@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+coverage/
+
+# TLS key material (see bin/setup-certs.ts)
+.secrets/
+
+# Persisted home page layout (see src/server/main.ts)
+data/
+
+# launchd service logs (see bin/install-service.ts)
+logs/
