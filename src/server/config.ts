@@ -34,6 +34,8 @@ export const config = {
     workspaceDir: path("data/assistant"),
     sourceDir: path("src"),
     backgroundsDir: path("data/backgrounds"),
-    unibrainUrl: Deno.env.get("UNIBRAIN_URL") ?? "http://127.0.0.1:7420/mcp",
+    /** `?client=` names the assistant in Unibrain's event log, apart from interactive agents. */
+    unibrainUrl: Deno.env.get("UNIBRAIN_URL") ??
+      "http://127.0.0.1:7420/mcp?client=home-page-assistant",
   },
 } as const;

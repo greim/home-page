@@ -73,10 +73,10 @@ back up or hand-edit while the server is stopped. Background images you upload o
 The assistant is [Claude Code](https://code.claude.com/) run headlessly by the server, one process
 per message (`--resume` continues the conversation). It needs `claude` installed and signed in
 (looked for at `~/.local/bin/claude`; set `CLAUDE_PATH` to override), and uses
-[Unibrain](../unibrain) at `http://127.0.0.1:7420/mcp` (`UNIBRAIN_URL`) as its only MCP server: it
-looks up how the layout works there, and saves what it learns and the programs it writes (such as a
-layout validator), so later conversations are faster and cheaper. The cost and time of each turn are
-shown under it.
+[Unibrain](../unibrain) at `http://127.0.0.1:7420/mcp?client=home-page-assistant` (`UNIBRAIN_URL`)
+as its only MCP server: it looks up how the layout works there, and saves what it learns and the
+programs it writes (such as a layout validator), so later conversations are faster and cheaper. The
+`client` parameter names it in Unibrain's stats. The cost and time of each turn are shown under it.
 
 It's confined (`--restricted`, `--permission-mode dontAsk`): no shell or web tools, it can read the
 app's `src/` and saved backgrounds, and the only file it can change is its copy of the layout,
