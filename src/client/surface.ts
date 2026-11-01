@@ -28,6 +28,12 @@ export const surface = {
   thumbShadow: "0 6px 14px rgba(0, 0, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.4)",
   /** Thickness of the white outline around the thumbnails of the columns in view. */
   thumbOutlineWidth: "2px",
+  /** Height of the admin bar along the top of the viewport in admin mode. */
+  adminBarHeight: "40px",
+  /** Duration and easing of the admin bar sliding in/out and the columns making room for it. */
+  adminTransition: "300ms ease",
+  /** Width of the admin assistant's chat panel. */
+  assistantPanelWidth: "400px",
 } as const;
 
 /** Text style for column headings (also used while renaming one in admin mode). */

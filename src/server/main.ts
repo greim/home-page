@@ -4,6 +4,8 @@
  */
 import { Effect } from "effect";
 import { bundleClient, BundlerIo, BundlerIoLive } from "../../tooling/bundle-client.ts";
+import { AssistantIo } from "./assistant.ts";
+import { assistantIoLive } from "./assistant-live.ts";
 import { config } from "./config.ts";
 import { contentTypeFor, type HttpRequest, type HttpResponse, IoError, ServerIo } from "./http.ts";
 import { handle } from "./routes.ts";
@@ -68,6 +70,7 @@ const staticAssets = await Array.fromAsync(
     }] as const,
 );
 await Deno.mkdir(config.backgroundsDir, { recursive: true });
+const assistantIo = await Effect.runPromise(assistantIoLive(config.assistant));
 
 const site = {
   hosts: config.hosts,
@@ -87,6 +90,7 @@ Deno.serve(
     Effect.runPromise(
       handle(toHttpRequest(request), site).pipe(
         Effect.provideService(ServerIo, io),
+        Effect.provideService(AssistantIo, assistantIo),
         Effect.map(toResponse),
       ),
     ),

@@ -1,8 +1,8 @@
 import { Box, Flex } from "@chakra-ui/react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { type Background, type Column, newColumn } from "../common/model.ts";
 import { useBoard } from "./board-context.ts";
-import { carousel, columnsPerView, revealOffset, stripSlots } from "./carousel.ts";
+import { carousel, columnsPerView, frameHeight, revealOffset, stripSlots } from "./carousel.ts";
 import { ColumnNavigator, navigatorHeight } from "./column-navigator.tsx";
 import { AddColumnSlot, ColumnView } from "./column-view.tsx";
 import { randomIcon } from "./icon-set.ts";
@@ -19,6 +19,11 @@ const slideTo = (offset: number) => `translateX(calc(${-offset} * (${slotWidth} 
 export function ColumnStrip(props: {
   background: Background;
   columns: ReadonlyArray<Column>;
+  /**
+   * The admin bar, which positions itself along the top of the surface. In admin
+   * mode the columns shrink to make room for it.
+   */
+  adminBar: ReactNode;
 }) {
   const { background } = props;
   const { admin, dispatch } = useBoard();
@@ -39,6 +44,9 @@ export function ColumnStrip(props: {
     // At the end, the new column takes the add-column slot's place.
     setOffset(at === "start" ? 0 : revealOffset(view.offset, slots.length - 1));
   };
+
+  // In admin mode the frame sits below the admin bar, half a gap from it.
+  const frameTop = admin ? `calc(${surface.adminBarHeight} + ${gap} / 2)` : gap;
 
   return (
     // The surface fills the viewport and clips columns slid out of view.
@@ -67,15 +75,18 @@ export function ColumnStrip(props: {
           opacity={background.opacity}
         />
       )}
+      {props.adminBar}
       {
-        /* Statically positioned frame, inset from the viewport by the gap on every side,
-          and shortened to make room for the navigator when there is one. */
+        /* Statically positioned frame, inset from the viewport by the gap on every
+          side (or half a gap below the admin bar), and shortened to make room for
+          the navigator when it's shown. It animates as the admin bar comes and goes. */
       }
       <Box
         m={gap}
-        h={view.navigable
-          ? `calc(100% - 2 * ${gap} - ${navigatorHeight})`
-          : `calc(100% - 2 * ${gap})`}
+        mt={frameTop}
+        h={frameHeight({ top: frameTop, bottom: gap }, view.navigable ? [navigatorHeight] : [])}
+        transition={`margin-top ${surface.adminTransition}, height ${surface.adminTransition}`}
+        _motionReduce={{ transition: "none" }}
       >
         <Flex
           h="full"

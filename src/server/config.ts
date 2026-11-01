@@ -4,6 +4,7 @@ const root = new URL("../../", import.meta.url);
 const path = (relative: string): string => new URL(relative, root).pathname;
 
 const hostname = "127.0.0.1";
+const home = Deno.env.get("HOME") ?? "";
 const port = 8443;
 
 export const config = {
@@ -26,4 +27,13 @@ export const config = {
   /** Background images uploaded or fetched from the web. */
   backgroundsDir: path("data/backgrounds"),
   logsDir: path("logs"),
+  /** The admin assistant's agent: Claude Code, run in its own workspace with Unibrain. */
+  assistant: {
+    /** launchd gives the server a minimal PATH, so claude is found by its full path. */
+    claudePath: Deno.env.get("CLAUDE_PATH") ?? `${home}/.local/bin/claude`,
+    workspaceDir: path("data/assistant"),
+    sourceDir: path("src"),
+    backgroundsDir: path("data/backgrounds"),
+    unibrainUrl: Deno.env.get("UNIBRAIN_URL") ?? "http://127.0.0.1:7420/mcp",
+  },
 } as const;

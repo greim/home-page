@@ -48,12 +48,31 @@ back up or hand-edit while the server is stopped. Background images you upload o
 - Bookmarks are edited as an outline: `Label | URL` per line; a line without a URL is a folder, and
   indented lines below it are its links.
 - Form grid URL templates use `{query}` as the placeholder.
-- In admin mode, the **Background** button (bottom left) sets the image tiled behind the columns,
-  the color beneath it, and the image's opacity. Images can be built-in (anything in
-  `src/client/static/`), uploaded from disk, or fetched from a web URL, which the server downloads
-  and saves locally. PNG, JPEG, GIF, WebP and AVIF are supported, up to 10 MB.
+- In admin mode, an admin bar along the top holds the admin-wide controls.
+- The admin bar's **Background** button sets the image tiled behind the columns, the color beneath
+  it, and the image's opacity. Images can be built-in (anything in `src/client/static/`), uploaded
+  from disk, or fetched from a web URL, which the server downloads and saves locally. PNG, JPEG,
+  GIF, WebP and AVIF are supported, up to 10 MB.
+- The admin bar's **Assistant** button opens a chat with Claude, which can make any admin-mode
+  change for you ("add a column of news bookmarks", "make the background darker"). See below.
 - In admin mode, the swatch in each column's header sets its background color. Text switches to
   light or dark automatically to stay readable.
+
+## The admin assistant
+
+The assistant is [Claude Code](https://code.claude.com/) run headlessly by the server, one process
+per message (`--resume` continues the conversation). It needs `claude` installed and signed in
+(looked for at `~/.local/bin/claude`; set `CLAUDE_PATH` to override), and uses
+[Unibrain](../unibrain) at `http://127.0.0.1:7420/mcp` (`UNIBRAIN_URL`) as its only MCP server: it
+looks up how the layout works there, and saves what it learns and the programs it writes (such as a
+layout validator), so later conversations are faster and cheaper. The cost and time of each turn are
+shown under it.
+
+It's confined (`--restricted`, `--permission-mode dontAsk`): no shell or web tools, it can read the
+app's `src/` and saved backgrounds, and the only file it can change is its copy of the layout,
+`data/assistant/layout.json`. When its turn ends the server validates that file and, if it changed,
+applies it to the live page. If it's invalid, or you changed the page by hand meanwhile, the agent
+is told why and tries again (up to 3 times in all). Only one turn runs at a time.
 
 ## Look and feel
 

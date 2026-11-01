@@ -1,5 +1,6 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Effect } from "effect";
+import { AssistantIo } from "./assistant.ts";
 import { defaultBackground, emptyLayout, type Layout, newColumn } from "../common/model.ts";
 import {
   contentTypeFor,
@@ -34,6 +35,13 @@ const request = (
 
 const unused = Effect.die("unexpected I/O");
 
+const noAssistantIo = AssistantIo.of({
+  readWorkspaceLayout: Effect.die("unexpected I/O"),
+  writeWorkspaceLayout: () => Effect.die("unexpected I/O"),
+  startAgent: () => Effect.die("unexpected I/O"),
+  turnLock: Effect.runSync(Effect.makeSemaphore(1)),
+});
+
 const noIo = ServerIo.of({
   readLayoutFile: unused,
   writeLayoutTempFile: () => unused,
@@ -45,7 +53,12 @@ const noIo = ServerIo.of({
 });
 
 const run = (req: HttpRequest, io = noIo): Promise<HttpResponse> =>
-  Effect.runPromise(handle(req, site).pipe(Effect.provideService(ServerIo, io)));
+  Effect.runPromise(
+    handle(req, site).pipe(
+      Effect.provideService(AssistantIo, noAssistantIo),
+      Effect.provideService(ServerIo, io),
+    ),
+  );
 
 const layout: Layout = {
   version: 1,
@@ -169,4 +182,9 @@ Deno.test("contentTypeFor maps known extensions", () => {
   assertEquals(contentTypeFor("a.webp"), "image/webp");
   assertEquals(contentTypeFor("a.svg"), "image/svg+xml");
   assertEquals(contentTypeFor("a.bin"), "application/octet-stream");
+});
+
+Deno.test("/api/assistant only accepts POST", async () => {
+  const res = await run(request("GET", "/api/assistant"));
+  assertEquals([res.status, res.headers["allow"]], [405, "POST"]);
 });

@@ -1,5 +1,6 @@
 /** Functional core of the client's server communication. */
-import { Context, Data, Effect, Either, Schema } from "effect";
+import { Context, Data, Effect, Either, Schema, Stream } from "effect";
+import { type AssistantRequest, ChatEvent } from "../common/assistant.ts";
 import { BackgroundImageUrl, Layout } from "../common/model.ts";
 
 export class ApiError extends Data.TaggedError("ApiError")<{
@@ -10,6 +11,13 @@ export type HttpResult = { readonly status: number; readonly text: string };
 
 export type HttpBody = string | Uint8Array<ArrayBuffer> | null;
 
+/** A response whose body is read as it arrives. */
+export type HttpStream = {
+  readonly status: number;
+  /** The body as text, in arbitrary chunks. */
+  readonly chunks: Stream.Stream<string, ApiError>;
+};
+
 export class Http extends Context.Tag("Http")<
   Http,
   {
@@ -19,6 +27,8 @@ export class Http extends Context.Tag("Http")<
       body: HttpBody,
       contentType: string,
     ) => Effect.Effect<HttpResult, ApiError>;
+    /** POSTs JSON and streams the response body. */
+    readonly stream: (path: string, json: string) => Effect.Effect<HttpStream, ApiError>;
   }
 >() {}
 
@@ -105,3 +115,29 @@ export const fetchBackground = (url: string): Effect.Effect<string, ApiError, Ht
     JSON.stringify({ url }),
     jsonType,
   ).pipe(Effect.map((r) => r.url));
+
+const decodeChatEvent = (line: string) =>
+  Either.try({ try: (): unknown => JSON.parse(line), catch: String }).pipe(
+    Either.flatMap((json) => Either.mapLeft(Schema.decodeUnknownEither(ChatEvent)(json), String)),
+    Either.mapLeft((message) => new ApiError({ message: `Invalid event from server: ${message}` })),
+  );
+
+/** Sends the admin assistant a message, handing each event to `onEvent` as it arrives. */
+export const askAssistant = (
+  request: AssistantRequest,
+  onEvent: (event: ChatEvent) => void,
+): Effect.Effect<void, ApiError, Http> =>
+  Effect.gen(function* () {
+    const http = yield* Http;
+    const response = yield* http.stream("/api/assistant", JSON.stringify(request));
+    if (response.status < 200 || response.status >= 300) {
+      const text = yield* Stream.mkString(response.chunks);
+      return yield* new ApiError({ message: `Server responded ${response.status}: ${text}` });
+    }
+    yield* response.chunks.pipe(
+      Stream.splitLines,
+      Stream.filter((line) => line.trim() !== ""),
+      Stream.mapEffect(decodeChatEvent),
+      Stream.runForEach((event) => Effect.sync(() => onEvent(event))),
+    );
+  });

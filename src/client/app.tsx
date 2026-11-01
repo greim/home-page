@@ -3,7 +3,10 @@ import { Effect, Either } from "effect";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyAction, type LayoutAction } from "../common/layout-ops.ts";
 import type { Layout } from "../common/model.ts";
+import { LuSparkles } from "react-icons/lu";
+import { AdminBar, AdminBarButton } from "./admin-bar.tsx";
 import { Http, loadLayout, saveLayout } from "./api.ts";
+import { AssistantPanel, useAssistant } from "./assistant-panel.tsx";
 import { BackgroundEditor } from "./background-editor.tsx";
 import { type Board, BoardContext, type EditRequest } from "./board-context.ts";
 import { ColumnStrip } from "./column-strip.tsx";
@@ -91,6 +94,9 @@ export function App() {
     addedColumnIds.current = [];
   }, [admin, dispatch]);
 
+  const assistant = useAssistant((layout) => dispatch({ is: "replace-layout", layout }));
+  const [assistantOpen, setAssistantOpen] = useState(false);
+
   const board: Board = useMemo(
     () => ({ admin, dispatch, edit: setEditing }),
     [admin, dispatch],
@@ -117,7 +123,33 @@ export function App() {
 
   return (
     <BoardContext.Provider value={board}>
-      <ColumnStrip background={state.layout.background} columns={state.layout.columns} />
+      <ColumnStrip
+        background={state.layout.background}
+        columns={state.layout.columns}
+        adminBar={
+          <AdminBar shown={admin} message="Admin mode · press Esc twice to exit">
+            <BackgroundEditor
+              background={state.layout.background}
+              onChange={(background) => dispatch({ is: "set-background", background })}
+            />
+            <AdminBarButton
+              aria-pressed={assistantOpen}
+              bg={assistantOpen ? "gray.100" : undefined}
+              onClick={() => setAssistantOpen((open) => !open)}
+            >
+              <LuSparkles /> Assistant
+            </AdminBarButton>
+          </AdminBar>
+        }
+      />
+      {admin && assistantOpen && (
+        <AssistantPanel
+          chat={assistant.chat}
+          onSend={assistant.send}
+          onReset={assistant.reset}
+          onClose={() => setAssistantOpen(false)}
+        />
+      )}
       {editing !== null && (
         <WidgetEditor
           widget={editing.widget}
@@ -132,24 +164,11 @@ export function App() {
           }}
         />
       )}
-      {admin && (
-        <Box position="fixed" bottom="3" left="3" zIndex="3">
-          <BackgroundEditor
-            background={state.layout.background}
-            onChange={(background) => dispatch({ is: "set-background", background })}
-          />
+      {saveError !== null && (
+        <Box position="fixed" bottom="3" left="50%" transform="translateX(-50%)" zIndex="3">
+          <Badge colorPalette="red" size="lg" title={saveError}>Couldn't save changes</Badge>
         </Box>
       )}
-      <Box position="fixed" bottom="3" left="50%" transform="translateX(-50%)" zIndex="3">
-        {saveError !== null && (
-          <Badge colorPalette="red" size="lg" title={saveError}>Couldn't save changes</Badge>
-        )}
-        {admin && (
-          <Badge colorPalette="purple" size="lg" ml="2">
-            Admin mode · press Esc twice to exit
-          </Badge>
-        )}
-      </Box>
     </BoardContext.Provider>
   );
 }

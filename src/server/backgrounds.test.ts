@@ -1,5 +1,6 @@
 import { assertEquals, assertMatch } from "@std/assert";
 import { Effect } from "effect";
+import { AssistantIo } from "./assistant.ts";
 import { maxImageBytes, sniffImage } from "./backgrounds.ts";
 import {
   type Bytes,
@@ -40,6 +41,13 @@ const request = (
 });
 
 const unused = Effect.die("unexpected I/O");
+const noAssistantIo = AssistantIo.of({
+  readWorkspaceLayout: Effect.die("unexpected I/O"),
+  writeWorkspaceLayout: () => Effect.die("unexpected I/O"),
+  startAgent: () => Effect.die("unexpected I/O"),
+  turnLock: Effect.runSync(Effect.makeSemaphore(1)),
+});
+
 const noIo = ServerIo.of({
   readLayoutFile: unused,
   writeLayoutTempFile: () => unused,
@@ -51,7 +59,12 @@ const noIo = ServerIo.of({
 });
 
 const run = (req: HttpRequest, io: Partial<ServerIo["Type"]> = {}): Promise<HttpResponse> =>
-  Effect.runPromise(handle(req, site).pipe(Effect.provideService(ServerIo, { ...noIo, ...io })));
+  Effect.runPromise(
+    handle(req, site).pipe(
+      Effect.provideService(AssistantIo, noAssistantIo),
+      Effect.provideService(ServerIo, { ...noIo, ...io }),
+    ),
+  );
 
 const bodyJson = (res: HttpResponse): unknown => JSON.parse(String(res.body));
 

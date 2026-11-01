@@ -53,3 +53,14 @@ export const inView = (offset: number, index: number): boolean =>
  */
 export const revealOffset = (offset: number, index: number): number =>
   index < offset ? index : index >= offset + columnsPerView ? index - columnsPerView + 1 : offset;
+
+/**
+ * CSS height of the frame holding the columns: the viewport less the frame's
+ * margins above and below, and less whatever else is shown (the admin bar, the
+ * navigator).
+ */
+export const frameHeight = (
+  margins: { top: string; bottom: string },
+  others: ReadonlyArray<string>,
+): string =>
+  `calc(100% - ${margins.top} - ${margins.bottom}${others.map((h) => ` - ${h}`).join("")})`;

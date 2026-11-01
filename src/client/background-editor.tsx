@@ -15,6 +15,7 @@ import { Effect, Either } from "effect";
 import { useEffect, useState } from "react";
 import { LuImage, LuImageOff, LuUpload } from "react-icons/lu";
 import type { Background } from "../common/model.ts";
+import { AdminBarButton } from "./admin-bar.tsx";
 import { fetchBackground, listBackgrounds, uploadBackground } from "./api.ts";
 import { readFileBytes, run } from "./live.ts";
 
@@ -215,17 +216,17 @@ function BackgroundPanel(props: {
   );
 }
 
-/** Admin-mode button that opens the background settings, applied live as you edit. */
+/** Admin bar button that opens the background settings, applied live as you edit. */
 export function BackgroundEditor(props: {
   background: Background;
   onChange: (background: Background) => void;
 }) {
   return (
-    <Popover.Root positioning={{ placement: "top-start" }} lazyMount unmountOnExit>
+    <Popover.Root positioning={{ placement: "bottom-start" }} lazyMount unmountOnExit>
       <Popover.Trigger asChild>
-        <Button size="sm" variant="surface" shadow="md">
+        <AdminBarButton>
           <LuImage /> Background
-        </Button>
+        </AdminBarButton>
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>

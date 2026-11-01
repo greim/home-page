@@ -1,5 +1,5 @@
 /** Imperative shell for the browser: real network and clipboard pipes. */
-import { Effect } from "effect";
+import { Effect, Stream } from "effect";
 import { ApiError, Http } from "./api.ts";
 
 export const HttpLive = Http.of({
@@ -15,6 +15,22 @@ export const HttpLive = Http.of({
       },
       catch: (cause) => new ApiError({ message: String(cause) }),
     }),
+  stream: (path, json) =>
+    Effect.tryPromise({
+      try: () =>
+        fetch(path, {
+          method: "POST",
+          body: json,
+          headers: { "content-type": "application/json" },
+        }),
+      catch: (cause) => new ApiError({ message: String(cause) }),
+    }).pipe(Effect.map((response) => ({
+      status: response.status,
+      chunks: Stream.fromReadableStream({
+        evaluate: () => (response.body ?? new Blob().stream()).pipeThrough(new TextDecoderStream()),
+        onError: (cause) => new ApiError({ message: String(cause) }),
+      }),
+    }))),
 });
 
 export const run = <A, E>(effect: Effect.Effect<A, E, Http>) =>

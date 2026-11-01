@@ -2,12 +2,11 @@
  * Functional core of the webserver: every routing and validation decision
  * lives here. All I/O goes through the injected {@link ServerIo} pipes.
  */
-import { Effect, Either, Schema } from "effect";
-import { emptyLayout, Layout } from "../common/model.ts";
+import { Effect, Either } from "effect";
+import { AssistantIo, routeAssistant } from "./assistant.ts";
 import { routeBackgrounds } from "./backgrounds.ts";
 import {
   BadRequest,
-  CorruptData,
   type HttpRequest,
   type HttpResponse,
   json,
@@ -17,8 +16,7 @@ import {
   type Site,
   text,
 } from "./http.ts";
-
-type StoredText = { found: true; text: string } | { found: false };
+import { decodeLayoutJson, readLayout, writeLayout } from "./layout-store.ts";
 
 /** File name the bundler gives the client entry point (src/client/main.tsx). */
 export const clientScript = "main.js";
@@ -40,54 +38,23 @@ export const page = (buildId: string): string =>
 </html>
 `;
 
-const decodeLayoutJson = (raw: string) =>
-  Either.flatMap(
-    Either.try({ try: (): unknown => JSON.parse(raw), catch: String }),
-    (parsed) =>
-      Either.mapLeft(
-        Schema.decodeUnknownEither(Layout)(parsed),
-        (error) => error.message,
-      ),
-  );
-
-const getLayout = Effect.gen(function* () {
-  const io = yield* ServerIo;
-  const stored = yield* io.readLayoutFile.pipe(
-    Effect.map((t): StoredText => ({ found: true, text: t })),
-    Effect.catchIf(
-      (e) => e.cause instanceof Deno.errors.NotFound,
-      () => Effect.succeed<StoredText>({ found: false }),
-    ),
-  );
-  if (!stored.found) {
-    return json(emptyLayout);
-  }
-  const layout = decodeLayoutJson(stored.text);
-  if (Either.isLeft(layout)) {
-    return yield* new CorruptData({
-      message: `Stored layout is invalid: ${layout.left}`,
-    });
-  }
-  return json(layout.right);
-});
+const getLayout = readLayout.pipe(Effect.map((layout) => json(layout)));
 
 const putLayout = (request: HttpRequest) =>
   Effect.gen(function* () {
-    const io = yield* ServerIo;
     const raw = yield* request.body;
     const layout = decodeLayoutJson(raw);
     if (Either.isLeft(layout)) {
       return yield* new BadRequest({ message: layout.left });
     }
-    yield* io.writeLayoutTempFile(JSON.stringify(layout.right, null, 2) + "\n");
-    yield* io.commitLayoutTempFile;
+    yield* writeLayout(layout.right);
     return { status: 204, headers: {}, body: null } satisfies HttpResponse;
   });
 
 const route = (
   request: HttpRequest,
   site: Site,
-): Effect.Effect<HttpResponse, RouteError, ServerIo> => {
+): Effect.Effect<HttpResponse, RouteError, ServerIo | AssistantIo> => {
   const { pathname } = request.url;
   const isRead = request.method === "GET" || request.method === "HEAD";
 
@@ -129,6 +96,11 @@ const route = (
         return Effect.succeed(methodNotAllowed("GET, PUT"));
     }
   }
+  if (pathname === "/api/assistant") {
+    return request.method === "POST"
+      ? routeAssistant(request)
+      : Effect.succeed(methodNotAllowed("POST"));
+  }
   if (pathname === "/api/backgrounds" || pathname.startsWith("/api/backgrounds/")) {
     return routeBackgrounds(request, site);
   }
@@ -138,7 +110,7 @@ const route = (
 export const handle = (
   request: HttpRequest,
   site: Site,
-): Effect.Effect<HttpResponse, never, ServerIo> => {
+): Effect.Effect<HttpResponse, never, ServerIo | AssistantIo> => {
   if (!site.hosts.has(request.url.host)) {
     return Effect.succeed(text(421, "Misdirected request"));
   }

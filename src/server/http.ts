@@ -65,7 +65,8 @@ export type HttpRequest = {
 export type HttpResponse = {
   readonly status: number;
   readonly headers: Readonly<Record<string, string>>;
-  readonly body: string | Bytes | null;
+  /** A stream is sent as it's produced (e.g. the assistant's progress). */
+  readonly body: string | Bytes | ReadableStream<Bytes> | null;
 };
 
 export const text = (status: number, body: string): HttpResponse => ({

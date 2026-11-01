@@ -1,0 +1,305 @@
+import { assertEquals, assertStringIncludes } from "@std/assert";
+import { Effect, Stream } from "effect";
+import type { ChatEvent } from "../common/assistant.ts";
+import { emptyLayout, type Layout, newColumn } from "../common/model.ts";
+import { conflictPrompt, invalidLayoutPrompt } from "./assistant-agent.ts";
+import { type AgentProcess, AssistantIo, routeAssistant, runTurn } from "./assistant.ts";
+import { type HttpRequest, IoError, ServerIo } from "./http.ts";
+import { layoutText } from "./layout-store.ts";
+
+const withColumn = (id: string): Layout => ({ ...emptyLayout, columns: [newColumn(id, "LuStar")] });
+
+const init = (sessionId: string) =>
+  JSON.stringify({ type: "system", subtype: "init", session_id: sessionId });
+const say = (text: string) =>
+  JSON.stringify({ type: "assistant", message: { content: [{ type: "text", text }] } });
+const result = (costUsd: number) =>
+  JSON.stringify({
+    type: "result",
+    subtype: "success",
+    is_error: false,
+    result: "",
+    total_cost_usd: costUsd,
+  });
+
+/** One scripted run of the agent: what it prints, and what it leaves in its layout copy. */
+type Run = {
+  readonly lines: ReadonlyArray<string>;
+  readonly edit: string | null;
+  readonly code?: number;
+  readonly stderr?: string;
+};
+
+/**
+ * Fake pipes over in-memory files. `stored` is the saved layout file; `liveAfter`
+ * replaces it after the given run, as if the user edited the page meanwhile.
+ */
+const harness = (options: {
+  stored: string | null;
+  runs: ReadonlyArray<Run>;
+  liveAfter?: { run: number; text: string };
+  overrides?: Partial<AssistantIo["Type"]>;
+}) => {
+  const files = { stored: options.stored, workspace: "", temp: "" };
+  const calls: Array<{ prompt: string; sessionId: string | null }> = [];
+  const workspaceWrites: Array<string> = [];
+
+  const agentProcess = (run: Run): AgentProcess => ({
+    // Split mid-line, as a pipe might.
+    stdout: Stream.make(...run.lines.map((l) => l + "\n").join("").match(/[^]{1,7}/g) ?? []),
+    exit: Effect.sync(() => {
+      if (run.edit !== null) files.workspace = run.edit;
+      if (options.liveAfter?.run === calls.length - 1) files.stored = options.liveAfter.text;
+      return { code: run.code ?? 0, stderr: run.stderr ?? "" };
+    }),
+  });
+
+  const assistantIo = AssistantIo.of({
+    readWorkspaceLayout: Effect.sync(() => files.workspace),
+    writeWorkspaceLayout: (text) =>
+      Effect.sync(() => {
+        files.workspace = text;
+        workspaceWrites.push(text);
+      }),
+    startAgent: (prompt, sessionId) =>
+      Effect.suspend(() => {
+        const run = options.runs.at(calls.length);
+        calls.push({ prompt, sessionId });
+        return run === undefined ? Effect.die("too many runs") : Effect.succeed(agentProcess(run));
+      }),
+    turnLock: Effect.runSync(Effect.makeSemaphore(1)),
+    ...options.overrides,
+  });
+
+  const serverIo = ServerIo.of({
+    readLayoutFile: Effect.suspend(() =>
+      files.stored === null
+        ? Effect.fail(new IoError({ cause: new Deno.errors.NotFound() }))
+        : Effect.succeed(files.stored)
+    ),
+    writeLayoutTempFile: (text) => Effect.sync(() => void (files.temp = text)),
+    commitLayoutTempFile: Effect.sync(() => void (files.stored = files.temp)),
+    listBackgroundFiles: Effect.die("unused"),
+    readBackgroundFile: () => Effect.die("unused"),
+    writeBackgroundFile: () => Effect.die("unused"),
+    fetchRemote: () => Effect.die("unused"),
+  });
+
+  const provide = <A, E>(effect: Effect.Effect<A, E, AssistantIo | ServerIo>) =>
+    effect.pipe(
+      Effect.provideService(AssistantIo, assistantIo),
+      Effect.provideService(ServerIo, serverIo),
+    );
+
+  const turn = async (message: string, sessionId: string | null = null) => {
+    const events: Array<ChatEvent> = [];
+    await Effect.runPromise(provide(
+      runTurn({ message, sessionId }, (e) => Effect.sync(() => void events.push(e))),
+    ));
+    // Durations vary from run to run.
+    return events.map((e) => e.is === "done" ? { ...e, durationMs: 0 } : e);
+  };
+
+  return { files, calls, workspaceWrites, turn, provide, assistantIo };
+};
+
+const done = (costUsd: number | null): ChatEvent => ({ is: "done", costUsd, durationMs: 0 });
+
+Deno.test("a turn that leaves the layout alone just relays the conversation", async () => {
+  const h = harness({
+    stored: null,
+    runs: [{ lines: [init("s1"), say("Hello!"), result(0.01)], edit: null }],
+  });
+  assertEquals(await h.turn("Hi"), [
+    { is: "session", sessionId: "s1" },
+    { is: "text", text: "Hello!" },
+    done(0.01),
+  ]);
+  assertEquals(h.calls, [{ prompt: "Hi", sessionId: null }]);
+  assertEquals(h.workspaceWrites, [layoutText(emptyLayout)]);
+  assertEquals(h.files.stored, null);
+});
+
+Deno.test("an edited, valid layout is saved and sent to the client", async () => {
+  const layout = withColumn("c1");
+  const h = harness({
+    stored: layoutText(emptyLayout),
+    runs: [{ lines: [init("s1"), result(0.02)], edit: JSON.stringify(layout) }],
+  });
+  assertEquals(await h.turn("Add a column", "s1"), [
+    { is: "session", sessionId: "s1" },
+    { is: "applied", layout },
+    done(0.02),
+  ]);
+  assertEquals(h.files.stored, layoutText(layout));
+  assertStringIncludes(h.calls.at(0)?.prompt ?? "", "[app] layout.json was refreshed");
+});
+
+Deno.test("a reformatted but identical layout counts as unchanged", async () => {
+  const h = harness({
+    stored: layoutText(emptyLayout),
+    runs: [{ lines: [result(0)], edit: JSON.stringify(emptyLayout) }],
+  });
+  assertEquals(await h.turn("Tidy up"), [done(0)]);
+});
+
+Deno.test("an invalid layout is explained to the agent, which retries in the same session", async () => {
+  const layout = withColumn("c1");
+  const h = harness({
+    stored: null,
+    runs: [
+      { lines: [init("s1"), result(0.1)], edit: `{"version": 2}` },
+      { lines: [init("s1"), result(0.05)], edit: JSON.stringify(layout) },
+    ],
+  });
+  const events = await h.turn("Add a column");
+  assertEquals(events.map((e) => e.is), ["session", "rejected", "session", "applied", "done"]);
+  assertEquals(events.at(-1), done(0.15000000000000002));
+  const diagnostic = events.at(1)?.is === "rejected" ? events.at(1) : undefined;
+  assertEquals(h.calls.at(1), {
+    prompt: invalidLayoutPrompt(diagnostic && "message" in diagnostic ? diagnostic.message : ""),
+    sessionId: "s1",
+  });
+  assertStringIncludes(h.calls.at(1)?.prompt ?? "", "version");
+});
+
+Deno.test("after repeated rejections the turn gives up without applying anything", async () => {
+  const bad: Run = { lines: [result(0)], edit: "{" };
+  const h = harness({ stored: null, runs: [bad, bad, bad] });
+  const events = await h.turn("Break it");
+  assertEquals(events.map((e) => e.is), ["rejected", "rejected", "error", "done"]);
+  assertStringIncludes(JSON.stringify(events.at(2)), "rejected 3 times");
+  assertEquals(h.calls.length, 3);
+  assertEquals(h.files.stored, null);
+});
+
+Deno.test("if the user changed the page meanwhile, the agent redoes its work on the new layout", async () => {
+  const theirs = withColumn("theirs");
+  const ours = withColumn("ours");
+  const h = harness({
+    stored: layoutText(emptyLayout),
+    runs: [
+      { lines: [result(0)], edit: JSON.stringify(ours) },
+      {
+        lines: [result(0)],
+        edit: JSON.stringify({ ...theirs, columns: [...theirs.columns, ...ours.columns] }),
+      },
+    ],
+    liveAfter: { run: 0, text: layoutText(theirs) },
+  });
+  const events = await h.turn("Add a column");
+  assertEquals(events.map((e) => e.is), ["rejected", "applied", "done"]);
+  assertEquals(h.workspaceWrites, [layoutText(emptyLayout), layoutText(theirs)]);
+  assertEquals(h.calls.at(1)?.prompt, conflictPrompt);
+  assertEquals(JSON.parse(h.files.stored ?? "").columns.length, 2);
+});
+
+Deno.test("an agent that fails reports why", async () => {
+  const crashed = harness({
+    stored: null,
+    runs: [{ lines: [say("Working")], edit: null, code: 1, stderr: "No conversation found" }],
+  });
+  assertEquals(await crashed.turn("Hi", "gone"), [
+    { is: "text", text: "Working" },
+    {
+      is: "error",
+      message: "The agent stopped unexpectedly (exit code 1). No conversation found",
+    },
+    done(null),
+  ]);
+
+  const errored = harness({
+    stored: null,
+    runs: [{
+      lines: [JSON.stringify({ type: "result", subtype: "error_max_turns", is_error: true })],
+      edit: null,
+    }],
+  });
+  assertEquals(await errored.turn("Hi"), [
+    { is: "error", message: "error_max_turns" },
+    done(null),
+  ]);
+});
+
+Deno.test("long stderr is trimmed to its end", async () => {
+  const h = harness({
+    stored: null,
+    runs: [{ lines: [], edit: null, code: 2, stderr: "x".repeat(600) + "END" }],
+  });
+  const events = await h.turn("Hi");
+  const error = events.at(0);
+  assertEquals(error?.is, "error");
+  assertStringIncludes(error && "message" in error ? error.message : "", `…${"x".repeat(497)}END`);
+});
+
+Deno.test("an agent that can't start is reported", async () => {
+  const h = harness({
+    stored: null,
+    runs: [],
+    overrides: { startAgent: () => Effect.fail(new IoError({ cause: "NotFound: claude" })) },
+  });
+  assertEquals(await h.turn("Hi"), [
+    { is: "error", message: "Couldn't run Claude Code: NotFound: claude" },
+    done(null),
+  ]);
+});
+
+Deno.test("a corrupt saved layout or failing workspace stops the turn with an error", async () => {
+  const corrupt = harness({ stored: "{", runs: [] });
+  assertEquals((await corrupt.turn("Hi")).map((e) => e.is), ["error"]);
+
+  const full = harness({
+    stored: null,
+    runs: [],
+    overrides: { writeWorkspaceLayout: () => Effect.fail(new IoError({ cause: "disk full" })) },
+  });
+  assertEquals(await full.turn("Hi"), [{ is: "error", message: "disk full" }]);
+});
+
+Deno.test("only one turn runs at a time", async () => {
+  const h = harness({ stored: null, runs: [] });
+  const events: Array<ChatEvent> = [];
+  await Effect.runPromise(
+    h.provide(
+      h.assistantIo.turnLock.withPermits(1)(
+        runTurn({ message: "Hi", sessionId: null }, (e) => Effect.sync(() => void events.push(e))),
+      ),
+    ),
+  );
+  assertEquals(events.map((e) => e.is), ["error"]);
+  assertStringIncludes(JSON.stringify(events), "still working");
+});
+
+const post = (body: string): HttpRequest => ({
+  method: "POST",
+  url: new URL("https://localhost:8443/api/assistant"),
+  origin: null,
+  body: Effect.succeed(body),
+  bytes: Effect.die("unused"),
+});
+
+Deno.test("POST /api/assistant streams the turn's events as NDJSON", async () => {
+  const h = harness({
+    stored: null,
+    runs: [{ lines: [init("s1"), say("Hi there"), result(0)], edit: null }],
+  });
+  const response = await Effect.runPromise(
+    h.provide(routeAssistant(post(JSON.stringify({ message: "Hi", sessionId: null })))),
+  );
+  assertEquals(response.headers["content-type"], "application/x-ndjson; charset=utf-8");
+  const body = response.body instanceof ReadableStream
+    ? await new Response(response.body).text()
+    : "";
+  const events = body.trim().split("\n").map((l) => JSON.parse(l));
+  assertEquals(events.map((e) => e.is), ["session", "text", "done"]);
+});
+
+Deno.test("POST /api/assistant rejects malformed requests", async () => {
+  const h = harness({ stored: null, runs: [] });
+  for (const body of ["{", JSON.stringify({ message: "", sessionId: null })]) {
+    const error = await Effect.runPromise(
+      h.provide(routeAssistant(post(body))).pipe(Effect.flip),
+    );
+    assertEquals(error._tag, "BadRequest");
+  }
+});

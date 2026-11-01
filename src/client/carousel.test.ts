@@ -1,6 +1,13 @@
 import { assertEquals } from "@std/assert";
 import { type Column, newColumn } from "../common/model.ts";
-import { carousel, clampOffset, inView, revealOffset, stripSlots } from "./carousel.ts";
+import {
+  carousel,
+  clampOffset,
+  frameHeight,
+  inView,
+  revealOffset,
+  stripSlots,
+} from "./carousel.ts";
 
 const cols = (n: number, hidden: ReadonlyArray<number> = []): ReadonlyArray<Column> =>
   Array.from(
@@ -76,4 +83,13 @@ Deno.test("revealOffset slides a hidden slot just into view on its side", () => 
   assertEquals(revealOffset(0, 8), 5);
   assertEquals(revealOffset(2, 2), 2); // already in view: no change
   assertEquals(revealOffset(2, 5), 2);
+});
+
+Deno.test("frameHeight leaves room for the margins and anything else shown", () => {
+  const margins = { top: "4px", bottom: "8px" };
+  assertEquals(frameHeight(margins, []), "calc(100% - 4px - 8px)");
+  assertEquals(
+    frameHeight(margins, ["40px", "(8px + 5px)"]),
+    "calc(100% - 4px - 8px - 40px - (8px + 5px))",
+  );
 });

@@ -37,6 +37,11 @@ const bookmarks: BookmarksWidget = {
   ],
 };
 
+Deno.test("replace-layout swaps in the new layout", () => {
+  const layout = { ...emptyLayout, columns: [] };
+  assertEquals(applyAction(emptyLayout, { is: "replace-layout", layout }), layout);
+});
+
 Deno.test("set-background replaces the background", () => {
   const background = { imageUrl: null, color: "#000000", opacity: 0.5 };
   assertEquals(
