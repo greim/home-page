@@ -1,7 +1,7 @@
 # Home Page
 
 A personal home page served from localhost over HTTPS. See [VISION.md](./VISION.md) for requirements
-and coding standards.
+and [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md) for coding standards.
 
 ## First-time setup (macOS)
 

@@ -101,8 +101,12 @@ either run the core or hand the resulting effect off to another part of the prog
 
 **Success criteria:** The shell is thin, because it contains no branching logic — no if statements,
 try/catch, ternaries, or other conditionals. Implementing the I/O interface feels like plugging in
-cables. Many of the dumb pipe implementations are one-liners. One unit test is all that's needed to
-fully cover it.
+cables. Many of the dumb pipe implementations are one-liners. One integration test is all that's
+needed to fully cover it, and every shell should have one. Its job is to confirm the right things
+were plugged in: the **wiring** (right path, right implementation in each slot) and the **contract**
+(the real pipe behaves the way the core's mocks assume). Decisions belong to core tests. Run it
+against real but disposable resources (a temp directory, an ephemeral port, a local test server)
+wherever possible.
 
 **Note:** Real shells often do more than the example below — an AWS Lambda handler, for instance,
 instantiating an API Gateway client on cold start using config from env vars. That's still just a
@@ -114,9 +118,13 @@ belongs in the core.
 ## Technology Choice: Effect — https://effect.website/
 
 Effect is a TypeScript library. It's a natural fit for implementing this pattern due to its
-dependency injection mechanism. When implementing this pattern, you MUST use the Effect library.
-Besides dependency injection, it brings complementary benefits to the table, such as
-agent-friendliness and typed error handling.
+dependency injection mechanism. When implementing this pattern in server code, I/O pipes, and logic
+modules, using the Effect library is **strongly recommended**. Besides dependency injection, it
+brings complementary benefits to the table, such as agent-friendliness and typed error handling.
+
+In UI code (e.g. React components), Effect is optional. There it's most useful at the boundary,
+wrapping a throwing API or invoking an Effect-based logic module, with the result handed to the
+component as a plain value.
 
 ## Example
 
@@ -262,4 +270,5 @@ illustrate a point.
 
 ### Can this pattern be implemented without Effect?
 
-Yes. Effect is just a natural fit as well as bringing additional benefits.
+Yes. Effect is just a natural fit as well as bringing additional benefits. It's strongly recommended
+for server code, I/O pipes, and logic modules, and optional in UI code (see above).
