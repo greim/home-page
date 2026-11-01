@@ -55,8 +55,16 @@ back up or hand-edit while the server is stopped. Background images you upload o
   GIF, WebP and AVIF are supported, up to 10 MB.
 - The admin bar's **Assistant** button opens a chat with Claude, which can make any admin-mode
   change for you ("add a column of news bookmarks", "make the background darker"). See below.
-- In admin mode, the swatch in each column's header sets its background color. Text switches to
-  light or dark automatically to stay readable.
+- Admin mode doesn't add anything to the columns, so they look exactly the same. Instead, things you
+  can change become clickable: click a column's heading to rename it (Enter saves, Esc cancels), its
+  icon to pick another, or a widget or the column's background to open the **column editor**.
+- The column editor edits a column's heading, icon and background color, and lists its widgets: drag
+  them to reorder, send them to another column, delete them, add new ones, or select one to edit it.
+  Changes apply when you click Save. A column's text switches to light or dark automatically to suit
+  its background color.
+- In admin mode the column navigator along the bottom is always shown. Add columns with the dashed
+  boxes at either end or the "+" markers between thumbnails; each thumbnail has icons to move (drag
+  it, or use the arrow keys), delete, and hide the column.
 
 ## The admin assistant
 

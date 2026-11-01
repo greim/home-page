@@ -10,8 +10,9 @@ export type Slot =
 
 /**
  * Hidden columns are skipped outside admin mode. The add-column placeholder
- * appears when columns don't fill the view, and always in admin mode.
- * `index` is the position in the full column list, for inserting/moving.
+ * appears when columns don't fill the view. (In admin mode, the navigator offers
+ * other ways to add columns.) `index` is the position in the full column list,
+ * for inserting/moving.
  */
 export const stripSlots = (
   columns: ReadonlyArray<Column>,
@@ -20,7 +21,7 @@ export const stripSlots = (
   const shown: ReadonlyArray<Slot> = columns.flatMap((column, index) =>
     admin || !column.hidden ? [{ is: "column" as const, column, index }] : []
   );
-  const needsPlaceholder = admin || shown.length < columnsPerView;
+  const needsPlaceholder = shown.length < columnsPerView;
   return needsPlaceholder ? [...shown, { is: "add-column", index: columns.length }] : shown;
 };
 
@@ -43,6 +44,9 @@ export const carousel = (offset: number, slots: ReadonlyArray<Slot>): Carousel =
   navigable: slots.length > columnsPerView,
 });
 
+/** Whether the navigator is shown: always in admin mode, otherwise when it's needed. */
+export const showNavigator = (view: Carousel, admin: boolean): boolean => admin || view.navigable;
+
 /** Whether the slot at `index` is among those in view at `offset`. */
 export const inView = (offset: number, index: number): boolean =>
   index >= offset && index < offset + columnsPerView;
@@ -64,3 +68,33 @@ export const frameHeight = (
   others: ReadonlyArray<string>,
 ): string =>
   `calc(100% - ${margins.top} - ${margins.bottom}${others.map((h) => ` - ${h}`).join("")})`;
+
+/** Where a navigator thumbnail sits relative to the outline around those in view. */
+export type Side = "left" | "in" | "right";
+
+export const sideOf = (offset: number, index: number): Side =>
+  index < offset ? "left" : inView(offset, index) ? "in" : "right";
+
+/** Thumbnails outside the outline are pushed this many outline-widths away from it. */
+export const sideShift = (side: Side): -1 | 0 | 1 => {
+  switch (side) {
+    case "left":
+      return -1;
+    case "in":
+      return 0;
+    case "right":
+      return 1;
+    default:
+      return side satisfies never;
+  }
+};
+
+/** A place a dragged column can be dropped: before column `gap`, centered at `x`. */
+export type DropTarget = { readonly gap: number; readonly x: number };
+
+/** The gap of the drop target nearest `x`, or null if there are none. */
+export const nearestGap = (targets: ReadonlyArray<DropTarget>, x: number): number | null =>
+  targets.reduce<DropTarget | null>(
+    (best, t) => best === null || Math.abs(t.x - x) < Math.abs(best.x - x) ? t : best,
+    null,
+  )?.gap ?? null;

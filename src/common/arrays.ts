@@ -36,3 +36,10 @@ export const removeWhere = <T>(
   items: ReadonlyArray<T>,
   pred: (item: T) => boolean,
 ): ReadonlyArray<T> => items.filter((item) => !pred(item));
+
+/**
+ * Where `moveWhere` should put an item at `from` that's dropped into the gap
+ * before position `gap` (0 is before the first item, `length` after the last),
+ * accounting for the item's own removal.
+ */
+export const gapToIndex = (from: number, gap: number): number => gap > from ? gap - 1 : gap;

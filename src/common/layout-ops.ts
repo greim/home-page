@@ -22,18 +22,13 @@ export type LayoutAction =
   | { is: "discard-untouched-columns"; columnIds: ReadonlyArray<string> }
   | { is: "move-column"; columnId: string; toIndex: number }
   | { is: "set-column-hidden"; columnId: string; hidden: boolean }
-  | { is: "set-column-color"; columnId: string; color: string }
   | { is: "set-column-icon"; columnId: string; icon: string }
-  | { is: "add-widget"; columnId: string; index: number; widget: Widget }
-  | { is: "replace-widget"; columnId: string; widget: Widget }
-  | { is: "remove-widget"; columnId: string; widgetId: string }
-  | {
-    is: "move-widget";
-    columnId: string;
-    widgetId: string;
-    toColumnId: string;
-    toIndex: number;
-  }
+  /**
+   * Saves the column content editor: swaps in the edited column (matched by id)
+   * and appends each sent widget to its target column. A widget sent to a column
+   * that no longer exists stays in the edited column rather than being lost.
+   */
+  | { is: "edit-column"; column: Column; sent: ReadonlyArray<SentWidget> }
   | { is: "toggle-widget"; columnId: string; widgetId: string }
   | {
     is: "toggle-folder";
@@ -41,6 +36,8 @@ export type LayoutAction =
     widgetId: string;
     folderId: string;
   };
+
+export type SentWidget = { readonly toColumnId: string; readonly widget: Widget };
 
 const byId = (id: string) => (item: { readonly id: string }): boolean => item.id === id;
 
@@ -64,30 +61,23 @@ const updateWidget = (
     widgets: mapWhere(column.widgets, byId(widgetId), fn),
   }));
 
-const moveWidget = (
+const editColumn = (
   layout: Layout,
-  action: Extract<LayoutAction, { is: "move-widget" }>,
+  action: Extract<LayoutAction, { is: "edit-column" }>,
 ): Layout => {
-  const source = layout.columns.find(byId(action.columnId));
-  const widget = source?.widgets.find(byId(action.widgetId));
-  const targetExists = layout.columns.some(byId(action.toColumnId));
-  if (widget === undefined || !targetExists) {
+  const exists = (id: string) => layout.columns.some(byId(id));
+  if (!exists(action.column.id)) {
     return layout;
   }
-  if (action.columnId === action.toColumnId) {
-    return updateColumn(layout, action.columnId, (column) => ({
-      ...column,
-      widgets: moveWhere(column.widgets, byId(widget.id), action.toIndex),
-    }));
-  }
-  const removed = updateColumn(layout, action.columnId, (column) => ({
-    ...column,
-    widgets: removeWhere(column.widgets, byId(widget.id)),
-  }));
-  return updateColumn(removed, action.toColumnId, (column) => ({
-    ...column,
-    widgets: insertAt(column.widgets, action.toIndex, widget),
-  }));
+  const replaced = updateColumn(layout, action.column.id, () => action.column);
+  return action.sent.reduce(
+    (l, { toColumnId, widget }) =>
+      updateColumn(l, exists(toColumnId) ? toColumnId : action.column.id, (column) => ({
+        ...column,
+        widgets: [...column.widgets, widget],
+      })),
+    replaced,
+  );
 };
 
 const toggleFolder = (widget: Widget, folderId: string): Widget => {
@@ -144,35 +134,13 @@ export const applyAction = (layout: Layout, action: LayoutAction): Layout => {
         ...column,
         hidden: action.hidden,
       }));
-    case "set-column-color":
-      return updateColumn(layout, action.columnId, (column) => ({
-        ...column,
-        color: action.color,
-      }));
     case "set-column-icon":
       return updateColumn(layout, action.columnId, (column) => ({
         ...column,
         icon: action.icon,
       }));
-    case "add-widget":
-      return updateColumn(layout, action.columnId, (column) => ({
-        ...column,
-        widgets: insertAt(column.widgets, action.index, action.widget),
-      }));
-    case "replace-widget":
-      return updateWidget(
-        layout,
-        action.columnId,
-        action.widget.id,
-        () => action.widget,
-      );
-    case "remove-widget":
-      return updateColumn(layout, action.columnId, (column) => ({
-        ...column,
-        widgets: removeWhere(column.widgets, byId(action.widgetId)),
-      }));
-    case "move-widget":
-      return moveWidget(layout, action);
+    case "edit-column":
+      return editColumn(layout, action);
     case "toggle-widget":
       return updateWidget(
         layout,

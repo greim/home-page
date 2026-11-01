@@ -103,15 +103,6 @@ Deno.test("set-column-hidden hides and shows", () => {
   assertEquals(shown.columns.at(0)?.hidden, false);
 });
 
-Deno.test("set-column-color changes only the target column", () => {
-  const l = applyAction(layout(column("a"), column("b")), {
-    is: "set-column-color",
-    columnId: "b",
-    color: "#112233",
-  });
-  assertEquals(l.columns.map((c) => c.color), ["#ffffff", "#112233"]);
-});
-
 Deno.test("set-column-icon changes only the target column", () => {
   const l = applyAction(layout(column("a"), column("b")), {
     is: "set-column-icon",
@@ -121,87 +112,37 @@ Deno.test("set-column-icon changes only the target column", () => {
   assertEquals(l.columns.map((c) => c.icon), ["LuHouse", "LuStar"]);
 });
 
-Deno.test("add-widget inserts at an index", () => {
-  const l = applyAction(
-    layout(column("a", [newWidget("snippets", "w1")])),
-    { is: "add-widget", columnId: "a", index: 0, widget: bookmarks },
+Deno.test("edit-column swaps in the edited column and appends sent widgets", () => {
+  const snippets = newWidget("snippets", "s");
+  const start = layout(
+    column("a", [bookmarks, snippets]),
+    column("b", [newWidget("form-grid", "g")]),
   );
-  // bookmarks also has id w1, so check kinds instead
-  assertEquals(l.columns.at(0)?.widgets.map((w) => w.is), [
-    "bookmarks",
-    "snippets",
+  const l = applyAction(start, {
+    is: "edit-column",
+    column: { ...column("a", [snippets]), heading: "Edited", color: "#112233" },
+    sent: [{ toColumnId: "b", widget: bookmarks }],
+  });
+  assertEquals(l.columns.map((c) => [c.heading, c.color]), [
+    ["Edited", "#112233"],
+    ["New Column", "#ffffff"],
   ]);
+  assertEquals(widgetIds(l, "a"), ["s"]);
+  assertEquals(widgetIds(l, "b"), ["g", "w1"]);
 });
 
-Deno.test("replace-widget swaps in the new widget by id", () => {
+Deno.test("edit-column keeps widgets sent to a missing column", () => {
   const l = applyAction(layout(column("a", [bookmarks])), {
-    is: "replace-widget",
-    columnId: "a",
-    widget: { ...bookmarks, subheading: "Renamed" },
+    is: "edit-column",
+    column: column("a"),
+    sent: [{ toColumnId: "gone", widget: bookmarks }],
   });
-  assertEquals(l.columns.at(0)?.widgets.at(0)?.subheading, "Renamed");
+  assertEquals(widgetIds(l, "a"), ["w1"]);
 });
 
-Deno.test("remove-widget removes the widget", () => {
-  const l = applyAction(layout(column("a", [bookmarks])), {
-    is: "remove-widget",
-    columnId: "a",
-    widgetId: "w1",
-  });
-  assertEquals(widgetIds(l, "a"), []);
-});
-
-Deno.test("move-widget reorders within a column", () => {
-  const l = applyAction(
-    layout(column("a", [newWidget("snippets", "x"), newWidget("form-grid", "y")])),
-    {
-      is: "move-widget",
-      columnId: "a",
-      widgetId: "x",
-      toColumnId: "a",
-      toIndex: 1,
-    },
-  );
-  assertEquals(widgetIds(l, "a"), ["y", "x"]);
-});
-
-Deno.test("move-widget moves between columns", () => {
-  const l = applyAction(
-    layout(column("a", [bookmarks]), column("b", [newWidget("snippets", "s")])),
-    {
-      is: "move-widget",
-      columnId: "a",
-      widgetId: "w1",
-      toColumnId: "b",
-      toIndex: 0,
-    },
-  );
-  assertEquals(widgetIds(l, "a"), []);
-  assertEquals(widgetIds(l, "b"), ["w1", "s"]);
-});
-
-Deno.test("move-widget is a no-op for unknown widgets or columns", () => {
-  const l = layout(column("a", [bookmarks]));
-  assertEquals(
-    applyAction(l, {
-      is: "move-widget",
-      columnId: "a",
-      widgetId: "nope",
-      toColumnId: "a",
-      toIndex: 0,
-    }),
-    l,
-  );
-  assertEquals(
-    applyAction(l, {
-      is: "move-widget",
-      columnId: "a",
-      widgetId: "w1",
-      toColumnId: "nope",
-      toIndex: 0,
-    }),
-    l,
-  );
+Deno.test("edit-column is a no-op for an unknown column", () => {
+  const l = layout(column("a"));
+  assertEquals(applyAction(l, { is: "edit-column", column: column("nope"), sent: [] }), l);
 });
 
 Deno.test("toggle-widget flips collapsed", () => {

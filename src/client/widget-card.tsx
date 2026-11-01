@@ -1,16 +1,11 @@
-import { Box, Button, chakra, Flex, HStack } from "@chakra-ui/react";
-import { LuChevronDown, LuChevronRight, LuPlus } from "react-icons/lu";
-import { newWidget, type Widget, widgetKinds } from "../common/model.ts";
-import { action, ActionMenu } from "./admin-menu.tsx";
+import { Box, chakra } from "@chakra-ui/react";
+import { LuChevronDown, LuChevronRight } from "react-icons/lu";
+import type { Widget } from "../common/model.ts";
+import { adminButton } from "./admin-button.ts";
 import { useBoard } from "./board-context.ts";
 import { BookmarksWidget } from "./bookmarks-widget.tsx";
 import { FormGridWidget } from "./form-grid-widget.tsx";
 import { SnippetsWidget } from "./snippets-widget.tsx";
-
-export type Neighbors = {
-  readonly prevColumnId: string | null;
-  readonly nextColumnId: string | null;
-};
 
 function WidgetBody(props: { columnId: string; widget: Widget }) {
   const { dispatch } = useBoard();
@@ -38,27 +33,36 @@ function WidgetBody(props: { columnId: string; widget: Widget }) {
   }
 }
 
-export function WidgetCard(props: {
-  columnId: string;
-  widget: Widget;
-  index: number;
-  count: number;
-  neighbors: Neighbors;
-}) {
+/**
+ * A widget in its column. In admin mode its contents go inert (links, inputs and
+ * toggles stop responding) and clicking anywhere on it opens the column content
+ * editor with it selected. Nothing is added or removed, so the layout is the same
+ * in both modes.
+ */
+export function WidgetCard(props: { columnId: string; widget: Widget }) {
   const { admin, dispatch, edit } = useBoard();
-  const { columnId, widget, index, neighbors } = props;
-  const move = (toColumnId: string, toIndex: number) =>
-    dispatch({ is: "move-widget", columnId, widgetId: widget.id, toColumnId, toIndex });
+  const { columnId, widget } = props;
+  const name = widget.subheading || "Untitled";
 
   return (
-    <Box>
-      <Flex align="center" gap="1" mb="1">
+    <Box
+      {...adminButton(admin, `Edit widget ${name}`)}
+      onClick={admin
+        ? (e) => {
+          // Don't also open the column itself.
+          e.stopPropagation();
+          edit({ columnId, widgetId: widget.id });
+        }
+        : undefined}
+    >
+      {/* Inert content can't be hit, so clicks on it land on the box above. */}
+      <Box inert={admin}>
         <chakra.button
           display="flex"
           alignItems="center"
           gap="1"
-          flex="1"
-          minW="0"
+          w="full"
+          mb="1"
           cursor="pointer"
           fontSize="md"
           fontWeight="semibold"
@@ -68,82 +72,10 @@ export function WidgetCard(props: {
           onClick={() => dispatch({ is: "toggle-widget", columnId, widgetId: widget.id })}
         >
           {widget.collapsed ? <LuChevronRight /> : <LuChevronDown />}
-          <chakra.span truncate>{widget.subheading || "Untitled"}</chakra.span>
+          <chakra.span truncate>{name}</chakra.span>
         </chakra.button>
-        {admin && (
-          <ActionMenu
-            label="Widget actions"
-            actions={[
-              action("edit", "Edit…", () => edit({ columnId, widget, insertAt: null })),
-              action("up", "Move up", () => move(columnId, index - 1), {
-                disabled: index === 0,
-              }),
-              action("down", "Move down", () => move(columnId, index + 1), {
-                disabled: index === props.count - 1,
-              }),
-              action(
-                "left",
-                "Move to previous column",
-                () => move(neighbors.prevColumnId ?? columnId, Infinity),
-                { disabled: neighbors.prevColumnId === null },
-              ),
-              action(
-                "right",
-                "Move to next column",
-                () => move(neighbors.nextColumnId ?? columnId, Infinity),
-                { disabled: neighbors.nextColumnId === null },
-              ),
-              action(
-                "delete",
-                "Delete",
-                () =>
-                  confirm(`Delete "${widget.subheading}"?`) &&
-                  dispatch({ is: "remove-widget", columnId, widgetId: widget.id }),
-                { danger: true },
-              ),
-            ]}
-          />
-        )}
-      </Flex>
-      {!widget.collapsed && <WidgetBody columnId={columnId} widget={widget} />}
+        {!widget.collapsed && <WidgetBody columnId={columnId} widget={widget} />}
+      </Box>
     </Box>
-  );
-}
-
-/** Menu for choosing a widget type to create at `index`. */
-export function AddWidget(props: {
-  columnId: string;
-  index: number;
-  compact: boolean;
-}) {
-  const { edit } = useBoard();
-  return (
-    <HStack justify={props.compact ? "center" : "start"}>
-      <ActionMenu
-        label="Add widget"
-        actions={widgetKinds.map((kind) =>
-          action(kind.is, kind.name, () =>
-            edit({
-              columnId: props.columnId,
-              widget: newWidget(kind.is, crypto.randomUUID()),
-              insertAt: props.index,
-            }))
-        )}
-        trigger={props.compact
-          ? (
-            // Colors are the column's own text color at reduced opacity, so they
-            // stay visible on light, dark, and tinted columns alike.
-            <Button size="2xs" variant="ghost" color="fg/55" width="full" h="4">
-              <LuPlus /> insert widget
-            </Button>
-          )
-          : (
-            // Negative margin lines the icon up with the widgets' left edge.
-            <Button size="sm" variant="ghost" color="fg/70" px="2" ms="-2">
-              <LuPlus /> Add widget
-            </Button>
-          )}
-      />
-    </HStack>
   );
 }

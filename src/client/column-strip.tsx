@@ -2,7 +2,15 @@ import { Box, Flex } from "@chakra-ui/react";
 import { type ReactNode, useState } from "react";
 import { type Background, type Column, newColumn } from "../common/model.ts";
 import { useBoard } from "./board-context.ts";
-import { carousel, columnsPerView, frameHeight, revealOffset, stripSlots } from "./carousel.ts";
+import { adminButtonStyles } from "./admin-button.ts";
+import {
+  carousel,
+  columnsPerView,
+  frameHeight,
+  revealOffset,
+  showNavigator,
+  stripSlots,
+} from "./carousel.ts";
 import { ColumnNavigator, navigatorHeight } from "./column-navigator.tsx";
 import { AddColumnSlot, ColumnView } from "./column-view.tsx";
 import { randomIcon } from "./icon-set.ts";
@@ -33,16 +41,18 @@ export function ColumnStrip(props: {
   // When columns are removed, the view slides left to stay full. Keep that as the
   // offset, so it doesn't slide back on its own when the slot count grows again.
   if (rawOffset !== view.offset) setOffset(view.offset);
-  const columnIdAt = (i: number) => props.columns.at(i)?.id ?? null;
+  const navigator = showNavigator(view, admin);
   // A column just added from the navigator, whose heading opens for editing.
   const [newColumnId, setNewColumnId] = useState<string | null>(null);
 
-  const addColumn = (at: "start" | "end") => {
+  /** Adds a column before the one at `index`, and slides it into view. */
+  const addColumn = (index: number) => {
     const column = newColumn(crypto.randomUUID(), randomIcon());
-    dispatch({ is: "add-column", index: at === "start" ? 0 : props.columns.length, column });
+    dispatch({ is: "add-column", index, column });
     setNewColumnId(column.id);
-    // At the end, the new column takes the add-column slot's place.
-    setOffset(at === "start" ? 0 : revealOffset(view.offset, slots.length - 1));
+    // The navigator only adds columns in admin mode, where every column has a
+    // slot, so the new column's slot index is its column index.
+    setOffset(revealOffset(view.offset, index));
   };
 
   // In admin mode the frame sits below the admin bar, half a gap from it.
@@ -59,6 +69,7 @@ export function ColumnStrip(props: {
       display="flow-root"
       bgColor={background.color}
       isolation="isolate"
+      css={adminButtonStyles}
     >
       {
         /* The tiled image, on its own layer (beneath everything) so its opacity
@@ -84,7 +95,7 @@ export function ColumnStrip(props: {
       <Box
         m={gap}
         mt={frameTop}
-        h={frameHeight({ top: frameTop, bottom: gap }, view.navigable ? [navigatorHeight] : [])}
+        h={frameHeight({ top: frameTop, bottom: gap }, navigator ? [navigatorHeight] : [])}
         transition={`margin-top ${surface.adminTransition}, height ${surface.adminTransition}`}
         _motionReduce={{ transition: "none" }}
       >
@@ -119,14 +130,8 @@ export function ColumnStrip(props: {
                 ? (
                   <ColumnView
                     column={slot.column}
-                    index={slot.index}
-                    count={props.columns.length}
                     editHeading={slot.column.id === newColumnId}
                     onHeadingEditEnd={() => setNewColumnId(null)}
-                    neighbors={{
-                      prevColumnId: slot.index === 0 ? null : columnIdAt(slot.index - 1),
-                      nextColumnId: columnIdAt(slot.index + 1),
-                    }}
                   />
                 )
                 : <AddColumnSlot index={slot.index} />}
@@ -134,9 +139,10 @@ export function ColumnStrip(props: {
           ))}
         </Flex>
       </Box>
-      {view.navigable && (
+      {navigator && (
         <ColumnNavigator
           slots={slots}
+          columnCount={props.columns.length}
           offset={view.offset}
           onSlide={setOffset}
           onAdd={addColumn}

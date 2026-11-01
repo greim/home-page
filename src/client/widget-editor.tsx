@@ -1,29 +1,19 @@
 import {
   Box,
   Button,
-  CloseButton,
-  Dialog,
   HStack,
   IconButton,
   Input,
   NativeSelect,
-  Portal,
   Stack,
   Text,
   Textarea,
 } from "@chakra-ui/react";
-import { useState } from "react";
 import { LuArrowDown, LuArrowUp, LuPlus, LuTrash2 } from "react-icons/lu";
 import { mapWhere, removeWhere } from "../common/arrays.ts";
-import type {
-  FormGridWidget,
-  GridColumns,
-  SnippetCopy,
-  SnippetsWidget,
-  Widget,
-} from "../common/model.ts";
+import type { FormGridWidget, GridColumns, SnippetCopy, SnippetsWidget } from "../common/model.ts";
 import { placeholder } from "../common/url-template.ts";
-import { type Draft, finishDraft, nudge, toDraft } from "./widget-draft.ts";
+import { type Draft, nudge } from "./widget-draft.ts";
 
 const newId = () => crypto.randomUUID();
 
@@ -47,7 +37,7 @@ function RowControls(props: {
   );
 }
 
-function Label(props: { children: string }) {
+export function Label(props: { children: string }) {
   return <Text fontSize="sm" fontWeight="medium" mb="1">{props.children}</Text>;
 }
 
@@ -220,62 +210,26 @@ Work
   }
 }
 
-export function WidgetEditor(props: {
-  widget: Widget;
-  onSave: (widget: Widget) => void;
-  onClose: () => void;
+/** Edits one widget's draft: its subheading and its kind-specific contents. */
+export function WidgetForm(props: {
+  draft: Draft;
+  onChange: (draft: Draft) => void;
+  error: string | null;
 }) {
-  const [draft, setDraft] = useState(() => toDraft(props.widget));
-  const [error, setError] = useState<string | null>(null);
-  const save = () => {
-    const finished = finishDraft(draft, newId);
-    setError(finished.ok ? null : finished.errorMessage);
-    if (finished.ok) {
-      props.onSave(finished.widget);
-    }
-  };
+  const { draft, onChange } = props;
   return (
-    <Dialog.Root
-      open
-      size="lg"
-      scrollBehavior="inside"
-      onOpenChange={(e) => !e.open && props.onClose()}
-    >
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>Edit widget</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              <Stack gap="4">
-                <Box>
-                  <Label>Subheading</Label>
-                  <Input
-                    size="sm"
-                    value={draft.widget.subheading}
-                    onChange={(e) =>
-                      setDraft({
-                        ...draft,
-                        widget: { ...draft.widget, subheading: e.target.value },
-                      })}
-                  />
-                </Box>
-                <DraftBody draft={draft} onChange={setDraft} />
-                {error !== null && <Text color="fg.error" fontSize="sm">{error}</Text>}
-              </Stack>
-            </Dialog.Body>
-            <Dialog.Footer>
-              <Button variant="outline" onClick={props.onClose}>Cancel</Button>
-              <Button onClick={save}>Save</Button>
-            </Dialog.Footer>
-            <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" />
-            </Dialog.CloseTrigger>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+    <Stack gap="4">
+      <Box>
+        <Label>Subheading</Label>
+        <Input
+          size="sm"
+          value={draft.widget.subheading}
+          onChange={(e) =>
+            onChange({ ...draft, widget: { ...draft.widget, subheading: e.target.value } })}
+        />
+      </Box>
+      <DraftBody draft={draft} onChange={onChange} />
+      {props.error !== null && <Text color="fg.error" fontSize="sm">{props.error}</Text>}
+    </Stack>
   );
 }

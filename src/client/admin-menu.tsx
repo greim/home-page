@@ -27,6 +27,8 @@ export function ActionMenu(props: {
   label: string;
   actions: ReadonlyArray<MenuAction>;
   trigger?: ReactNode;
+  /** False inside a dialog, which the menu must render within to appear above it. */
+  portalled: boolean;
 }) {
   return (
     <Menu.Root
@@ -39,7 +41,7 @@ export function ActionMenu(props: {
           </IconButton>
         )}
       </Menu.Trigger>
-      <Portal>
+      <Portal disabled={!props.portalled}>
         <Menu.Positioner>
           <Menu.Content>
             {props.actions.map((a) => (

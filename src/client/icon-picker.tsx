@@ -1,5 +1,5 @@
 import { chakra, Icon, Input, Popover, Portal, SimpleGrid, Text } from "@chakra-ui/react";
-import { useState } from "react";
+import { type ReactElement, useState } from "react";
 import { searchIcons } from "./column-icons.ts";
 import { allIcons, iconFor } from "./icon-set.ts";
 
@@ -14,14 +14,16 @@ export function NamedIcon(props: { name: string; boxSize: string }) {
 }
 
 /**
- * A button showing the current icon, which opens a searchable grid of every
- * available icon. Picking one closes the grid.
+ * Opens a searchable grid of every available icon when `children` (the trigger,
+ * a single element that accepts a ref and click handler) is clicked. Picking one
+ * closes the grid.
  */
 export function IconPicker(props: {
-  label: string;
+  /** False inside a dialog, which the grid must render within to appear above it. */
+  portalled: boolean;
   value: string;
-  boxSize: string;
   onChange: (name: string) => void;
+  children: ReactElement;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -39,20 +41,8 @@ export function IconPicker(props: {
       unmountOnExit
       initialFocusEl={() => document.getElementById("icon-picker-search")}
     >
-      <Popover.Trigger asChild>
-        <chakra.button
-          display="flex"
-          flexShrink="0"
-          rounded="md"
-          cursor="pointer"
-          _hover={{ color: "fg" }}
-          aria-label={props.label}
-          title={props.label}
-        >
-          <NamedIcon name={props.value} boxSize={props.boxSize} />
-        </chakra.button>
-      </Popover.Trigger>
-      <Portal>
+      <Popover.Trigger asChild>{props.children}</Popover.Trigger>
+      <Portal disabled={!props.portalled}>
         <Popover.Positioner>
           <Popover.Content width="sm">
             <Popover.Body p="3">

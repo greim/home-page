@@ -1,12 +1,10 @@
 import { createContext, useContext } from "react";
 import type { LayoutAction } from "../common/layout-ops.ts";
-import type { Widget } from "../common/model.ts";
 
-/** A request to open the widget editor. `insertAt` is set for new widgets. */
+/** A request to open the column content editor, optionally with a widget selected. */
 export type EditRequest = {
   readonly columnId: string;
-  readonly widget: Widget;
-  readonly insertAt: number | null;
+  readonly widgetId: string | null;
 };
 
 export type Board = {

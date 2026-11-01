@@ -13,7 +13,7 @@ import { ColumnStrip } from "./column-strip.tsx";
 import { initialEscapeState, onEscape } from "./double-escape.ts";
 import { HttpLive, run } from "./live.ts";
 import { makeSaveQueue } from "./save-queue.ts";
-import { WidgetEditor } from "./widget-editor.tsx";
+import { ColumnEditor } from "./column-editor.tsx";
 
 type LoadState =
   | { is: "loading" }
@@ -43,7 +43,11 @@ export function App() {
   const [state, setState] = useState<LoadState>({ is: "loading" });
   const [saveError, setSaveError] = useState<string | null>(null);
   const [editing, setEditing] = useState<EditRequest | null>(null);
-  const admin = useAdminMode(editing !== null);
+  // The column being edited, while it still exists (the assistant may remove it).
+  const editingColumn = state.is === "ready" && editing !== null
+    ? state.layout.columns.find((c) => c.id === editing.columnId)
+    : undefined;
+  const admin = useAdminMode(editingColumn !== undefined);
 
   useEffect(() => {
     run(loadLayout).then((result) =>
@@ -150,16 +154,14 @@ export function App() {
           onClose={() => setAssistantOpen(false)}
         />
       )}
-      {editing !== null && (
-        <WidgetEditor
-          widget={editing.widget}
+      {editing !== null && editingColumn !== undefined && (
+        <ColumnEditor
+          column={editingColumn}
+          columns={state.layout.columns}
+          widgetId={editing.widgetId}
           onClose={() => setEditing(null)}
-          onSave={(widget) => {
-            dispatch(
-              editing.insertAt === null
-                ? { is: "replace-widget", columnId: editing.columnId, widget }
-                : { is: "add-widget", columnId: editing.columnId, index: editing.insertAt, widget },
-            );
+          onSave={(action) => {
+            dispatch(action);
             setEditing(null);
           }}
         />

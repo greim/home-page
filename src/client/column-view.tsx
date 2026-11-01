@@ -1,28 +1,111 @@
-import { Badge, Box, Button, Editable, Flex, Heading, Input, Stack, Theme } from "@chakra-ui/react";
-import { Fragment, useState } from "react";
+import { Box, Button, chakra, Flex, Heading, Input, Stack, Theme } from "@chakra-ui/react";
+import { useRef, useState } from "react";
 import { LuPlus } from "react-icons/lu";
 import { type Column, newColumn } from "../common/model.ts";
-import { action, ActionMenu } from "./admin-menu.tsx";
+import { adminButton } from "./admin-button.ts";
 import { useBoard } from "./board-context.ts";
-import { ColorPicker } from "./color-picker.tsx";
+import { appearanceFor } from "./contrast.ts";
 import { IconPicker, NamedIcon } from "./icon-picker.tsx";
 import { randomIcon } from "./icon-set.ts";
-import { appearanceFor } from "./contrast.ts";
 import { columnCorners, columnHeading, surface } from "./surface.ts";
-import { AddWidget, type Neighbors, WidgetCard } from "./widget-card.tsx";
+import { WidgetCard } from "./widget-card.tsx";
+
+/**
+ * The column heading, which in admin mode turns into a text field when clicked:
+ * Enter (or clicking away) saves it, Escape cancels.
+ */
+function ColumnHeading(props: {
+  column: Column;
+  /** Start out editing (with the text selected), e.g. for a column just added. */
+  editing: boolean;
+  onEditEnd: () => void;
+}) {
+  const { admin, dispatch } = useBoard();
+  const { column } = props;
+  const [editing, setEditing] = useState(props.editing);
+  // Escape unmounts the field, which can blur it; that mustn't save.
+  const done = useRef(false);
+
+  const finish = (heading: string | null) => {
+    if (done.current) return;
+    done.current = true;
+    if (heading !== null && heading !== column.heading) {
+      dispatch({ is: "rename-column", columnId: column.id, heading });
+    }
+    setEditing(false);
+    props.onEditEnd();
+  };
+
+  return editing
+    ? (
+      <chakra.input
+        defaultValue={column.heading}
+        aria-label="Column heading"
+        autoFocus
+        flex="1"
+        minW="0"
+        h={columnHeading.lineHeight}
+        px="0"
+        fontFamily="heading"
+        fontWeight="semibold"
+        bg="transparent"
+        outline="none"
+        borderBottomWidth="2px"
+        borderColor="currentColor"
+        {...columnHeading}
+        onFocus={(e) => {
+          done.current = false;
+          e.currentTarget.select();
+        }}
+        onClick={(e) => e.stopPropagation()}
+        onBlur={(e) => finish(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") finish(e.currentTarget.value);
+          if (e.key === "Escape") {
+            // Not a step toward toggling admin mode.
+            e.stopPropagation();
+            finish(null);
+          }
+        }}
+      />
+    )
+    : (
+      <Heading
+        flex="1"
+        minW="0"
+        truncate
+        {...columnHeading}
+        {...adminButton(admin, `Edit heading: ${column.heading}`)}
+        onClick={admin
+          ? (e) => {
+            e.stopPropagation();
+            setEditing(true);
+          }
+          : undefined}
+      >
+        {column.heading}
+      </Heading>
+    );
+}
 
 function ColumnHeader(props: {
   column: Column;
-  index: number;
-  count: number;
-  /** Open the heading for editing (with its text selected) when it mounts. */
   editHeading: boolean;
   onHeadingEditEnd: () => void;
 }) {
   const { admin, dispatch } = useBoard();
-  const { column, index } = props;
-  const insert = (at: number) =>
-    dispatch({ is: "add-column", index: at, column: newColumn(crypto.randomUUID(), randomIcon()) });
+  const { column } = props;
+  // Shares the heading's adaptive color.
+  const icon = (
+    <Box
+      display="flex"
+      color={columnHeading.color}
+      {...adminButton(admin, "Change column icon")}
+      onClick={admin ? (e) => e.stopPropagation() : undefined}
+    >
+      <NamedIcon name={column.icon} boxSize={surface.columnIconSize} />
+    </Box>
+  );
 
   return (
     <Flex
@@ -36,106 +119,37 @@ function ColumnHeader(props: {
       pt={surface.columnPaddingTop}
       pb="2"
     >
-      {/* Shares the heading's adaptive color. */}
-      <Box display="flex" color={columnHeading.color}>
-        {admin
-          ? (
-            <IconPicker
-              label="Column icon"
-              value={column.icon}
-              boxSize={surface.columnIconSize}
-              onChange={(icon) => dispatch({ is: "set-column-icon", columnId: column.id, icon })}
-            />
-          )
-          : <NamedIcon name={column.icon} boxSize={surface.columnIconSize} />}
-      </Box>
       {admin
         ? (
-          <Editable.Root
-            key={column.heading}
-            defaultValue={column.heading}
-            size="sm"
-            flex="1"
-            minW="0"
-            fontWeight="bold"
-            defaultEdit={props.editHeading}
-            onEditChange={(e) => !e.edit && props.onHeadingEditEnd()}
-            onValueCommit={(e) =>
-              dispatch({ is: "rename-column", columnId: column.id, heading: e.value })}
+          <IconPicker
+            portalled
+            value={column.icon}
+            onChange={(icon) => dispatch({ is: "set-column-icon", columnId: column.id, icon })}
           >
-            <Editable.Preview width="full" {...columnHeading} />
-            <Editable.Input {...columnHeading} />
-          </Editable.Root>
+            {icon}
+          </IconPicker>
         )
-        : (
-          <Heading flex="1" minW="0" truncate {...columnHeading}>
-            {column.heading}
-          </Heading>
-        )}
-      {admin && column.hidden && <Badge>Hidden</Badge>}
-      {admin && (
-        <ColorPicker
-          label="Column color"
-          value={column.color}
-          onChange={(color) => dispatch({ is: "set-column-color", columnId: column.id, color })}
-        />
-      )}
-      {admin && (
-        <ActionMenu
-          label="Column actions"
-          actions={[
-            action("before", "Insert column before", () => insert(index)),
-            action("after", "Insert column after", () => insert(index + 1)),
-            action(
-              "left",
-              "Move left",
-              () => dispatch({ is: "move-column", columnId: column.id, toIndex: index - 1 }),
-              {
-                disabled: index === 0,
-              },
-            ),
-            action(
-              "right",
-              "Move right",
-              () => dispatch({ is: "move-column", columnId: column.id, toIndex: index + 1 }),
-              {
-                disabled: index === props.count - 1,
-              },
-            ),
-            action(
-              "visibility",
-              column.hidden ? "Show column" : "Hide column",
-              () =>
-                dispatch({
-                  is: "set-column-hidden",
-                  columnId: column.id,
-                  hidden: !column.hidden,
-                }),
-            ),
-            action(
-              "delete",
-              "Delete column",
-              () =>
-                confirm(`Delete "${column.heading}" and all its widgets?`) &&
-                dispatch({ is: "remove-column", columnId: column.id }),
-              { danger: true },
-            ),
-          ]}
-        />
-      )}
+        : icon}
+      <ColumnHeading
+        column={column}
+        editing={props.editHeading}
+        onEditEnd={props.onHeadingEditEnd}
+      />
     </Flex>
   );
 }
 
+/**
+ * A column of widgets. Admin mode adds no controls: the heading, icon, widgets
+ * and the background behind them become clickable instead (see admin-button.ts),
+ * so the column looks and lays out exactly the same in both modes.
+ */
 export function ColumnView(props: {
   column: Column;
-  index: number;
-  count: number;
-  neighbors: Neighbors;
   editHeading: boolean;
   onHeadingEditEnd: () => void;
 }) {
-  const { admin } = useBoard();
+  const { admin, edit } = useBoard();
   const { column } = props;
   return (
     // Theme switches Chakra's tokens to light or dark to suit the column's color.
@@ -148,30 +162,26 @@ export function ColumnView(props: {
       overflowY="auto"
       overflowX="hidden"
       opacity={column.hidden ? 0.5 : 1}
+      {...adminButton(admin, `Edit column ${column.heading}`)}
+      onClick={admin
+        ? (e) => {
+          // React bubbles clicks from portals (e.g. the icon picker) through here
+          // too; only clicks on the column itself count.
+          if (e.currentTarget.contains(e.target as Node)) {
+            edit({ columnId: column.id, widgetId: null });
+          }
+        }
+        : undefined}
     >
       <ColumnHeader
         column={column}
-        index={props.index}
-        count={props.count}
         editHeading={props.editHeading}
         onHeadingEditEnd={props.onHeadingEditEnd}
       />
       <Stack gap="4" px={surface.columnPaddingX} pb={surface.columnPaddingBottom}>
-        {column.widgets.map((widget, i) => (
-          <Fragment key={widget.id}>
-            {admin && <AddWidget columnId={column.id} index={i} compact />}
-            <WidgetCard
-              columnId={column.id}
-              widget={widget}
-              index={i}
-              count={column.widgets.length}
-              neighbors={props.neighbors}
-            />
-          </Fragment>
+        {column.widgets.map((widget) => (
+          <WidgetCard key={widget.id} columnId={column.id} widget={widget} />
         ))}
-        {(admin || column.widgets.length === 0) && (
-          <AddWidget columnId={column.id} index={column.widgets.length} compact={false} />
-        )}
       </Stack>
     </Theme>
   );

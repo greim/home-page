@@ -5,7 +5,11 @@ import {
   clampOffset,
   frameHeight,
   inView,
+  nearestGap,
   revealOffset,
+  showNavigator,
+  sideOf,
+  sideShift,
   stripSlots,
 } from "./carousel.ts";
 
@@ -34,14 +38,9 @@ Deno.test("stripSlots skips hidden columns outside admin mode", () => {
   assertEquals(describe(stripSlots(cols(2, [0]), false)), ["c1@1", "+@2"]);
 });
 
-Deno.test("stripSlots shows everything plus an add slot in admin mode", () => {
-  assertEquals(describe(stripSlots(cols(4, [1]), true)), [
-    "c0@0",
-    "c1@1",
-    "c2@2",
-    "c3@3",
-    "+@4",
-  ]);
+Deno.test("stripSlots shows hidden columns in admin mode", () => {
+  assertEquals(describe(stripSlots(cols(4, [1]), true)), ["c0@0", "c1@1", "c2@2", "c3@3"]);
+  assertEquals(describe(stripSlots(cols(2, [1]), true)), ["c0@0", "c1@1", "+@2"]);
 });
 
 Deno.test("clampOffset keeps the view within bounds", () => {
@@ -58,10 +57,32 @@ Deno.test("carousel is navigable only when slots overflow the view", () => {
   assertEquals(carousel(9, stripSlots(cols(6), false)), { offset: 2, navigable: true });
 });
 
-Deno.test("carousel keeps the add-column slot out of a view columns could fill", () => {
-  // Five columns plus the add slot, scrolled right; delete the last column.
-  assertEquals(carousel(1, stripSlots(cols(4), true)), { offset: 0, navigable: true });
+Deno.test("carousel keeps the view filled when columns are removed", () => {
+  // Scrolled right, then the last column is deleted.
+  assertEquals(carousel(1, stripSlots(cols(4), true)), { offset: 0, navigable: false });
   assertEquals(carousel(2, stripSlots(cols(5), true)), { offset: 1, navigable: true });
+  assertEquals(carousel(1, stripSlots(cols(3), true)), { offset: 0, navigable: false });
+});
+
+Deno.test("showNavigator shows it in admin mode or when slots overflow", () => {
+  const fits = { offset: 0, navigable: false };
+  const overflows = { offset: 0, navigable: true };
+  assertEquals(showNavigator(fits, false), false);
+  assertEquals(showNavigator(fits, true), true);
+  assertEquals(showNavigator(overflows, false), true);
+});
+
+Deno.test("sideOf and sideShift place thumbnails around the outline", () => {
+  assertEquals([0, 1, 4, 5].map((i) => sideOf(1, i)), ["left", "in", "in", "right"]);
+  assertEquals(["left", "in", "right"].map((s) => sideShift(s as "left")), [-1, 0, 1]);
+});
+
+Deno.test("nearestGap picks the closest drop target", () => {
+  const targets = [{ gap: 0, x: 10 }, { gap: 1, x: 50 }, { gap: 2, x: 90 }];
+  assertEquals(nearestGap(targets, -100), 0);
+  assertEquals(nearestGap(targets, 60), 1);
+  assertEquals(nearestGap(targets, 75), 2);
+  assertEquals(nearestGap([], 75), null);
 });
 
 Deno.test("inView covers the four slots from the offset", () => {
