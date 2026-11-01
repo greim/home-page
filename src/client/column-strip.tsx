@@ -1,9 +1,9 @@
-import { Box, Flex, IconButton } from "@chakra-ui/react";
+import { Box, Flex } from "@chakra-ui/react";
 import { useState } from "react";
-import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
-import type { Background, Column } from "../common/model.ts";
+import { type Background, type Column, newColumn } from "../common/model.ts";
 import { useBoard } from "./board-context.ts";
-import { carousel, columnsPerView, stripSlots } from "./carousel.ts";
+import { carousel, columnsPerView, revealOffset, stripSlots } from "./carousel.ts";
+import { ColumnNavigator, navigatorHeight } from "./column-navigator.tsx";
 import { AddColumnSlot, ColumnView } from "./column-view.tsx";
 import { columnCorners, surface } from "./surface.ts";
 
@@ -15,52 +15,39 @@ const slotWidth = `calc((100% - ${columnsPerView - 1} * ${gap}) / ${columnsPerVi
 /** Slides the strip so the column at `offset` sits at the left edge of the view. */
 const slideTo = (offset: number) => `translateX(calc(${-offset} * (${slotWidth} + ${gap})))`;
 
-const slideButtonSize = "24px";
-
-/** Floats in the gap beside the outermost visible columns, level with their headings. */
-function SlideButton(props: {
-  side: "left" | "right";
-  onClick: () => void;
-}) {
-  return (
-    <IconButton
-      aria-label={`Slide columns ${props.side}`}
-      position="absolute"
-      top={`calc(${gap} + 14px)`}
-      {...(props.side === "left"
-        ? { left: `calc((${gap} - ${slideButtonSize}) / 2)` }
-        : { right: `calc((${gap} - ${slideButtonSize}) / 2)` })}
-      zIndex="2"
-      size="2xs"
-      boxSize={slideButtonSize}
-      minW={slideButtonSize}
-      rounded="full"
-      variant="surface"
-      shadow="md"
-      onClick={props.onClick}
-    >
-      {props.side === "left" ? <LuChevronLeft /> : <LuChevronRight />}
-    </IconButton>
-  );
-}
-
 export function ColumnStrip(props: {
   background: Background;
   columns: ReadonlyArray<Column>;
 }) {
   const { background } = props;
-  const { admin } = useBoard();
+  const { admin, dispatch } = useBoard();
   const [rawOffset, setOffset] = useState(0);
   const slots = stripSlots(props.columns, admin);
-  const view = carousel(rawOffset, slots.length);
+  const view = carousel(rawOffset, slots);
+  // When columns are removed, the view slides left to stay full. Keep that as the
+  // offset, so it doesn't slide back on its own when the slot count grows again.
+  if (rawOffset !== view.offset) setOffset(view.offset);
   const columnIdAt = (i: number) => props.columns.at(i)?.id ?? null;
+  // A column just added from the navigator, whose heading opens for editing.
+  const [newColumnId, setNewColumnId] = useState<string | null>(null);
+
+  const addColumn = (at: "start" | "end") => {
+    const column = newColumn(crypto.randomUUID());
+    dispatch({ is: "add-column", index: at === "start" ? 0 : props.columns.length, column });
+    setNewColumnId(column.id);
+    // At the end, the new column takes the add-column slot's place.
+    setOffset(at === "start" ? 0 : revealOffset(view.offset, slots.length - 1));
+  };
 
   return (
     // The surface fills the viewport and clips columns slid out of view.
     <Box
       position="relative"
       h="100vh"
-      overflow="hidden"
+      // clip, not hidden: focusing an input in an off-view column mustn't scroll the surface.
+      overflow="clip"
+      // Unlike hidden, clip doesn't contain the frame's top margin; flow-root does.
+      display="flow-root"
       bgColor={background.color}
       isolation="isolate"
     >
@@ -79,15 +66,16 @@ export function ColumnStrip(props: {
           opacity={background.opacity}
         />
       )}
-      {view.canSlideLeft && <SlideButton side="left" onClick={() => setOffset(view.offset - 1)} />}
-      {view.canSlideRight && (
-        <SlideButton
-          side="right"
-          onClick={() => setOffset(view.offset + 1)}
-        />
-      )}
-      {/* Statically positioned frame, inset from the viewport by the gap on every side. */}
-      <Box m={gap} h={`calc(100% - 2 * ${gap})`}>
+      {
+        /* Statically positioned frame, inset from the viewport by the gap on every side,
+          and shortened to make room for the navigator when there is one. */
+      }
+      <Box
+        m={gap}
+        h={view.navigable
+          ? `calc(100% - 2 * ${gap} - ${navigatorHeight})`
+          : `calc(100% - 2 * ${gap})`}
+      >
         <Flex
           h="full"
           gap={gap}
@@ -121,6 +109,8 @@ export function ColumnStrip(props: {
                     column={slot.column}
                     index={slot.index}
                     count={props.columns.length}
+                    editHeading={slot.column.id === newColumnId}
+                    onHeadingEditEnd={() => setNewColumnId(null)}
                     neighbors={{
                       prevColumnId: slot.index === 0 ? null : columnIdAt(slot.index - 1),
                       nextColumnId: columnIdAt(slot.index + 1),
@@ -132,6 +122,14 @@ export function ColumnStrip(props: {
           ))}
         </Flex>
       </Box>
+      {view.navigable && (
+        <ColumnNavigator
+          slots={slots}
+          offset={view.offset}
+          onSlide={setOffset}
+          onAdd={addColumn}
+        />
+      )}
     </Box>
   );
 }

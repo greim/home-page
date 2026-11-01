@@ -3,13 +3,21 @@
  * reducer that applies one. Actions referencing unknown ids are no-ops.
  */
 import { insertAt, mapWhere, moveWhere, removeWhere } from "./arrays.ts";
-import type { Background, Column, Layout, Widget } from "./model.ts";
+import {
+  type Background,
+  type Column,
+  isUntouchedColumn,
+  type Layout,
+  type Widget,
+} from "./model.ts";
 
 export type LayoutAction =
   | { is: "set-background"; background: Background }
   | { is: "add-column"; index: number; column: Column }
   | { is: "rename-column"; columnId: string; heading: string }
   | { is: "remove-column"; columnId: string }
+  /** Removes those of the given columns that are still untouched (see isUntouchedColumn). */
+  | { is: "discard-untouched-columns"; columnIds: ReadonlyArray<string> }
   | { is: "move-column"; columnId: string; toIndex: number }
   | { is: "set-column-hidden"; columnId: string; hidden: boolean }
   | { is: "set-column-color"; columnId: string; color: string }
@@ -105,6 +113,13 @@ export const applyAction = (layout: Layout, action: LayoutAction): Layout => {
         ...column,
         heading: action.heading,
       }));
+    case "discard-untouched-columns":
+      return {
+        ...layout,
+        columns: layout.columns.filter((column) =>
+          !(action.columnIds.includes(column.id) && isUntouchedColumn(column))
+        ),
+      };
     case "remove-column":
       return {
         ...layout,

@@ -60,9 +60,8 @@ export function WidgetCard(props: {
           flex="1"
           minW="0"
           cursor="pointer"
-          fontSize="xs"
+          fontSize="md"
           fontWeight="semibold"
-          textTransform="uppercase"
           letterSpacing="wider"
           color="fg.muted"
           aria-expanded={!widget.collapsed}

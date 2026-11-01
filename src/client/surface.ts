@@ -19,6 +19,13 @@ export const surface = {
   columnPaddingBottom: "31px",
   /** Drop shadow each column casts onto the surface. */
   columnShadow: "0 14px 36px rgba(0, 0, 0, 0.6), 0 3px 8px rgba(0, 0, 0, 0.45)",
+  /** Size of each column thumbnail in the navigator (shown when columns overflow the view). */
+  thumbWidth: "96px",
+  thumbHeight: "56px",
+  /** Drop shadow each navigator thumbnail casts. */
+  thumbShadow: "0 6px 14px rgba(0, 0, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.4)",
+  /** Thickness of the white outline around the thumbnails of the columns in view. */
+  thumbOutlineWidth: "2px",
 } as const;
 
 /** Text style for column headings (also used while renaming one in admin mode). */
@@ -50,3 +57,10 @@ export const columnColorPresets: ReadonlyArray<string> = [
   "#2b2d33",
   "#1f2a3a",
 ];
+
+/**
+ * How far a widget heading's text sits from the widget's left edge: its 1em
+ * expand/collapse chevron (headings are 1rem) plus the 0.25rem gap after it.
+ * Widget content uses this to line its text up with the heading's.
+ */
+export const widgetTextIndent = "1.25rem";

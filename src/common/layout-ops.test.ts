@@ -225,3 +225,14 @@ Deno.test("toggle-folder ignores non-bookmark widgets", () => {
     l,
   );
 });
+
+Deno.test("discard-untouched-columns removes only listed columns left as created", () => {
+  const renamed = { ...column("renamed"), heading: "Work" };
+  const filled = column("filled", [newWidget("bookmarks", "w")]);
+  const start = layout(column("fresh"), renamed, filled, column("unlisted"));
+  const result = applyAction(start, {
+    is: "discard-untouched-columns",
+    columnIds: ["fresh", "renamed", "filled", "missing"],
+  });
+  assertEquals(ids(result), ["renamed", "filled", "unlisted"]);
+});

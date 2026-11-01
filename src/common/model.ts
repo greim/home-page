@@ -133,13 +133,19 @@ export type Layout = typeof Layout.Type;
 
 export const emptyLayout: Layout = { version: 1, background: defaultBackground, columns: [] };
 
+const newColumnHeading = "New Column";
+
 export const newColumn = (id: string): Column => ({
   id,
-  heading: "New Column",
+  heading: newColumnHeading,
   hidden: false,
   color: defaultColumnColor,
   widgets: [],
 });
+
+/** Still has the default heading and no widgets: nothing the user would miss. */
+export const isUntouchedColumn = (column: Column): boolean =>
+  column.heading === newColumnHeading && column.widgets.length === 0;
 
 export const widgetKinds: ReadonlyArray<
   { readonly is: WidgetKind; readonly name: string }

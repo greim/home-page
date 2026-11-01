@@ -24,20 +24,32 @@ export const stripSlots = (
   return needsPlaceholder ? [...shown, { is: "add-column", index: columns.length }] : shown;
 };
 
-export const clampOffset = (offset: number, slotCount: number): number =>
-  Math.max(0, Math.min(offset, slotCount - columnsPerView));
+/**
+ * Keeps the view within bounds, and filled with as many columns as possible: it
+ * stops at the last column, so the add-column slot after it only shows when
+ * there aren't enough columns to fill the view.
+ */
+export const clampOffset = (offset: number, columnCount: number): number =>
+  Math.max(0, Math.min(offset, columnCount - columnsPerView));
 
 export type Carousel = {
   readonly offset: number;
-  readonly canSlideLeft: boolean;
-  readonly canSlideRight: boolean;
+  /** More slots than fit in the view, so the column navigator is shown. */
+  readonly navigable: boolean;
 };
 
-export const carousel = (offset: number, slotCount: number): Carousel => {
-  const clamped = clampOffset(offset, slotCount);
-  return {
-    offset: clamped,
-    canSlideLeft: clamped > 0,
-    canSlideRight: clamped + columnsPerView < slotCount,
-  };
-};
+export const carousel = (offset: number, slots: ReadonlyArray<Slot>): Carousel => ({
+  offset: clampOffset(offset, slots.filter((slot) => slot.is === "column").length),
+  navigable: slots.length > columnsPerView,
+});
+
+/** Whether the slot at `index` is among those in view at `offset`. */
+export const inView = (offset: number, index: number): boolean =>
+  index >= offset && index < offset + columnsPerView;
+
+/**
+ * The offset that slides the slot at `index` just into view, on the side it was
+ * hidden past. A slot already in view leaves the offset unchanged.
+ */
+export const revealOffset = (offset: number, index: number): number =>
+  index < offset ? index : index >= offset + columnsPerView ? index - columnsPerView + 1 : offset;

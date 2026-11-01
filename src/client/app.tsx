@@ -72,11 +72,24 @@ export function App() {
     queue.save(state.layout);
   }, [state, queue]);
 
-  const dispatch = useCallback(
-    (action: LayoutAction) =>
-      setState((s) => s.is === "ready" ? { ...s, layout: applyAction(s.layout, action) } : s),
-    [],
-  );
+  // Columns added since admin mode was entered. Leaving admin mode discards
+  // any still untouched (default heading, no widgets).
+  const addedColumnIds = useRef<ReadonlyArray<string>>([]);
+
+  const dispatch = useCallback((action: LayoutAction) => {
+    if (action.is === "add-column") {
+      addedColumnIds.current = [...addedColumnIds.current, action.column.id];
+    }
+    setState((s) => s.is === "ready" ? { ...s, layout: applyAction(s.layout, action) } : s);
+  }, []);
+
+  useEffect(() => {
+    // Entering admin mode starts afresh, so columns added outside it are kept.
+    if (!admin && addedColumnIds.current.length > 0) {
+      dispatch({ is: "discard-untouched-columns", columnIds: addedColumnIds.current });
+    }
+    addedColumnIds.current = [];
+  }, [admin, dispatch]);
 
   const board: Board = useMemo(
     () => ({ admin, dispatch, edit: setEditing }),

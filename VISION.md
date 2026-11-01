@@ -15,10 +15,16 @@ Viewport space is occupied by columns. By default, no columns are defined, in wh
 is displayed to add the first column. Otherwise, each column occupies 25% of available viewport
 width, and stack horizontally from left to right. If columns don't fill available width, empty space
 is displayed, with an option to add another column. If more than 4 columns exist, only 4 are
-displayed at once, with floating icon buttons appearing at the top left and right to slide columns
-left and right, so columns animate into and out of view. Columns are internally vertically
-scrollable when their contents exceed available vertical space, but their headings remain sticky.
-Scrolling within one column doesn't affect other columns.
+displayed at once, and a column navigator appears along the bottom of the viewport (the columns
+shrink in height to make room). It shows a small thumbnail per column, in the column's color with
+its heading in very small text. The thumbnails of the four visible columns sit centered inside a
+white outline, with the rest extending to either side (and off screen, if there are many). Clicking
+a thumbnail outside the outline slides the columns just far enough to bring that column into view on
+that side, so columns animate into and out of view. When columns can be added (always in admin
+mode), dashed "+" boxes at each end of the navigator add a column at that end, slide it into view,
+and open its heading for editing. Columns are internally vertically scrollable when their contents
+exceed available vertical space, but their headings remain sticky. Scrolling within one column
+doesn't affect other columns.
 
 ### Column Internal Layout
 

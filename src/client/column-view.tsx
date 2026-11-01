@@ -13,6 +13,9 @@ function ColumnHeader(props: {
   column: Column;
   index: number;
   count: number;
+  /** Open the heading for editing (with its text selected) when it mounts. */
+  editHeading: boolean;
+  onHeadingEditEnd: () => void;
 }) {
   const { admin, dispatch } = useBoard();
   const { column, index } = props;
@@ -40,6 +43,8 @@ function ColumnHeader(props: {
             flex="1"
             minW="0"
             fontWeight="bold"
+            defaultEdit={props.editHeading}
+            onEditChange={(e) => !e.edit && props.onHeadingEditEnd()}
             onValueCommit={(e) =>
               dispatch({ is: "rename-column", columnId: column.id, heading: e.value })}
           >
@@ -112,6 +117,8 @@ export function ColumnView(props: {
   index: number;
   count: number;
   neighbors: Neighbors;
+  editHeading: boolean;
+  onHeadingEditEnd: () => void;
 }) {
   const { admin } = useBoard();
   const { column } = props;
@@ -127,7 +134,13 @@ export function ColumnView(props: {
       overflowX="hidden"
       opacity={column.hidden ? 0.5 : 1}
     >
-      <ColumnHeader column={column} index={props.index} count={props.count} />
+      <ColumnHeader
+        column={column}
+        index={props.index}
+        count={props.count}
+        editHeading={props.editHeading}
+        onHeadingEditEnd={props.onHeadingEditEnd}
+      />
       <Stack gap="4" px={surface.columnPaddingX} pb={surface.columnPaddingBottom}>
         {column.widgets.map((widget, i) => (
           <Fragment key={widget.id}>
@@ -141,7 +154,9 @@ export function ColumnView(props: {
             />
           </Fragment>
         ))}
-        <AddWidget columnId={column.id} index={column.widgets.length} compact={false} />
+        {(admin || column.widgets.length === 0) && (
+          <AddWidget columnId={column.id} index={column.widgets.length} compact={false} />
+        )}
       </Stack>
     </Theme>
   );
