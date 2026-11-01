@@ -1,6 +1,13 @@
 import { assertEquals } from "@std/assert";
 import { Either, Schema } from "effect";
-import { defaultBackground, emptyLayout, Layout, newWidget, widgetKinds } from "./model.ts";
+import {
+  defaultBackground,
+  defaultColumnIcon,
+  emptyLayout,
+  Layout,
+  newWidget,
+  widgetKinds,
+} from "./model.ts";
 
 const decode = Schema.decodeUnknownEither(Layout);
 
@@ -13,6 +20,7 @@ Deno.test("Layout decodes a well-formed layout", () => {
       heading: "Work",
       hidden: false,
       color: "#ffffff",
+      icon: "LuStar",
       widgets: widgetKinds.map((k) => newWidget(k.is, k.is)),
     }],
   };
@@ -66,6 +74,17 @@ Deno.test("Column color defaults to white for older layouts", () => {
   assertEquals(
     Either.map(decode(legacy), (l) => l.columns.at(0)?.color),
     Either.right("#ffffff"),
+  );
+});
+
+Deno.test("Column icon defaults for older layouts", () => {
+  const legacy = {
+    version: 1,
+    columns: [{ id: "c", heading: "", hidden: false, widgets: [] }],
+  };
+  assertEquals(
+    Either.map(decode(legacy), (l) => l.columns.at(0)?.icon),
+    Either.right(defaultColumnIcon),
   );
 });
 

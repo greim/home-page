@@ -21,6 +21,7 @@ export type LayoutAction =
   | { is: "move-column"; columnId: string; toIndex: number }
   | { is: "set-column-hidden"; columnId: string; hidden: boolean }
   | { is: "set-column-color"; columnId: string; color: string }
+  | { is: "set-column-icon"; columnId: string; icon: string }
   | { is: "add-widget"; columnId: string; index: number; widget: Widget }
   | { is: "replace-widget"; columnId: string; widget: Widget }
   | { is: "remove-widget"; columnId: string; widgetId: string }
@@ -143,6 +144,11 @@ export const applyAction = (layout: Layout, action: LayoutAction): Layout => {
       return updateColumn(layout, action.columnId, (column) => ({
         ...column,
         color: action.color,
+      }));
+    case "set-column-icon":
+      return updateColumn(layout, action.columnId, (column) => ({
+        ...column,
+        icon: action.icon,
       }));
     case "add-widget":
       return updateColumn(layout, action.columnId, (column) => ({

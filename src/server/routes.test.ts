@@ -47,7 +47,11 @@ const noIo = ServerIo.of({
 const run = (req: HttpRequest, io = noIo): Promise<HttpResponse> =>
   Effect.runPromise(handle(req, site).pipe(Effect.provideService(ServerIo, io)));
 
-const layout: Layout = { version: 1, background: defaultBackground, columns: [newColumn("c")] };
+const layout: Layout = {
+  version: 1,
+  background: defaultBackground,
+  columns: [newColumn("c", "LuStar")],
+};
 
 Deno.test("/ redirects to the app", async () => {
   const res = await run(request("GET", "/"));

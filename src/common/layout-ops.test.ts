@@ -12,7 +12,7 @@ import {
 } from "./model.ts";
 
 const column = (id: string, widgets: ReadonlyArray<Widget> = []): Column => ({
-  ...newColumn(id),
+  ...newColumn(id, "LuStar"),
   widgets,
 });
 
@@ -105,6 +105,15 @@ Deno.test("set-column-color changes only the target column", () => {
     color: "#112233",
   });
   assertEquals(l.columns.map((c) => c.color), ["#ffffff", "#112233"]);
+});
+
+Deno.test("set-column-icon changes only the target column", () => {
+  const l = applyAction(layout(column("a"), column("b")), {
+    is: "set-column-icon",
+    columnId: "a",
+    icon: "LuHouse",
+  });
+  assertEquals(l.columns.map((c) => c.icon), ["LuHouse", "LuStar"]);
 });
 
 Deno.test("add-widget inserts at an index", () => {

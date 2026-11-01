@@ -19,6 +19,8 @@ export const surface = {
   columnPaddingBottom: "31px",
   /** Drop shadow each column casts onto the surface. */
   columnShadow: "0 14px 36px rgba(0, 0, 0, 0.6), 0 3px 8px rgba(0, 0, 0, 0.45)",
+  /** Size of the icon left of each column heading. Any CSS length. */
+  columnIconSize: "1.75rem",
   /** Size of each column thumbnail in the navigator (shown when columns overflow the view). */
   thumbWidth: "96px",
   thumbHeight: "56px",

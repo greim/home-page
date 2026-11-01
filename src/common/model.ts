@@ -88,12 +88,20 @@ export const HexColor = Schema.String.pipe(Schema.pattern(/^#[0-9a-fA-F]{6}$/));
 
 export const defaultColumnColor = "#ffffff";
 
+/**
+ * Icon shown left of a column's heading, named by its react-icons export (e.g.
+ * "LuStar"). Kept as a plain string so this module stays free of UI code.
+ */
+export const defaultColumnIcon = "LuLayoutGrid";
+
 export const Column = Schema.Struct({
   id: Schema.String,
   heading: Schema.String,
   hidden: Schema.Boolean,
   /** Background color. Layouts saved before this field existed decode as white. */
   color: Schema.optionalWith(HexColor, { default: () => defaultColumnColor }),
+  /** Layouts saved before this field existed decode with the default icon. */
+  icon: Schema.optionalWith(Schema.String, { default: () => defaultColumnIcon }),
   widgets: Schema.Array(Widget),
 });
 export type Column = typeof Column.Type;
@@ -135,11 +143,12 @@ export const emptyLayout: Layout = { version: 1, background: defaultBackground, 
 
 const newColumnHeading = "New Column";
 
-export const newColumn = (id: string): Column => ({
+export const newColumn = (id: string, icon: string): Column => ({
   id,
   heading: newColumnHeading,
   hidden: false,
   color: defaultColumnColor,
+  icon,
   widgets: [],
 });
 

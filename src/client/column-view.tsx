@@ -1,10 +1,12 @@
-import { Badge, Button, Editable, Flex, Heading, Input, Stack, Theme } from "@chakra-ui/react";
+import { Badge, Box, Button, Editable, Flex, Heading, Input, Stack, Theme } from "@chakra-ui/react";
 import { Fragment, useState } from "react";
 import { LuPlus } from "react-icons/lu";
 import { type Column, newColumn } from "../common/model.ts";
 import { action, ActionMenu } from "./admin-menu.tsx";
 import { useBoard } from "./board-context.ts";
 import { ColorPicker } from "./color-picker.tsx";
+import { IconPicker, NamedIcon } from "./icon-picker.tsx";
+import { randomIcon } from "./icon-set.ts";
 import { appearanceFor } from "./contrast.ts";
 import { columnCorners, columnHeading, surface } from "./surface.ts";
 import { AddWidget, type Neighbors, WidgetCard } from "./widget-card.tsx";
@@ -20,7 +22,7 @@ function ColumnHeader(props: {
   const { admin, dispatch } = useBoard();
   const { column, index } = props;
   const insert = (at: number) =>
-    dispatch({ is: "add-column", index: at, column: newColumn(crypto.randomUUID()) });
+    dispatch({ is: "add-column", index: at, column: newColumn(crypto.randomUUID(), randomIcon()) });
 
   return (
     <Flex
@@ -34,6 +36,19 @@ function ColumnHeader(props: {
       pt={surface.columnPaddingTop}
       pb="2"
     >
+      {/* Shares the heading's adaptive color. */}
+      <Box display="flex" color={columnHeading.color}>
+        {admin
+          ? (
+            <IconPicker
+              label="Column icon"
+              value={column.icon}
+              boxSize={surface.columnIconSize}
+              onChange={(icon) => dispatch({ is: "set-column-icon", columnId: column.id, icon })}
+            />
+          )
+          : <NamedIcon name={column.icon} boxSize={surface.columnIconSize} />}
+      </Box>
       {admin
         ? (
           <Editable.Root
@@ -192,7 +207,10 @@ export function AddColumnSlot(props: { index: number }) {
               dispatch({
                 is: "add-column",
                 index: props.index,
-                column: { ...newColumn(crypto.randomUUID()), heading: heading || "New Column" },
+                column: {
+                  ...newColumn(crypto.randomUUID(), randomIcon()),
+                  heading: heading || "New Column",
+                },
               });
               setNaming(false);
             }}

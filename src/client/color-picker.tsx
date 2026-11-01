@@ -1,5 +1,5 @@
 import { chakra, HStack, Popover, Portal, SimpleGrid, Text } from "@chakra-ui/react";
-import { columnColorPresets } from "./surface.ts";
+import { columnColorPresets, columnHeading } from "./surface.ts";
 
 const swatch = {
   borderWidth: "1px",
@@ -22,6 +22,10 @@ export function ColorPicker(props: {
           boxSize="4"
           flexShrink="0"
           bg={props.value}
+          // Its fill often matches the column, so the ring carries visibility: it
+          // shares the heading's adaptive color to contrast with any column.
+          borderWidth="2px"
+          borderColor={columnHeading.color}
           aria-label={props.label}
           title={props.label}
         />

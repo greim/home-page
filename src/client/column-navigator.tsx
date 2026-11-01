@@ -179,7 +179,7 @@ export function ColumnNavigator(props: {
         bottom={`calc(-1 * ${outsideShift})`}
         borderWidth={thumbOutlineWidth}
         borderStyle="solid"
-        borderColor="white"
+        borderColor="rgba(255, 255, 255, 0.5)"
         {...columnCorners}
       />
     </Box>

@@ -3,7 +3,10 @@ import { type Column, newColumn } from "../common/model.ts";
 import { carousel, clampOffset, inView, revealOffset, stripSlots } from "./carousel.ts";
 
 const cols = (n: number, hidden: ReadonlyArray<number> = []): ReadonlyArray<Column> =>
-  Array.from({ length: n }, (_, i) => ({ ...newColumn(`c${i}`), hidden: hidden.includes(i) }));
+  Array.from(
+    { length: n },
+    (_, i) => ({ ...newColumn(`c${i}`, "LuStar"), hidden: hidden.includes(i) }),
+  );
 
 const describe = (slots: ReturnType<typeof stripSlots>) =>
   slots.map((s) => (s.is === "column" ? `${s.column.id}@${s.index}` : `+@${s.index}`));

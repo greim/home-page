@@ -5,6 +5,7 @@ import { useBoard } from "./board-context.ts";
 import { carousel, columnsPerView, revealOffset, stripSlots } from "./carousel.ts";
 import { ColumnNavigator, navigatorHeight } from "./column-navigator.tsx";
 import { AddColumnSlot, ColumnView } from "./column-view.tsx";
+import { randomIcon } from "./icon-set.ts";
 import { columnCorners, surface } from "./surface.ts";
 
 const { gap } = surface;
@@ -32,7 +33,7 @@ export function ColumnStrip(props: {
   const [newColumnId, setNewColumnId] = useState<string | null>(null);
 
   const addColumn = (at: "start" | "end") => {
-    const column = newColumn(crypto.randomUUID());
+    const column = newColumn(crypto.randomUUID(), randomIcon());
     dispatch({ is: "add-column", index: at === "start" ? 0 : props.columns.length, column });
     setNewColumnId(column.id);
     // At the end, the new column takes the add-column slot's place.
