@@ -34,6 +34,8 @@ export const surface = {
   adminTransition: "300ms ease",
   /** Width of the admin assistant's chat panel. */
   assistantPanelWidth: "400px",
+  /** Height of an assistant widget's chat, messages and input together. */
+  assistantWidgetHeight: "26rem",
 } as const;
 
 /** Text style for column headings (also used while renaming one in admin mode). */

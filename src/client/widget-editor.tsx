@@ -205,6 +205,13 @@ Work
       return <SnippetsEditor widget={widget} onChange={(w) => onChange({ ...draft, widget: w })} />;
     case "form-grid":
       return <FormGridEditor widget={widget} onChange={(w) => onChange({ ...draft, widget: w })} />;
+    case "assistant":
+      return (
+        <Text fontSize="sm" color="fg.muted">
+          A chat with the admin assistant, always on view. It's the same conversation as the
+          assistant in the admin bar.
+        </Text>
+      );
     default:
       return widget satisfies never;
   }

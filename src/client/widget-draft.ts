@@ -24,6 +24,7 @@ export const finishDraft = (draft: Draft, makeId: () => string): Finished => {
       return parsed.ok ? { ok: true, widget: { ...widget, items: parsed.items } } : parsed;
     }
     case "snippets":
+    case "assistant":
       return { ok: true, widget };
     case "form-grid": {
       const bad = widget.fields.find((f) => !f.urlTemplate.includes(placeholder));

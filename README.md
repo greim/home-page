@@ -54,7 +54,9 @@ back up or hand-edit while the server is stopped. Background images you upload o
   from disk, or fetched from a web URL, which the server downloads and saves locally. PNG, JPEG,
   GIF, WebP and AVIF are supported, up to 10 MB.
 - The admin bar's **Assistant** button opens a chat with Claude, which can make any admin-mode
-  change for you ("add a column of news bookmarks", "make the background darker"). See below.
+  change for you ("add a column of news bookmarks", "make the background darker"). See below. To
+  keep it on view, add an **Assistant** widget to a column: it's the same conversation, usable
+  outside admin mode. The conversation survives a reload until you start a new one.
 - Admin mode doesn't add anything to the columns, so they look exactly the same. Instead, things you
   can change become clickable: click a column's heading to rename it (Enter saves, Esc cancels), its
   icon to pick another, or a widget or the column's background to open the **column editor**.

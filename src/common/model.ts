@@ -75,10 +75,18 @@ export const FormGridWidget = Schema.Struct({
 });
 export type FormGridWidget = typeof FormGridWidget.Type;
 
+/** A chat with the admin assistant, pinned into a column. It has nothing to configure. */
+export const AssistantWidget = Schema.Struct({
+  is: Schema.Literal("assistant"),
+  ...widgetBase,
+});
+export type AssistantWidget = typeof AssistantWidget.Type;
+
 export const Widget = Schema.Union(
   BookmarksWidget,
   SnippetsWidget,
   FormGridWidget,
+  AssistantWidget,
 );
 export type Widget = typeof Widget.Type;
 export type WidgetKind = Widget["is"];
@@ -162,6 +170,7 @@ export const widgetKinds: ReadonlyArray<
   { is: "bookmarks", name: "Bookmarks" },
   { is: "snippets", name: "Copyable Snippets" },
   { is: "form-grid", name: "Form Grid" },
+  { is: "assistant", name: "Assistant" },
 ];
 
 export const newWidget = (is: WidgetKind, id: string): Widget => {
@@ -179,6 +188,8 @@ export const newWidget = (is: WidgetKind, id: string): Widget => {
         gridColumns: 1,
         fields: [],
       };
+    case "assistant":
+      return { is, id, subheading: "Assistant", collapsed: false };
     default:
       return is satisfies never;
   }

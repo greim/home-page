@@ -1,4 +1,5 @@
 /** The admin assistant's chat, as a pure reducer over what the user and server do. */
+import { Either, Schema } from "effect";
 import type { ChatEvent } from "../common/assistant.ts";
 
 export type ChatEntry =
@@ -77,4 +78,35 @@ export const chatReducer = (chat: Chat, action: ChatAction): Chat => {
     default:
       return action satisfies never;
   }
+};
+
+const SavedEntry = Schema.Union(
+  Schema.Struct({ is: Schema.Literal("user", "assistant", "summary"), text: Schema.String }),
+  Schema.Struct({ is: Schema.Literal("activity"), label: Schema.String }),
+  Schema.Struct({ is: Schema.Literal("applied") }),
+  Schema.Struct({ is: Schema.Literal("rejected", "error"), message: Schema.String }),
+);
+
+/** A chat as kept in browser storage, so the conversation survives a reload. */
+const SavedChat = Schema.parseJson(Schema.Struct({
+  sessionId: Schema.NullOr(Schema.String),
+  entries: Schema.Array(SavedEntry),
+  busy: Schema.Boolean,
+}));
+
+export const saveChat = (chat: Chat): string => JSON.stringify(chat);
+
+/**
+ * The chat saved by saveChat, or an empty one if nothing usable was saved. A
+ * turn that was in progress can't be picked up again, so it's marked as cut off.
+ */
+export const restoreChat = (saved: string | null): Chat => {
+  if (saved === null) return emptyChat;
+  const decoded = Schema.decodeUnknownEither(SavedChat)(saved);
+  if (Either.isLeft(decoded)) return emptyChat;
+  const { sessionId, entries, busy } = decoded.right;
+  const chat: Chat = { sessionId, entries, busy: false };
+  return busy
+    ? append(chat, { is: "error", message: "The page was reloaded before this reply finished." })
+    : chat;
 };

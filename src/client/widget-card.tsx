@@ -3,6 +3,7 @@ import { LuChevronDown, LuChevronRight } from "react-icons/lu";
 import type { Widget } from "../common/model.ts";
 import { adminButton } from "./admin-button.ts";
 import { useBoard } from "./board-context.ts";
+import { AssistantWidget } from "./assistant-panel.tsx";
 import { BookmarksWidget } from "./bookmarks-widget.tsx";
 import { FormGridWidget } from "./form-grid-widget.tsx";
 import { SnippetsWidget } from "./snippets-widget.tsx";
@@ -28,6 +29,8 @@ function WidgetBody(props: { columnId: string; widget: Widget }) {
       return <SnippetsWidget widget={widget} />;
     case "form-grid":
       return <FormGridWidget widget={widget} />;
+    case "assistant":
+      return <AssistantWidget />;
     default:
       return widget satisfies never;
   }

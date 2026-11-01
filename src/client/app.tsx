@@ -6,7 +6,7 @@ import type { Layout } from "../common/model.ts";
 import { LuSparkles } from "react-icons/lu";
 import { AdminBar, AdminBarButton } from "./admin-bar.tsx";
 import { Http, loadLayout, saveLayout } from "./api.ts";
-import { AssistantPanel, useAssistant } from "./assistant-panel.tsx";
+import { AssistantContext, AssistantPanel, useAssistant } from "./assistant-panel.tsx";
 import { BackgroundEditor } from "./background-editor.tsx";
 import { type Board, BoardContext, type EditRequest } from "./board-context.ts";
 import { ColumnStrip } from "./column-strip.tsx";
@@ -127,50 +127,52 @@ export function App() {
 
   return (
     <BoardContext.Provider value={board}>
-      <ColumnStrip
-        background={state.layout.background}
-        columns={state.layout.columns}
-        adminBar={
-          <AdminBar shown={admin} message="Admin mode · press Esc twice to exit">
-            <BackgroundEditor
-              background={state.layout.background}
-              onChange={(background) => dispatch({ is: "set-background", background })}
-            />
-            <AdminBarButton
-              aria-pressed={assistantOpen}
-              bg={assistantOpen ? "gray.100" : undefined}
-              onClick={() => setAssistantOpen((open) => !open)}
-            >
-              <LuSparkles /> Assistant
-            </AdminBarButton>
-          </AdminBar>
-        }
-      />
-      {admin && assistantOpen && (
-        <AssistantPanel
-          chat={assistant.chat}
-          onSend={assistant.send}
-          onReset={assistant.reset}
-          onClose={() => setAssistantOpen(false)}
-        />
-      )}
-      {editing !== null && editingColumn !== undefined && (
-        <ColumnEditor
-          column={editingColumn}
+      <AssistantContext.Provider value={assistant}>
+        <ColumnStrip
+          background={state.layout.background}
           columns={state.layout.columns}
-          widgetId={editing.widgetId}
-          onClose={() => setEditing(null)}
-          onSave={(action) => {
-            dispatch(action);
-            setEditing(null);
-          }}
+          adminBar={
+            <AdminBar shown={admin} message="Admin mode · press Esc twice to exit">
+              <BackgroundEditor
+                background={state.layout.background}
+                onChange={(background) => dispatch({ is: "set-background", background })}
+              />
+              <AdminBarButton
+                aria-pressed={assistantOpen}
+                bg={assistantOpen ? "gray.100" : undefined}
+                onClick={() => setAssistantOpen((open) => !open)}
+              >
+                <LuSparkles /> Assistant
+              </AdminBarButton>
+            </AdminBar>
+          }
         />
-      )}
-      {saveError !== null && (
-        <Box position="fixed" bottom="3" left="50%" transform="translateX(-50%)" zIndex="3">
-          <Badge colorPalette="red" size="lg" title={saveError}>Couldn't save changes</Badge>
-        </Box>
-      )}
+        {admin && assistantOpen && (
+          <AssistantPanel
+            chat={assistant.chat}
+            onSend={assistant.send}
+            onReset={assistant.reset}
+            onClose={() => setAssistantOpen(false)}
+          />
+        )}
+        {editing !== null && editingColumn !== undefined && (
+          <ColumnEditor
+            column={editingColumn}
+            columns={state.layout.columns}
+            widgetId={editing.widgetId}
+            onClose={() => setEditing(null)}
+            onSave={(action) => {
+              dispatch(action);
+              setEditing(null);
+            }}
+          />
+        )}
+        {saveError !== null && (
+          <Box position="fixed" bottom="3" left="50%" transform="translateX(-50%)" zIndex="3">
+            <Badge colorPalette="red" size="lg" title={saveError}>Couldn't save changes</Badge>
+          </Box>
+        )}
+      </AssistantContext.Provider>
     </BoardContext.Provider>
   );
 }

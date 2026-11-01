@@ -46,3 +46,8 @@ Deno.test("nudge moves items up and down, ignoring unknown ids", () => {
   assertEquals(nudge(items, "a", -1).map((x) => x.id), ["a", "b", "c"]);
   assertEquals(nudge(items, "z", 1), items);
 });
+
+Deno.test("assistant drafts finish as they are, with nothing to check", () => {
+  const widget = { ...newWidget("assistant", "w"), subheading: "Ask me" };
+  assertEquals(finishDraft(toDraft(widget), ids()), { ok: true, widget });
+});
