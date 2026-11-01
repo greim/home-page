@@ -1,6 +1,8 @@
-/** Imperative shell for the browser: real network and clipboard pipes. */
+/** Imperative shell for the browser: real network, clipboard and screenshot pipes. */
 import { Effect, Stream } from "effect";
+import { domToBlob } from "modern-screenshot";
 import { ApiError, Http } from "./api.ts";
+import { includeInScreenshot, screenshotScale } from "./screenshot.ts";
 
 export const HttpLive = Http.of({
   request: (method, path, body, contentType) =>
@@ -45,5 +47,25 @@ export const copyToClipboard = (text: string): Effect.Effect<void, string> =>
 export const readFileBytes = (file: File): Effect.Effect<Uint8Array<ArrayBuffer>, string> =>
   Effect.tryPromise({
     try: async () => new Uint8Array(await file.arrayBuffer()),
+    catch: String,
+  });
+
+/**
+ * A JPEG of how `element` looks, drawn from the DOM (no screen-capture permission
+ * needed). Elements marked with screenshotSkip are left out.
+ */
+export const captureScreenshot = (
+  element: HTMLElement,
+): Effect.Effect<Uint8Array<ArrayBuffer>, string> =>
+  Effect.tryPromise({
+    try: async () => {
+      const blob = await domToBlob(element, {
+        type: "image/jpeg",
+        quality: 0.85,
+        scale: screenshotScale(element.clientWidth),
+        filter: includeInScreenshot,
+      });
+      return new Uint8Array(await blob.arrayBuffer());
+    },
     catch: String,
   });

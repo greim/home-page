@@ -23,6 +23,7 @@ export type LayoutAction =
   | { is: "move-column"; columnId: string; toIndex: number }
   | { is: "set-column-hidden"; columnId: string; hidden: boolean }
   | { is: "set-column-icon"; columnId: string; icon: string }
+  | { is: "set-column-color"; columnId: string; color: string }
   /**
    * Saves the column content editor: swaps in the edited column (matched by id)
    * and appends each sent widget to its target column. A widget sent to a column
@@ -138,6 +139,11 @@ export const applyAction = (layout: Layout, action: LayoutAction): Layout => {
       return updateColumn(layout, action.columnId, (column) => ({
         ...column,
         icon: action.icon,
+      }));
+    case "set-column-color":
+      return updateColumn(layout, action.columnId, (column) => ({
+        ...column,
+        color: action.color,
       }));
     case "edit-column":
       return editColumn(layout, action);

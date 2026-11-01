@@ -40,7 +40,12 @@ const harness = (options: {
   liveAfter?: { run: number; text: string };
   overrides?: Partial<AssistantIo["Type"]>;
 }) => {
-  const files = { stored: options.stored, workspace: "", temp: "" };
+  const files = {
+    stored: options.stored,
+    workspace: "",
+    temp: "",
+    screenshot: null as Uint8Array | null,
+  };
   const calls: Array<{ prompt: string; sessionId: string | null }> = [];
   const workspaceWrites: Array<string> = [];
 
@@ -61,6 +66,8 @@ const harness = (options: {
         files.workspace = text;
         workspaceWrites.push(text);
       }),
+    writeWorkspaceScreenshot: (jpeg) => Effect.sync(() => void (files.screenshot = jpeg)),
+    removeWorkspaceScreenshot: Effect.sync(() => void (files.screenshot = null)),
     startAgent: (prompt, sessionId) =>
       Effect.suspend(() => {
         const run = options.runs.at(calls.length);
@@ -91,10 +98,14 @@ const harness = (options: {
       Effect.provideService(ServerIo, serverIo),
     );
 
-  const turn = async (message: string, sessionId: string | null = null) => {
+  const turn = async (
+    message: string,
+    sessionId: string | null = null,
+    screenshot: Uint8Array | null = null,
+  ) => {
     const events: Array<ChatEvent> = [];
     await Effect.runPromise(provide(
-      runTurn({ message, sessionId }, (e) => Effect.sync(() => void events.push(e))),
+      runTurn({ message, sessionId, screenshot }, (e) => Effect.sync(() => void events.push(e))),
     ));
     // Durations vary from run to run.
     return events.map((e) => e.is === "done" ? { ...e, durationMs: 0 } : e);
@@ -262,7 +273,10 @@ Deno.test("only one turn runs at a time", async () => {
   await Effect.runPromise(
     h.provide(
       h.assistantIo.turnLock.withPermits(1)(
-        runTurn({ message: "Hi", sessionId: null }, (e) => Effect.sync(() => void events.push(e))),
+        runTurn(
+          { message: "Hi", sessionId: null, screenshot: null },
+          (e) => Effect.sync(() => void events.push(e)),
+        ),
       ),
     ),
   );
@@ -284,7 +298,9 @@ Deno.test("POST /api/assistant streams the turn's events as NDJSON", async () =>
     runs: [{ lines: [init("s1"), say("Hi there"), result(0)], edit: null }],
   });
   const response = await Effect.runPromise(
-    h.provide(routeAssistant(post(JSON.stringify({ message: "Hi", sessionId: null })))),
+    h.provide(
+      routeAssistant(post(JSON.stringify({ message: "Hi", sessionId: null, screenshot: "AQID" }))),
+    ),
   );
   assertEquals(response.headers["content-type"], "application/x-ndjson; charset=utf-8");
   const body = response.body instanceof ReadableStream
@@ -296,10 +312,47 @@ Deno.test("POST /api/assistant streams the turn's events as NDJSON", async () =>
 
 Deno.test("POST /api/assistant rejects malformed requests", async () => {
   const h = harness({ stored: null, runs: [] });
-  for (const body of ["{", JSON.stringify({ message: "", sessionId: null })]) {
+  for (
+    const body of [
+      "{",
+      JSON.stringify({ message: "", sessionId: null, screenshot: null }),
+      JSON.stringify({ message: "Hi", sessionId: null }),
+      JSON.stringify({ message: "Hi", sessionId: null, screenshot: "not base64!" }),
+    ]
+  ) {
     const error = await Effect.runPromise(
       h.provide(routeAssistant(post(body))).pipe(Effect.flip),
     );
     assertEquals(error._tag, "BadRequest");
   }
+});
+
+Deno.test("a screenshot sent with the message is saved for the agent, and the prompt says so", async () => {
+  const h = harness({ stored: null, runs: [{ lines: [init("s1"), result(0)], edit: null }] });
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff]);
+  await h.turn("Make it cozier", null, jpeg);
+  assertEquals(h.files.screenshot, jpeg);
+  assertEquals(
+    h.calls.at(0)?.prompt,
+    "[app] screenshot.jpg shows the page as the user saw it just now.\n\nMake it cozier",
+  );
+});
+
+Deno.test("without a screenshot, the last one is removed and the prompt doesn't mention it", async () => {
+  const h = harness({ stored: null, runs: [{ lines: [init("s1"), result(0)], edit: null }] });
+  h.files.screenshot = new Uint8Array([1]);
+  await h.turn("Hi");
+  assertEquals(h.files.screenshot, null);
+  assertEquals(h.calls.at(0)?.prompt, "Hi");
+});
+
+Deno.test("failing to remove an old screenshot doesn't stop the turn", async () => {
+  const h = harness({
+    stored: null,
+    runs: [{ lines: [init("s1"), result(0)], edit: null }],
+    overrides: {
+      removeWorkspaceScreenshot: Effect.fail(new IoError({ cause: new Deno.errors.NotFound() })),
+    },
+  });
+  assertEquals(await h.turn("Hi"), [{ is: "session", sessionId: "s1" }, done(0)]);
 });

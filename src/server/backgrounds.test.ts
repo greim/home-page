@@ -44,6 +44,8 @@ const unused = Effect.die("unexpected I/O");
 const noAssistantIo = AssistantIo.of({
   readWorkspaceLayout: Effect.die("unexpected I/O"),
   writeWorkspaceLayout: () => Effect.die("unexpected I/O"),
+  writeWorkspaceScreenshot: () => Effect.die("unexpected I/O"),
+  removeWorkspaceScreenshot: Effect.die("unexpected I/O"),
   startAgent: () => Effect.die("unexpected I/O"),
   turnLock: Effect.runSync(Effect.makeSemaphore(1)),
 });

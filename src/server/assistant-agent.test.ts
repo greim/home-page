@@ -52,11 +52,26 @@ Deno.test("instructions point the agent at its references and at Unibrain", () =
   assertStringIncludes(text, settings.backgroundsDir);
   assertStringIncludes(text, "search Unibrain");
   assertStringIncludes(text, "unibrain_safe_execute");
+  assertStringIncludes(text, "screenshot.jpg");
+  assertStringIncludes(text, "skin");
+  assertStringIncludes(text, "fonts.google.com");
 });
 
 Deno.test("prompts tell the agent what the app did with its layout", () => {
-  assertEquals(userPrompt("Hi", false), "Hi");
-  assertEquals(userPrompt("Hi", true), "[app] layout.json was refreshed from the live page.\n\nHi");
+  assertEquals(userPrompt("Hi", { resumed: false, screenshot: false }), "Hi");
+  assertEquals(
+    userPrompt("Hi", { resumed: true, screenshot: false }),
+    "[app] layout.json was refreshed from the live page.\n\nHi",
+  );
+  assertEquals(
+    userPrompt("Hi", { resumed: false, screenshot: true }),
+    "[app] screenshot.jpg shows the page as the user saw it just now.\n\nHi",
+  );
+  assertEquals(
+    userPrompt("Hi", { resumed: true, screenshot: true }),
+    "[app] layout.json was refreshed from the live page.\n" +
+      "[app] screenshot.jpg shows the page as the user saw it just now.\n\nHi",
+  );
   assertStringIncludes(invalidLayoutPrompt("Expected string"), "Expected string");
   assertStringIncludes(invalidLayoutPrompt("x"), "NOT applied");
   assertStringIncludes(conflictPrompt, "NOT applied");

@@ -144,11 +144,18 @@ Deno.test("askAssistant posts the message and hands over each event as it arrive
   ]);
   const events: Array<ChatEvent> = [];
   const result = run(
-    askAssistant({ message: "Hello", sessionId: null }, (e) => events.push(e)),
+    askAssistant(
+      { message: "Hello", sessionId: null, screenshot: new Uint8Array([1, 2, 3]) },
+      (e) => events.push(e),
+    ),
     http,
   );
   assertEquals(result, Either.right(undefined));
-  assertEquals(sent, [["/api/assistant", { message: "Hello", sessionId: null }]]);
+  assertEquals(sent, [["/api/assistant", {
+    message: "Hello",
+    sessionId: null,
+    screenshot: "AQID",
+  }]]);
   assertEquals(events, [
     { is: "session", sessionId: "s1" },
     { is: "text", text: "Hi" },
@@ -159,10 +166,23 @@ Deno.test("askAssistant posts the message and hands over each event as it arrive
 Deno.test("askAssistant fails on error statuses and malformed events", () => {
   const rejected = streaming(400, ["Bad ", "request"]);
   assertEquals(
-    run(askAssistant({ message: "x", sessionId: null }, () => {}), rejected.http),
+    run(askAssistant({ message: "x", sessionId: null, screenshot: null }, () => {}), rejected.http),
     Either.left("Server responded 400: Bad request"),
   );
   const garbled = streaming(200, [`{"is":"nope"}\n`]);
-  const result = run(askAssistant({ message: "x", sessionId: null }, () => {}), garbled.http);
+  const result = run(
+    askAssistant({ message: "x", sessionId: null, screenshot: null }, () => {}),
+    garbled.http,
+  );
   assertEquals(Either.isLeft(result), true);
+});
+
+Deno.test("askAssistant refuses to send an empty message", () => {
+  const { sent, http } = streaming(200, []);
+  const result = run(
+    askAssistant({ message: "", sessionId: null, screenshot: null }, () => {}),
+    http,
+  );
+  assertEquals(Either.isLeft(result), true);
+  assertEquals(sent, []);
 });

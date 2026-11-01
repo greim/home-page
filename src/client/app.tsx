@@ -6,7 +6,7 @@ import type { Layout } from "../common/model.ts";
 import { LuSparkles } from "react-icons/lu";
 import { AdminBar, AdminBarButton } from "./admin-bar.tsx";
 import { Http, loadLayout, saveLayout } from "./api.ts";
-import { AssistantContext, AssistantPanel, useAssistant } from "./assistant-panel.tsx";
+import { AssistantContext, AssistantPanel, useAssistants } from "./assistant-panel.tsx";
 import { BackgroundEditor } from "./background-editor.tsx";
 import { type Board, BoardContext, type EditRequest } from "./board-context.ts";
 import { ColumnStrip } from "./column-strip.tsx";
@@ -14,6 +14,8 @@ import { initialEscapeState, onEscape } from "./double-escape.ts";
 import { HttpLive, run } from "./live.ts";
 import { makeSaveQueue } from "./save-queue.ts";
 import { ColumnEditor } from "./column-editor.tsx";
+import { googleFontsUrl } from "./fonts.ts";
+import { skinVars } from "./skin.ts";
 
 type LoadState =
   | { is: "loading" }
@@ -98,7 +100,8 @@ export function App() {
     addedColumnIds.current = [];
   }, [admin, dispatch]);
 
-  const assistant = useAssistant((layout) => dispatch({ is: "replace-layout", layout }));
+  const assistants = useAssistants((layout) => dispatch({ is: "replace-layout", layout }));
+  const assistant = assistants({ is: "panel" });
   const [assistantOpen, setAssistantOpen] = useState(false);
 
   const board: Board = useMemo(
@@ -106,6 +109,7 @@ export function App() {
     [admin, dispatch],
   );
 
+  const fontsUrl = state.is === "ready" ? googleFontsUrl(state.layout.skin) : null;
   switch (state.is) {
     case "loading":
       return (
@@ -127,34 +131,41 @@ export function App() {
 
   return (
     <BoardContext.Provider value={board}>
-      <AssistantContext.Provider value={assistant}>
-        <ColumnStrip
-          background={state.layout.background}
-          columns={state.layout.columns}
-          adminBar={
-            <AdminBar shown={admin} message="Admin mode · press Esc twice to exit">
-              <BackgroundEditor
-                background={state.layout.background}
-                onChange={(background) => dispatch({ is: "set-background", background })}
-              />
-              <AdminBarButton
-                aria-pressed={assistantOpen}
-                bg={assistantOpen ? "gray.100" : undefined}
-                onClick={() => setAssistantOpen((open) => !open)}
-              >
-                <LuSparkles /> Assistant
-              </AdminBarButton>
-            </AdminBar>
-          }
-        />
-        {admin && assistantOpen && (
-          <AssistantPanel
-            chat={assistant.chat}
-            onSend={assistant.send}
-            onReset={assistant.reset}
-            onClose={() => setAssistantOpen(false)}
+      <AssistantContext.Provider value={assistants}>
+        {/* The skin's CSS variables, for everything on the page (portals aside). */}
+        {
+          /* The skin's Google fonts. CORS mode lets screenshots read and embed them. */
+        }
+        {fontsUrl !== null && <link rel="stylesheet" href={fontsUrl} crossOrigin="anonymous" />}
+        <Box display="contents" css={skinVars(state.layout.skin)}>
+          <ColumnStrip
+            background={state.layout.background}
+            columns={state.layout.columns}
+            adminBar={
+              <AdminBar shown={admin} message="Admin mode · press Esc twice to exit">
+                <BackgroundEditor
+                  background={state.layout.background}
+                  onChange={(background) => dispatch({ is: "set-background", background })}
+                />
+                <AdminBarButton
+                  aria-pressed={assistantOpen}
+                  bg={assistantOpen ? "gray.100" : undefined}
+                  onClick={() => setAssistantOpen((open) => !open)}
+                >
+                  <LuSparkles /> Assistant
+                </AdminBarButton>
+              </AdminBar>
+            }
           />
-        )}
+          {admin && assistantOpen && (
+            <AssistantPanel
+              chat={assistant.chat}
+              onSend={assistant.send}
+              onReset={assistant.reset}
+              onClose={() => setAssistantOpen(false)}
+            />
+          )}
+        </Box>
         {editing !== null && editingColumn !== undefined && (
           <ColumnEditor
             column={editingColumn}

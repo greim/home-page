@@ -1,6 +1,6 @@
 /** Functional core of the client's server communication. */
 import { Context, Data, Effect, Either, Schema, Stream } from "effect";
-import { type AssistantRequest, ChatEvent } from "../common/assistant.ts";
+import { AssistantRequest, ChatEvent } from "../common/assistant.ts";
 import { BackgroundImageUrl, Layout } from "../common/model.ts";
 
 export class ApiError extends Data.TaggedError("ApiError")<{
@@ -129,7 +129,10 @@ export const askAssistant = (
 ): Effect.Effect<void, ApiError, Http> =>
   Effect.gen(function* () {
     const http = yield* Http;
-    const response = yield* http.stream("/api/assistant", JSON.stringify(request));
+    const body = yield* Schema.encode(AssistantRequest)(request).pipe(
+      Effect.mapError((e) => new ApiError({ message: e.message })),
+    );
+    const response = yield* http.stream("/api/assistant", JSON.stringify(body));
     if (response.status < 200 || response.status >= 300) {
       const text = yield* Stream.mkString(response.chunks);
       return yield* new ApiError({ message: `Server responded ${response.status}: ${text}` });

@@ -7,6 +7,7 @@ import { AssistantWidget } from "./assistant-panel.tsx";
 import { BookmarksWidget } from "./bookmarks-widget.tsx";
 import { FormGridWidget } from "./form-grid-widget.tsx";
 import { SnippetsWidget } from "./snippets-widget.tsx";
+import { widgetHeading } from "./surface.ts";
 
 function WidgetBody(props: { columnId: string; widget: Widget }) {
   const { dispatch } = useBoard();
@@ -30,7 +31,7 @@ function WidgetBody(props: { columnId: string; widget: Widget }) {
     case "form-grid":
       return <FormGridWidget widget={widget} />;
     case "assistant":
-      return <AssistantWidget />;
+      return <AssistantWidget widgetId={widget.id} />;
     default:
       return widget satisfies never;
   }
@@ -68,9 +69,9 @@ export function WidgetCard(props: { columnId: string; widget: Widget }) {
           mb="1"
           cursor="pointer"
           fontSize="md"
-          fontWeight="semibold"
+          fontFamily="heading"
           letterSpacing="wider"
-          color="fg.muted"
+          {...widgetHeading}
           aria-expanded={!widget.collapsed}
           onClick={() => dispatch({ is: "toggle-widget", columnId, widgetId: widget.id })}
         >

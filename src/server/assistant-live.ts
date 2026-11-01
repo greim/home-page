@@ -3,7 +3,12 @@
  * `claude` process behind the {@link AssistantIo} pipes.
  */
 import { Effect, Stream } from "effect";
-import { agentArgs, type AgentSettings, workspaceLayoutName } from "./assistant-agent.ts";
+import {
+  agentArgs,
+  type AgentSettings,
+  workspaceLayoutName,
+  workspaceScreenshotName,
+} from "./assistant-agent.ts";
 import { AssistantIo } from "./assistant.ts";
 import { IoError } from "./http.ts";
 
@@ -39,6 +44,7 @@ const writeAll = async (stdin: WritableStream<Uint8Array>, text: string) => {
 export const assistantIoLive = (settings: AgentSettings): Effect.Effect<AssistantIo["Type"]> =>
   Effect.map(Effect.makeSemaphore(1), (turnLock) => {
     const layoutFile = `${settings.workspaceDir}/${workspaceLayoutName}`;
+    const screenshotFile = `${settings.workspaceDir}/${workspaceScreenshotName}`;
     return AssistantIo.of({
       turnLock,
       readWorkspaceLayout: attempt(() => Deno.readTextFile(layoutFile)),
@@ -47,6 +53,9 @@ export const assistantIoLive = (settings: AgentSettings): Effect.Effect<Assistan
           await Deno.mkdir(settings.workspaceDir, { recursive: true });
           await Deno.writeTextFile(layoutFile, text);
         }),
+      // Written after the layout, which creates the workspace.
+      writeWorkspaceScreenshot: (jpeg) => attempt(() => Deno.writeFile(screenshotFile, jpeg)),
+      removeWorkspaceScreenshot: attempt(() => Deno.remove(screenshotFile)),
       startAgent: (prompt, sessionId) =>
         Effect.acquireRelease(
           spawn(settings.claudePath, agentArgs(settings, sessionId), settings.workspaceDir, prompt),

@@ -7,7 +7,13 @@ import { useBoard } from "./board-context.ts";
 import { appearanceFor } from "./contrast.ts";
 import { IconPicker, NamedIcon } from "./icon-picker.tsx";
 import { randomIcon } from "./icon-set.ts";
-import { columnCorners, columnHeading, surface } from "./surface.ts";
+import {
+  columnCorners,
+  columnHeading,
+  columnHeadingHeight,
+  hiddenScrollbar,
+  surface,
+} from "./surface.ts";
 import { WidgetCard } from "./widget-card.tsx";
 
 /**
@@ -44,10 +50,8 @@ function ColumnHeading(props: {
         autoFocus
         flex="1"
         minW="0"
-        h={columnHeading.lineHeight}
+        h={columnHeadingHeight}
         px="0"
-        fontFamily="heading"
-        fontWeight="semibold"
         bg="transparent"
         outline="none"
         borderBottomWidth="2px"
@@ -158,7 +162,7 @@ export function ColumnView(props: {
       hasBackground={false}
       bg={column.color}
       h="full"
-      css={columnCorners}
+      css={{ ...columnCorners, ...hiddenScrollbar }}
       overflowY="auto"
       overflowX="hidden"
       opacity={column.hidden ? 0.5 : 1}

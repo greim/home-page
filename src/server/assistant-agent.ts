@@ -20,6 +20,9 @@ export type AgentSettings = {
 /** The file in the workspace the agent edits; applied when its turn ends. */
 export const workspaceLayoutName = "layout.json";
 
+/** A screenshot of the page, taken as the user sent their message, for the agent to look at. */
+export const workspaceScreenshotName = "screenshot.jpg";
+
 /** Most times a turn re-prompts the agent after its layout is rejected. */
 export const maxRetries = 2;
 
@@ -28,7 +31,12 @@ export const instructions = (s: AgentSettings): string =>
 holding widgets (bookmarks, copyable snippets, search forms) over a background. The user chats
 with you from the page's admin mode. Your job is to configure the page on their behalf: anything
 they could do in admin mode, such as changing the background, adding, editing, moving, hiding or
-removing columns, and adding or editing widgets.
+removing columns, and adding or editing widgets. You can also restyle the page through the layout's
+skin: fonts, line height, spacing, corner rounding, column shadows and padding, and the weight and
+opacity of headings. Fonts can be ones installed on the user's computer or any font from
+fonts.google.com, by its exact name there (e.g. "Open Sans"); the page loads Google fonts itself.
+You can't browse Google Fonts, so only use names you're sure of: a wrong one silently shows the
+fallback font.
 
 How changes reach the page
 - ${workspaceLayoutName} in your working directory is a copy of the live layout, refreshed at the
@@ -37,6 +45,13 @@ How changes reach the page
   it's applied to the page immediately and the user sees it. If it's invalid, or the live layout
   changed while you worked, you get a message starting with "[app]" explaining why, and nothing was
   applied: fix the file and end your turn again. If no "[app]" message follows, it was applied.
+- Seeing the page: when the user's message starts with an "[app]" note saying so,
+  ${workspaceScreenshotName} in your working directory is a screenshot of the page as they saw it
+  when they sent it. Read it (with the Read tool) whenever how the page looks matters, such as
+  restyling it or when the user refers to something on screen. It's taken in whatever mode the user
+  was in (admin mode shows hidden columns faded, and the column navigator). It isn't retaken during
+  your turn, so you can't see the result of your own changes until the user's next message; ask
+  them to check it when it matters.
 - Read-only references: the app's source code is in ${s.sourceDir} (the layout's schema is
   defined there), and the user's saved background images are in ${s.backgroundsDir}.
 
@@ -101,11 +116,23 @@ export const agentArgs = (
   instructions(s),
 ];
 
-/** The prompt for a user's message. A resumed conversation is told its copy is fresh. */
-export const userPrompt = (message: string, resumed: boolean): string =>
-  resumed
-    ? `[app] ${workspaceLayoutName} was refreshed from the live page.\n\n${message}`
-    : message;
+/**
+ * The prompt for a user's message, after notes on what the app prepared: a
+ * resumed conversation is told its layout copy is fresh, and the agent is told
+ * when there's a screenshot to look at.
+ */
+export const userPrompt = (
+  message: string,
+  context: { readonly resumed: boolean; readonly screenshot: boolean },
+): string => {
+  const notes = [
+    ...(context.resumed ? [`[app] ${workspaceLayoutName} was refreshed from the live page.`] : []),
+    ...(context.screenshot
+      ? [`[app] ${workspaceScreenshotName} shows the page as the user saw it just now.`]
+      : []),
+  ];
+  return notes.length === 0 ? message : `${notes.join("\n")}\n\n${message}`;
+};
 
 export const invalidLayoutPrompt = (diagnostic: string): string =>
   `[app] ${workspaceLayoutName} was NOT applied: it failed validation.

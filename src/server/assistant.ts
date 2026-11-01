@@ -26,6 +26,8 @@ export class AssistantIo extends Context.Tag("AssistantIo")<
   {
     readonly readWorkspaceLayout: Effect.Effect<string, IoError>;
     readonly writeWorkspaceLayout: (text: string) => Effect.Effect<void, IoError>;
+    readonly writeWorkspaceScreenshot: (jpeg: Uint8Array) => Effect.Effect<void, IoError>;
+    readonly removeWorkspaceScreenshot: Effect.Effect<void, IoError>;
     /** Starts one turn of the agent; it's killed if still running when the scope closes. */
     readonly startAgent: (
       prompt: string,
@@ -146,8 +148,16 @@ const turn = (request: AssistantRequest, emit: Emit) =>
     const started = yield* Clock.currentTimeMillis;
     let snapshot = yield* readLayout;
     yield* io.writeWorkspaceLayout(layoutText(snapshot));
+    // Without a screenshot, an old one mustn't pass for this one. (The prompt says
+    // whether there's one, so failing to remove it is harmless.)
+    yield* request.screenshot === null
+      ? Effect.ignore(io.removeWorkspaceScreenshot)
+      : io.writeWorkspaceScreenshot(request.screenshot);
 
-    let prompt = userPrompt(request.message, request.sessionId !== null);
+    let prompt = userPrompt(request.message, {
+      resumed: request.sessionId !== null,
+      screenshot: request.screenshot !== null,
+    });
     let sessionId = request.sessionId;
     let costUsd: number | null = null;
     for (let attempt = 0;; attempt++) {

@@ -1,7 +1,13 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Effect } from "effect";
 import { AssistantIo } from "./assistant.ts";
-import { defaultBackground, emptyLayout, type Layout, newColumn } from "../common/model.ts";
+import {
+  defaultBackground,
+  defaultSkin,
+  emptyLayout,
+  type Layout,
+  newColumn,
+} from "../common/model.ts";
 import {
   contentTypeFor,
   type HttpRequest,
@@ -38,6 +44,8 @@ const unused = Effect.die("unexpected I/O");
 const noAssistantIo = AssistantIo.of({
   readWorkspaceLayout: Effect.die("unexpected I/O"),
   writeWorkspaceLayout: () => Effect.die("unexpected I/O"),
+  writeWorkspaceScreenshot: () => Effect.die("unexpected I/O"),
+  removeWorkspaceScreenshot: Effect.die("unexpected I/O"),
   startAgent: () => Effect.die("unexpected I/O"),
   turnLock: Effect.runSync(Effect.makeSemaphore(1)),
 });
@@ -63,6 +71,7 @@ const run = (req: HttpRequest, io = noIo): Promise<HttpResponse> =>
 const layout: Layout = {
   version: 1,
   background: defaultBackground,
+  skin: defaultSkin,
   columns: [newColumn("c", "LuStar")],
 };
 

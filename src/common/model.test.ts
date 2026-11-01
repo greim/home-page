@@ -3,9 +3,11 @@ import { Either, Schema } from "effect";
 import {
   defaultBackground,
   defaultColumnIcon,
+  defaultSkin,
   emptyLayout,
   Layout,
   newWidget,
+  type Skin,
   widgetKinds,
 } from "./model.ts";
 
@@ -15,6 +17,7 @@ Deno.test("Layout decodes a well-formed layout", () => {
   const layout: Layout = {
     version: 1,
     background: defaultBackground,
+    skin: defaultSkin,
     columns: [{
       id: "c",
       heading: "Work",
@@ -122,4 +125,109 @@ Deno.test("Background only accepts local image URLs and opacities from 0 to 1", 
   ) {
     assertEquals(Either.isLeft(withBackground(bad)), true, JSON.stringify(bad));
   }
+});
+
+Deno.test("Layout skin defaults for older layouts", () => {
+  assertEquals(
+    Either.map(decode({ version: 1, columns: [] }), (l) => l.skin),
+    Either.right(defaultSkin),
+  );
+});
+
+Deno.test("Skin fields default one by one, so a skin can list only what differs", () => {
+  assertEquals(
+    Either.map(
+      decode({
+        version: 1,
+        skin: { layoutSpacing: 2, headingFont: { is: "google", name: "Lora", fallback: "serif" } },
+        columns: [],
+      }),
+      (l) => l.skin,
+    ),
+    Either.right<Skin>({
+      ...defaultSkin,
+      layoutSpacing: 2,
+      headingFont: { is: "google", name: "Lora", fallback: "serif" },
+    }),
+  );
+});
+
+Deno.test("Skin rejects out-of-range values and fonts that could break out of CSS", () => {
+  const withSkin = (skin: unknown) => decode({ version: 1, skin, columns: [] });
+  const font = (name: unknown, fallback: unknown = "sans-serif") => ({
+    bodyFont: { is: "google", name, fallback },
+  });
+  assertEquals(Either.isRight(withSkin(font("M PLUS 1p"))), true);
+  for (
+    const bad of [
+      { textSpacing: 0.5 },
+      { layoutSpacing: -1 },
+      { cornerRounding: 7 },
+      { columnShadow: { blur: 1, distance: 1, opacity: 2 } },
+      { columnShadow: { blur: 1, distance: 1 } },
+      { columnShadow: { blur: 1, distance: 1, opacity: 0.5, angle: 270 } },
+      { columnHeadingWeight: 450.5 },
+      { widgetHeadingWeight: 1000 },
+      { widgetHeadingOpacity: -0.1 },
+      { bodyFont: "serif; color: red" },
+      { codeFont: "mono}" },
+      { headingFont: "" },
+      font(""),
+      font(`Open Sans", serif`),
+      font("Open Sans; color: red"),
+      font("Open Sans", "Arial"),
+      { bodyFont: { is: "system", fallback: "serif" } },
+      { bodyFont: { is: "adobe", name: "Minion", fallback: "serif" } },
+    ]
+  ) {
+    assertEquals(Either.isLeft(withSkin(bad)), true, JSON.stringify(bad));
+  }
+});
+
+Deno.test("Fonts saved as CSS font-family lists decode as system fonts", () => {
+  const bodyFont = (list: string) =>
+    Either.map(
+      decode({ version: 1, skin: { bodyFont: list }, columns: [] }),
+      (l) => l.skin.bodyFont,
+    );
+  assertEquals(
+    bodyFont("sans-serif"),
+    Either.right({ is: "system", name: null, fallback: "sans-serif" }),
+  );
+  assertEquals(
+    bodyFont(`"Helvetica Neue", Arial, sans-serif`),
+    Either.right({ is: "system", name: "Helvetica Neue", fallback: "sans-serif" }),
+  );
+  assertEquals(
+    bodyFont("Georgia, 'Times New Roman'"),
+    Either.right({ is: "system", name: "Georgia", fallback: "sans-serif" }),
+  );
+  assertEquals(
+    bodyFont("monospace, serif"),
+    Either.right({ is: "system", name: null, fallback: "monospace" }),
+  );
+});
+
+Deno.test("Fonts are saved as objects, even ones that were read from strings", () => {
+  const decoded = Schema.decodeUnknownSync(Layout)({
+    version: 1,
+    skin: { bodyFont: "serif" },
+    columns: [],
+  });
+  const encoded = Schema.encodeSync(Layout)(decoded);
+  assertEquals(encoded.skin?.bodyFont, { is: "system", name: null, fallback: "serif" });
+});
+
+Deno.test("Shadows saved before the light's angle existed get the default angle", () => {
+  assertEquals(
+    Either.map(
+      decode({
+        version: 1,
+        skin: { columnShadow: { blur: 1, distance: 2, opacity: 0.4 } },
+        columns: [],
+      }),
+      (l) => l.skin.columnShadow,
+    ),
+    Either.right({ blur: 1, distance: 2, opacity: 0.4, angle: 35 }),
+  );
 });

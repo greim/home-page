@@ -1,6 +1,6 @@
-import { Box, chakra, HStack, Theme } from "@chakra-ui/react";
+import { Box, chakra, HStack, Popover, Portal, Theme } from "@chakra-ui/react";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
-import { LuEye, LuEyeOff, LuMove, LuPlus, LuTrash2 } from "react-icons/lu";
+import { LuEye, LuEyeOff, LuMove, LuPalette, LuPlus, LuTrash2 } from "react-icons/lu";
 import { gapToIndex } from "../common/arrays.ts";
 import type { Column } from "../common/model.ts";
 import { useBoard } from "./board-context.ts";
@@ -15,31 +15,48 @@ import {
   sideShift,
   type Slot,
 } from "./carousel.ts";
+import { ColorPicker } from "./color-picker.tsx";
 import { appearanceFor } from "./contrast.ts";
-import { columnCorners, surface } from "./surface.ts";
+import { columnCorners, smallCorners, surface } from "./surface.ts";
 
 const { gap, thumbWidth, thumbHeight, thumbOutlineWidth } = surface;
 
-/** Space between neighboring thumbnails, and between the outline and the thumbnails beside it. */
-const thumbGap = `(${gap} / 2)`;
+/** Space between the outline and the thumbnails beside it. */
+const outlinePad = `(${gap} / 2)`;
 
-/** Width of the thumbnails for the columns in view, including the gaps between them. */
-const viewWidth = `(${columnsPerView} * ${thumbWidth} + ${columnsPerView - 1} * ${thumbGap})`;
+/** How far the outline's outer edge sits from the visible thumbnails on every side. */
+const outlineInset = `(${outlinePad} + ${thumbOutlineWidth})`;
 
-/**
- * How far thumbnails outside the outline are pushed away from it, so that where
- * the outline runs between two thumbnails, each keeps a thumbGap from its line.
- */
-const outsideShift = `(${thumbGap} + ${thumbOutlineWidth})`;
+/** Horizontal sizes along the row, which spreads out in admin mode to make room for markers. */
+type Spacing = {
+  /** Space between neighboring thumbnails. */
+  readonly thumbGap: string;
+  /** Width of the thumbnails for the columns in view, including the gaps between them. */
+  readonly viewWidth: string;
+  /**
+   * How far thumbnails outside the outline are pushed away from it, so that where
+   * the outline runs between two thumbnails, each keeps an outlinePad from its line.
+   */
+  readonly outsideShift: string;
+};
 
-/** Holds a thumbnail, nudged away from the outline when it's outside it. */
-function Place(props: { side: Side; children: ReactNode }) {
+const spacingFor = (admin: boolean): Spacing => {
+  const thumbGap = admin ? gap : `(${gap} / 2)`;
+  return {
+    thumbGap,
+    viewWidth: `(${columnsPerView} * ${thumbWidth} + ${columnsPerView - 1} * ${thumbGap})`,
+    outsideShift: `(2 * ${outlinePad} + ${thumbOutlineWidth} - ${thumbGap})`,
+  };
+};
+
+/** Holds a thumbnail, nudged `shift` away from the outline when it's outside it. */
+function Place(props: { side: Side; shift: string; children: ReactNode }) {
   return (
     <Box
       position="relative"
       display="flex"
       flex="none"
-      transform={`translateX(calc(${sideShift(props.side)} * ${outsideShift}))`}
+      transform={`translateX(calc(${sideShift(props.side)} * ${props.shift}))`}
       transition="transform 300ms ease"
     >
       {props.children}
@@ -50,10 +67,7 @@ function Place(props: { side: Side; children: ReactNode }) {
 /** Space the navigator takes below the columns: one gap above it plus its own height. */
 export const navigatorHeight = `(${gap} + ${thumbHeight})`;
 
-const thumbCorners = {
-  borderRadius: `calc(${gap} / 2)`,
-  cornerShape: surface.cornerShape,
-} as const;
+const thumbCorners = smallCorners;
 
 /** Color of a drop target nearest a dragged column. */
 const targetColor = "yellow.400";
@@ -63,7 +77,7 @@ const dropTarget = (gap: number) => ({ "data-drop-gap": gap });
 
 /** A drop target's symbol: "+" normally, or a dot while it's where a dragged column will go. */
 function TargetSymbol(props: { targeted: boolean }) {
-  return props.targeted ? <Box boxSize="6px" rounded="full" bg="currentColor" /> : <LuPlus />;
+  return props.targeted ? <Box boxSize="0.375rem" rounded="full" bg="currentColor" /> : <LuPlus />;
 }
 
 /** A dashed "+" box, like the add-column slot, that adds a column at one end. */
@@ -101,8 +115,8 @@ function AddThumbnail(props: {
 const discRadius = `(3 / 8 * ${gap})`;
 
 /**
- * A dashed line in the space before a thumbnail, topped by a "+" disc, that
- * inserts a column there. The disc's center sits on the outline's top edge.
+ * A dashed line in the space before a thumbnail, with a "+" disc at its middle,
+ * that inserts a column there. The line spans the thumbnails' height.
  * `space` is the width of the space it's centered in, which grows where the
  * outline runs through it.
  */
@@ -125,15 +139,17 @@ function InsertMarker(props: {
       left={`calc(-1 * ${props.space} / 2)`}
       transform="translateX(-50%)"
       transition="left 300ms ease"
-      top={`calc(-1 * ${outsideShift} + ${thumbOutlineWidth} / 2 - ${discRadius})`}
+      top="0"
       bottom="0"
       w={`calc(2 * ${discRadius})`}
       display="flex"
-      flexDirection="column"
-      alignItems="center"
+      justifyContent="center"
     >
+      <Box borderLeftWidth="2px" borderStyle="dashed" borderColor={color} />
       <Box
-        flex="none"
+        position="absolute"
+        top="50%"
+        transform="translateY(-50%)"
         boxSize={`calc(2 * ${discRadius})`}
         rounded="full"
         bg={color}
@@ -145,7 +161,6 @@ function InsertMarker(props: {
       >
         <TargetSymbol targeted={props.targeted} />
       </Box>
-      <Box flex="1" borderLeftWidth="2px" borderStyle="dashed" borderColor={color} />
     </chakra.button>
   );
 }
@@ -174,6 +189,38 @@ function ThumbIcon(props: ComponentProps<typeof chakra.button> & { label: string
   );
 }
 
+/**
+ * A thumbnail's palette icon, which opens the column color swatches just above
+ * the navigator. Picks apply at once, so the column itself is the preview.
+ */
+function ColorButton(props: { label: string; value: string; onChange: (color: string) => void }) {
+  return (
+    <Popover.Root positioning={{ placement: "top" }} lazyMount unmountOnExit>
+      <Popover.Trigger asChild>
+        <ThumbIcon label={`Change ${props.label} background color`}>
+          <LuPalette />
+        </ThumbIcon>
+      </Popover.Trigger>
+      <Portal>
+        <Popover.Positioner>
+          <Popover.Content width="auto">
+            <Popover.Arrow>
+              <Popover.ArrowTip />
+            </Popover.Arrow>
+            <Popover.Body p="3">
+              <ColorPicker
+                label={`${props.label} background color`}
+                value={props.value}
+                onChange={props.onChange}
+              />
+            </Popover.Body>
+          </Popover.Content>
+        </Popover.Positioner>
+      </Portal>
+    </Popover.Root>
+  );
+}
+
 function ColumnThumbnail(props: {
   column: Column;
   admin: boolean;
@@ -182,6 +229,7 @@ function ColumnThumbnail(props: {
   onClick: () => void;
   onDelete: () => void;
   onToggleHidden: () => void;
+  onColor: (color: string) => void;
 }) {
   const { column, visible, admin } = props;
   const label = column.heading;
@@ -244,6 +292,7 @@ function ColumnThumbnail(props: {
           >
             {column.hidden ? <LuEye /> : <LuEyeOff />}
           </ThumbIcon>
+          <ColorButton label={label} value={column.color} onChange={props.onColor} />
         </HStack>
       )}
     </Theme>
@@ -282,6 +331,7 @@ export function ColumnNavigator(props: {
 }) {
   const { admin, dispatch } = useBoard();
   const { offset, slots, columnCount } = props;
+  const { thumbGap, viewWidth, outsideShift } = spacingFor(admin);
   const [drag, setDrag] = useState<Drag | null>(null);
   const row = useRef<HTMLDivElement>(null);
   const targeted = (gap: number) => drag?.gap === gap;
@@ -318,11 +368,11 @@ export function ColumnNavigator(props: {
     <Box position="absolute" left="0" right="0" bottom={gap} h={thumbHeight}>
       <Box
         ref={row}
-        // Above the outline, so the insert markers' discs sit on top of its line.
+        // Above the outline, so the insert markers sit on top of its line.
         position="relative"
         zIndex="1"
         display="flex"
-        gap={`calc${thumbGap}`}
+        gap={`calc(${thumbGap})`}
         h="full"
         // The thumbnail at `offset` starts where the centered view begins.
         ml={`calc(50% - ${viewWidth} / 2${lead})`}
@@ -330,7 +380,7 @@ export function ColumnNavigator(props: {
         transition="transform 300ms ease"
       >
         {admin && (
-          <Place side="left">
+          <Place side="left" shift={outsideShift}>
             <AddThumbnail
               label="Add column at start"
               gap={0}
@@ -343,7 +393,11 @@ export function ColumnNavigator(props: {
           const side = sideOf(offset, i);
           const prev = i === 0 ? undefined : slots.at(i - 1);
           return (
-            <Place key={slot.is === "column" ? slot.column.id : "add-column"} side={side}>
+            <Place
+              key={slot.is === "column" ? slot.column.id : "add-column"}
+              side={side}
+              shift={outsideShift}
+            >
               {admin && slot.is === "column" && prev?.is === "column" && (
                 <InsertMarker
                   label={`Insert column before ${slot.column.heading}`}
@@ -373,6 +427,8 @@ export function ColumnNavigator(props: {
                         columnId: slot.column.id,
                         hidden: !slot.column.hidden,
                       })}
+                    onColor={(color) =>
+                      dispatch({ is: "set-column-color", columnId: slot.column.id, color })}
                   />
                 )
                 : (
@@ -387,7 +443,7 @@ export function ColumnNavigator(props: {
           );
         })}
         {admin && endsWithColumn && (
-          <Place side={sideOf(offset, slots.length)}>
+          <Place side={sideOf(offset, slots.length)} shift={outsideShift}>
             <AddThumbnail
               label="Add column at end"
               gap={columnCount}
@@ -397,14 +453,15 @@ export function ColumnNavigator(props: {
           </Place>
         )}
       </Box>
-      {/* The outline's line sits a thumbGap out from the visible thumbnails on every side. */}
+      {/* The outline's line sits an outlinePad out from the visible thumbnails on every side. */}
       <Box
         position="absolute"
         pointerEvents="none"
-        left={`calc(50% - ${viewWidth} / 2 - ${outsideShift})`}
-        width={`calc(${viewWidth} + 2 * ${outsideShift})`}
-        top={`calc(-1 * ${outsideShift})`}
-        bottom={`calc(-1 * ${outsideShift})`}
+        left={`calc(50% - ${viewWidth} / 2 - ${outlineInset})`}
+        width={`calc(${viewWidth} + 2 * ${outlineInset})`}
+        top={`calc(-1 * ${outlineInset})`}
+        bottom={`calc(-1 * ${outlineInset})`}
+        transition="left 300ms ease, width 300ms ease"
         borderWidth={thumbOutlineWidth}
         borderStyle="solid"
         borderColor="rgba(255, 255, 255, 0.5)"

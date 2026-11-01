@@ -1,8 +1,15 @@
 /** Browser entry point. */
-import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
+import { ChakraProvider, createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app.tsx";
+import { rootFontSize } from "./surface.ts";
+
+// Viewport-relative design: every rem (Chakra's included) scales with the window's width.
+const system = createSystem(
+  defaultConfig,
+  defineConfig({ globalCss: { html: { fontSize: rootFontSize } } }),
+);
 
 // Follow the OS light/dark setting (Chakra keys dark tokens off this class).
 const dark = matchMedia("(prefers-color-scheme: dark)");
@@ -17,7 +24,7 @@ if (root === null) {
 
 createRoot(root).render(
   <StrictMode>
-    <ChakraProvider value={defaultSystem}>
+    <ChakraProvider value={system}>
       <App />
     </ChakraProvider>
   </StrictMode>,

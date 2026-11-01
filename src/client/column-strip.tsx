@@ -14,7 +14,8 @@ import {
 import { ColumnNavigator, navigatorHeight } from "./column-navigator.tsx";
 import { AddColumnSlot, ColumnView } from "./column-view.tsx";
 import { randomIcon } from "./icon-set.ts";
-import { columnCorners, surface } from "./surface.ts";
+import { screenshotRootId } from "./screenshot.ts";
+import { columnCorners, skinTypography, surface } from "./surface.ts";
 
 const { gap } = surface;
 
@@ -61,6 +62,7 @@ export function ColumnStrip(props: {
   return (
     // The surface fills the viewport and clips columns slid out of view.
     <Box
+      id={screenshotRootId}
       position="relative"
       h="100vh"
       // clip, not hidden: focusing an input in an off-view column mustn't scroll the surface.
@@ -69,7 +71,7 @@ export function ColumnStrip(props: {
       display="flow-root"
       bgColor={background.color}
       isolation="isolate"
-      css={adminButtonStyles}
+      css={{ ...adminButtonStyles, ...skinTypography }}
     >
       {
         /* The tiled image, on its own layer (beneath everything) so its opacity

@@ -10,7 +10,7 @@ import {
   Textarea,
   Theme,
 } from "@chakra-ui/react";
-import { Either } from "effect";
+import { Effect, Either } from "effect";
 import {
   createContext,
   type ReactNode,
@@ -23,56 +23,127 @@ import {
 import { LuCheck, LuDot, LuSend, LuSquarePen, LuTriangleAlert, LuX } from "react-icons/lu";
 import type { Layout } from "../common/model.ts";
 import { askAssistant } from "./api.ts";
-import { type Chat, type ChatEntry, chatReducer, restoreChat, saveChat } from "./assistant-chat.ts";
-import { run } from "./live.ts";
-import { columnCorners, surface } from "./surface.ts";
+import {
+  type Chat,
+  type ChatAction,
+  type ChatEntry,
+  chatReducer,
+  restoreChat,
+  saveChat,
+} from "./assistant-chat.ts";
+import { captureScreenshot, run } from "./live.ts";
+import { screenshotRootId } from "./screenshot.ts";
+import { columnCorners, hiddenScrollbar, surface } from "./surface.ts";
 
 const { gap, adminBarHeight, assistantPanelWidth, assistantWidgetHeight } = surface;
 
-const storageKey = "home-page.assistant-chat";
+/** Where each conversation is kept in browser storage. */
+const storagePrefix = "home-page.assistant-chat";
 
-/** Reads the saved conversation; storage can be unavailable (e.g. private windows). */
-const loadChat = (): Chat => {
+/** Which conversation: the admin bar's panel, or the assistant widget with this id. */
+export type ChatHost = { is: "panel" } | { is: "widget"; widgetId: string };
+
+const storageKey = (host: ChatHost) =>
+  host.is === "panel" ? storagePrefix : `${storagePrefix}.widget.${host.widgetId}`;
+
+/** Reads a saved conversation; storage can be unavailable (e.g. private windows). */
+const loadChat = (key: string): Chat => {
   try {
-    return restoreChat(localStorage.getItem(storageKey));
+    return restoreChat(localStorage.getItem(key));
   } catch {
     return restoreChat(null);
   }
 };
 
-/** The assistant's conversation, kept while its panel is closed and across reloads. */
-export function useAssistant(onApplied: (layout: Layout) => void) {
-  const [chat, dispatch] = useReducer(chatReducer, undefined, loadChat);
-  useEffect(() => {
-    try {
-      if (chat.entries.length === 0) localStorage.removeItem(storageKey);
-      else localStorage.setItem(storageKey, saveChat(chat));
-    } catch {
-      // Not saved: the conversation still works, it just won't survive a reload.
+const storeChat = (key: string, chat: Chat) => {
+  try {
+    if (chat.entries.length === 0) localStorage.removeItem(key);
+    else localStorage.setItem(key, saveChat(chat));
+  } catch {
+    // Not saved: the conversation still works, it just won't survive a reload.
+  }
+};
+
+type Chats = Readonly<Record<string, Chat>>;
+
+const chatsReducer = (
+  chats: Chats,
+  action: { key: string; base: Chat; action: ChatAction },
+): Chats => ({
+  ...chats,
+  [action.key]: chatReducer(chats[action.key] ?? action.base, action.action),
+});
+
+/**
+ * The assistant's conversations, one per place it's hosted (the admin bar's
+ * panel and each assistant widget), kept here rather than in their hosts so a
+ * turn carries on while its panel is closed or its widget collapsed, and saved
+ * so they survive reloads.
+ */
+export function useAssistants(onApplied: (layout: Layout) => void) {
+  const [chats, dispatchChat] = useReducer(chatsReducer, {});
+  // Conversations read from storage but not yet touched, read once each.
+  const loaded = useRef(new Map<string, Chat>());
+  const chatAt = (key: string): Chat => {
+    const live = chats[key];
+    if (live !== undefined) return live;
+    let saved = loaded.current.get(key);
+    if (saved === undefined) {
+      saved = loadChat(key);
+      loaded.current.set(key, saved);
     }
-  }, [chat]);
+    return saved;
+  };
+  const stored = useRef<Chats>({});
+  useEffect(() => {
+    for (const [key, chat] of Object.entries(chats)) {
+      if (stored.current[key] !== chat) storeChat(key, chat);
+    }
+    stored.current = chats;
+  }, [chats]);
   const onAppliedRef = useRef(onApplied);
   onAppliedRef.current = onApplied;
 
-  const send = (message: string) => {
-    dispatch({ is: "send", text: message });
-    run(askAssistant({ message, sessionId: chat.sessionId }, (event) => {
-      dispatch({ is: "event", event });
-      if (event.is === "applied") onAppliedRef.current(event.layout);
-    })).then((result) =>
-      dispatch(
-        Either.isLeft(result) ? { is: "failed", message: result.left.message } : { is: "finished" },
-      )
+  /** The page as the user sees it, for the agent to look at; null if that fails. */
+  const screenshot = () => {
+    const surface = document.getElementById(screenshotRootId);
+    return Effect.runPromise(
+      surface === null ? Effect.succeed(null) : captureScreenshot(surface).pipe(
+        Effect.tapError((e) => Effect.sync(() => console.warn("Couldn't take a screenshot:", e))),
+        Effect.orElseSucceed(() => null),
+      ),
     );
   };
 
-  return { chat, send, reset: () => dispatch({ is: "reset" }) };
+  /** The conversation hosted at `host`. */
+  return (host: ChatHost) => {
+    const key = storageKey(host);
+    const chat = chatAt(key);
+    const dispatch = (action: ChatAction) => dispatchChat({ key, base: chat, action });
+    const send = (message: string) => {
+      dispatch({ is: "send", text: message });
+      screenshot().then((screenshot) =>
+        run(askAssistant({ message, sessionId: chat.sessionId, screenshot }, (event) => {
+          dispatch({ is: "event", event });
+          if (event.is === "applied") onAppliedRef.current(event.layout);
+        }))
+      ).then((result) =>
+        dispatch(
+          Either.isLeft(result)
+            ? { is: "failed", message: result.left.message }
+            : { is: "finished" },
+        )
+      );
+    };
+    return { chat, send, reset: () => dispatch({ is: "reset" }) };
+  };
 }
 
-export type Assistant = ReturnType<typeof useAssistant>;
+export type Assistants = ReturnType<typeof useAssistants>;
+export type Assistant = ReturnType<Assistants>;
 
-/** The one conversation, shared by the admin bar's panel and any assistant widgets. */
-export const AssistantContext = createContext<Assistant | null>(null);
+/** Every conversation, for the admin bar's panel and any assistant widgets to find their own. */
+export const AssistantContext = createContext<Assistants | null>(null);
 
 function Entry(props: { entry: ChatEntry }) {
   const { entry } = props;
@@ -117,14 +188,40 @@ function Entry(props: { entry: ChatEntry }) {
     case "error":
       return <Text fontSize="sm" color="fg.error" whiteSpace="pre-wrap">{entry.message}</Text>;
     case "summary":
-      return <Text fontSize="xs" color="fg.subtle" textAlign="right">{entry.text}</Text>;
+      return <Text fontSize="xs" color="fg/60" textAlign="right">{entry.text}</Text>;
     default:
       return entry satisfies never;
   }
 }
 
+/**
+ * A thin border in the column's own text color, made translucent, so it adapts
+ * to light and dark columns like the text does (Chakra's `border` is a fixed gray).
+ */
+const widgetBorder = { borderWidth: "1px", borderColor: "fg/20" } as const;
+
+/**
+ * The widget's chat history: a faint white wash, with text at 80% of its usual
+ * size. Entries size their text with Chakra's rem-based tokens, so a percentage
+ * font-size here wouldn't reach them; scaling the tokens' variables does.
+ */
+const widgetMessagesStyle = {
+  bg: "white/10",
+  padding: "1em 1.2em",
+  // The same radius Chakra's textarea recipe gives the prompt field below.
+  borderRadius: "l2",
+  boxShadow: surface.faintInsetShadow,
+  ...widgetBorder,
+} as const;
+
+/** Scales the rem-based `xs` and `sm` font sizes to 80% inside the widget's history. */
+const widgetFontScale = {
+  "--chakra-font-sizes-xs": "calc(0.75rem * 0.8)",
+  "--chakra-font-sizes-sm": "calc(0.875rem * 0.8)",
+} as const;
+
 /** The conversation so far, kept scrolled to its latest message. */
-function ChatMessages(props: { chat: Chat; px: string }) {
+function ChatMessages(props: { chat: Chat; px: string; compact?: boolean }) {
   const { chat } = props;
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -134,7 +231,17 @@ function ChatMessages(props: { chat: Chat; px: string }) {
   }, [chat.entries.length, chat.busy]);
 
   return (
-    <Stack ref={scroller} flex="1" minH="0" overflowY="auto" px={props.px} py="3" gap="2.5">
+    <Stack
+      ref={scroller}
+      flex="1"
+      minH="0"
+      overflowY="auto"
+      px={props.px}
+      py="3"
+      gap="2.5"
+      css={{ ...hiddenScrollbar, ...(props.compact ? widgetFontScale : {}) }}
+      {...(props.compact ? widgetMessagesStyle : {})}
+    >
       {chat.entries.length === 0 && (
         <Text fontSize="sm" color="fg.muted">
           Ask me to change your home page, e.g. “add a column of news bookmarks” or “make the
@@ -159,6 +266,8 @@ function ChatComposer(props: {
   autoFocus: boolean;
   inset: boolean;
   actions?: ReactNode;
+  /** Half-faded on a white field until focused, so it sits quietly in a column. */
+  fadeUntilFocused?: boolean;
 }) {
   const { chat } = props;
   const [draft, setDraft] = useState("");
@@ -174,9 +283,11 @@ function ChatComposer(props: {
     <chakra.form
       display="flex"
       gap="2"
-      {...(props.inset ? { p: "3" } : { pt: "3" })}
-      borderTopWidth="1px"
-      borderColor="border"
+      {
+        // Inset (the panel), a rule divides it from the messages; in the widget,
+        // the history's own background does that.
+        ...(props.inset ? { p: "3", borderTopWidth: "1px", borderColor: "border" } : { pt: "3" })
+      }
       onSubmit={(e) => {
         e.preventDefault();
         submit();
@@ -186,6 +297,24 @@ function ChatComposer(props: {
         size="sm"
         rows={2}
         resize="none"
+        {...(props.fadeUntilFocused
+          ? {
+            bg: "white",
+            // Black on the white field, whatever color the column's own text is.
+            color: "black",
+            _placeholder: { color: "gray.500" },
+            boxShadow: surface.faintInsetShadow,
+            // Twice as strong: the field's 50% opacity fades its border too, and
+            // this keeps it level with the chat history's while unfocused.
+            borderWidth: "1px",
+            borderColor: "fg/40",
+            // Keep the focus ring's border color, which the line above would override.
+            _focusVisible: { borderColor: "var(--focus-ring-color)" },
+            opacity: 0.5,
+            _focus: { opacity: 1 },
+            transition: "opacity 0.15s",
+          }
+          : {})}
         autoFocus={props.autoFocus}
         placeholder="Ask the assistant…"
         value={draft}
@@ -277,21 +406,23 @@ export function AssistantPanel(props: {
 }
 
 /**
- * The assistant pinned into a column: the same conversation as the panel,
- * sized to sit among the other widgets and colored to suit its column.
+ * The assistant pinned into a column: a conversation of its own, separate from
+ * the panel's, sized to sit among the other widgets and colored to suit its column.
  */
-export function AssistantWidget() {
-  const assistant = useContext(AssistantContext);
-  if (assistant === null) throw new Error("AssistantWidget must be used within AssistantContext");
+export function AssistantWidget(props: { widgetId: string }) {
+  const assistants = useContext(AssistantContext);
+  if (assistants === null) throw new Error("AssistantWidget must be used within AssistantContext");
+  const assistant = assistants({ is: "widget", widgetId: props.widgetId });
   const { chat } = assistant;
   return (
     <Flex direction="column" h={assistantWidgetHeight}>
-      <ChatMessages chat={chat} px="0" />
+      <ChatMessages chat={chat} px="0" compact />
       <ChatComposer
         chat={chat}
         onSend={assistant.send}
         autoFocus={false}
         inset={false}
+        fadeUntilFocused
         actions={<NewConversationButton chat={chat} onReset={assistant.reset} size="sm" />}
       />
     </Flex>

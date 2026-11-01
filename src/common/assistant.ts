@@ -10,6 +10,11 @@ export const AssistantRequest = Schema.Struct({
   message: Schema.String.pipe(Schema.minLength(1)),
   /** The agent's session to continue; null starts a new conversation. */
   sessionId: Schema.NullOr(Schema.String),
+  /**
+   * A JPEG of the page as the user saw it when they sent the message (base64 on
+   * the wire), so the agent can see what it's styling; null if it couldn't be taken.
+   */
+  screenshot: Schema.NullOr(Schema.Uint8ArrayFromBase64),
 });
 export type AssistantRequest = typeof AssistantRequest.Type;
 

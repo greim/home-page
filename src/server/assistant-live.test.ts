@@ -79,3 +79,25 @@ Deno.test("an agent still running when its scope closes is killed", async () => 
   assertEquals(Date.now() - started < 10_000, true);
   await Deno.remove(dir, { recursive: true });
 });
+
+Deno.test("the screenshot is written beside the layout copy, and removed", async () => {
+  const dir = await Deno.makeTempDir();
+  const settings = {
+    claudePath: `${dir}/claude`,
+    workspaceDir: `${dir}/workspace`,
+    sourceDir: dir,
+    backgroundsDir: dir,
+    unibrainUrl: "http://127.0.0.1:1/mcp",
+  };
+  const file = `${dir}/workspace/screenshot.jpg`;
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff]);
+  const io = await Effect.runPromise(assistantIoLive(settings));
+  await Effect.runPromise(io.writeWorkspaceLayout("{}\n"));
+  await Effect.runPromise(io.writeWorkspaceScreenshot(jpeg));
+  assertEquals(await Deno.readFile(file), jpeg);
+  await Effect.runPromise(io.removeWorkspaceScreenshot);
+  // Removing it again fails, as the core assumes, with the file's absence as the cause.
+  const again = await Effect.runPromise(Effect.flip(io.removeWorkspaceScreenshot));
+  assertEquals(again.cause instanceof Deno.errors.NotFound, true);
+  await Deno.remove(dir, { recursive: true });
+});

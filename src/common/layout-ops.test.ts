@@ -4,6 +4,7 @@ import {
   type BookmarksWidget,
   type Column,
   defaultBackground,
+  defaultSkin,
   emptyLayout,
   type Layout,
   newColumn,
@@ -19,6 +20,7 @@ const column = (id: string, widgets: ReadonlyArray<Widget> = []): Column => ({
 const layout = (...columns: ReadonlyArray<Column>): Layout => ({
   version: 1,
   background: defaultBackground,
+  skin: defaultSkin,
   columns,
 });
 
@@ -110,6 +112,15 @@ Deno.test("set-column-icon changes only the target column", () => {
     icon: "LuHouse",
   });
   assertEquals(l.columns.map((c) => c.icon), ["LuHouse", "LuStar"]);
+});
+
+Deno.test("set-column-color changes only the target column", () => {
+  const l = applyAction(layout(column("a"), column("b")), {
+    is: "set-column-color",
+    columnId: "b",
+    color: "#112233",
+  });
+  assertEquals(l.columns.map((c) => c.color), ["#ffffff", "#112233"]);
 });
 
 Deno.test("edit-column swaps in the edited column and appends sent widgets", () => {

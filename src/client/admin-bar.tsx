@@ -1,6 +1,7 @@
 import { Button, type ButtonProps, Flex, Text, Theme } from "@chakra-ui/react";
 import type { ReactNode } from "react";
-import { surface } from "./surface.ts";
+import { screenshotSkip } from "./screenshot.ts";
+import { smallCorners, surface } from "./surface.ts";
 
 const { gap, adminBarHeight } = surface;
 
@@ -14,6 +15,10 @@ export function AdminBar(props: { shown: boolean; children: ReactNode; message: 
   return (
     <Theme appearance="light" hasBackground={false}>
       <Flex
+        {
+          // The agent sees the page itself, not the controls for editing it.
+          ...{ [screenshotSkip]: "" }
+        }
         position="absolute"
         top="0"
         left="0"
@@ -31,8 +36,8 @@ export function AdminBar(props: { shown: boolean; children: ReactNode; message: 
         color="fg"
         align="stretch"
         overflow="hidden"
-        borderBottomRadius={`calc(${gap} / 2)`}
-        css={{ cornerShape: surface.cornerShape }}
+        borderBottomRadius={smallCorners.borderRadius}
+        css={{ cornerShape: smallCorners.cornerShape }}
       >
         <Text alignSelf="center" px="4" fontSize="sm" color="fg.muted">
           {props.message}
