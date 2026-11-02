@@ -27,6 +27,9 @@ export const faintInsetShadowOpacity = 0.3;
 /** How much smaller the faint inset shadow is than the column shadow: half the code boxes'. */
 export const faintInsetShadowScale = insetShadowScale / 2;
 
+/** How much lighter the assistant widget's chat history shadow is than the faint inset shadow. */
+export const chatInsetShadowOpacity = 0.5;
+
 /**
  * Code is set tighter than text: it keeps this share of text's spacing beyond
  * solid (a line height of 1). Text at 1.7 gives code 1.4; text at 1 gives 1.
@@ -70,6 +73,14 @@ export const skinVars = (skin: Skin): Record<`--skin-${string}`, string> => ({
   ),
   "--skin-faint-inset-shadow": shadowCss(
     { ...skin.columnShadow, opacity: skin.columnShadow.opacity * faintInsetShadowOpacity },
+    faintInsetShadowScale,
+    true,
+  ),
+  "--skin-chat-inset-shadow": shadowCss(
+    {
+      ...skin.columnShadow,
+      opacity: skin.columnShadow.opacity * faintInsetShadowOpacity * chatInsetShadowOpacity,
+    },
     faintInsetShadowScale,
     true,
   ),

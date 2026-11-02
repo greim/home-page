@@ -1,16 +1,19 @@
 import { Box, Flex } from "@chakra-ui/react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { type Background, type Column, newColumn } from "../common/model.ts";
-import { useBoard } from "./board-context.ts";
+import { adminModeKey, useBoard } from "./board-context.ts";
 import { adminButtonStyles } from "./admin-button.ts";
 import {
   carousel,
   columnsPerView,
   frameHeight,
+  leadingColumnId,
+  offsetOfColumn,
   revealOffset,
   showNavigator,
   stripSlots,
 } from "./carousel.ts";
+import { appearanceFor } from "./contrast.ts";
 import { ColumnNavigator, navigatorHeight } from "./column-navigator.tsx";
 import { AddColumnSlot, ColumnView } from "./column-view.tsx";
 import { randomIcon } from "./icon-set.ts";
@@ -21,6 +24,27 @@ const { gap } = surface;
 
 /** Width of one column: the view's width, minus the gaps between columns, split evenly. */
 const slotWidth = `calc((100% - ${columnsPerView - 1} * ${gap}) / ${columnsPerView})`;
+
+/** Where the column at the left edge of the view is remembered, so a reload keeps the view. */
+const leadingColumnKey = "home-page.leading-column";
+
+/** Storage can be unavailable (e.g. private windows); the view then starts at the beginning. */
+const loadLeadingColumn = (): string | null => {
+  try {
+    return localStorage.getItem(leadingColumnKey);
+  } catch {
+    return null;
+  }
+};
+
+const storeLeadingColumn = (columnId: string | null) => {
+  try {
+    if (columnId === null) localStorage.removeItem(leadingColumnKey);
+    else localStorage.setItem(leadingColumnKey, columnId);
+  } catch {
+    // Not saved: the view just won't survive a reload.
+  }
+};
 
 /** Slides the strip so the column at `offset` sits at the left edge of the view. */
 const slideTo = (offset: number) => `translateX(calc(${-offset} * (${slotWidth} + ${gap})))`;
@@ -36,9 +60,11 @@ export function ColumnStrip(props: {
 }) {
   const { background } = props;
   const { admin, dispatch } = useBoard();
-  const [rawOffset, setOffset] = useState(0);
   const slots = stripSlots(props.columns, admin);
+  const [rawOffset, setOffset] = useState(() => offsetOfColumn(loadLeadingColumn(), slots));
   const view = carousel(rawOffset, slots);
+  const leadingId = leadingColumnId(view.offset, slots);
+  useEffect(() => storeLeadingColumn(leadingId), [leadingId]);
   // When columns are removed, the view slides left to stay full. Keep that as the
   // offset, so it doesn't slide back on its own when the slot count grows again.
   if (rawOffset !== view.offset) setOffset(view.offset);
@@ -150,6 +176,25 @@ export function ColumnStrip(props: {
           onAdd={addColumn}
         />
       )}
+      {
+        /* How to toggle admin mode, in the bottom-left corner: black or white,
+          whichever contrasts with the background color, at half opacity. */
+      }
+      <Box
+        position="absolute"
+        left="1"
+        bottom="1"
+        px="1.5"
+        py="0.5"
+        fontSize="66%"
+        lineHeight="1"
+        color={appearanceFor(background.color) === "dark" ? "white" : "black"}
+        opacity={0.5}
+        pointerEvents="none"
+        userSelect="none"
+      >
+        Press {adminModeKey} to {admin ? "exit" : "enter"} admin mode
+      </Box>
     </Box>
   );
 }

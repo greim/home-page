@@ -145,7 +145,13 @@ export type Assistant = ReturnType<Assistants>;
 /** Every conversation, for the admin bar's panel and any assistant widgets to find their own. */
 export const AssistantContext = createContext<Assistants | null>(null);
 
-function Entry(props: { entry: ChatEntry }) {
+/**
+ * A user message in the widget: a darker wash than the history box it sits in,
+ * with the same corner radius.
+ */
+const widgetUserStyle = { bg: "black/20", rounded: "l2" } as const;
+
+function Entry(props: { entry: ChatEntry; compact: boolean }) {
   const { entry } = props;
   switch (entry.is) {
     case "user":
@@ -159,6 +165,7 @@ function Entry(props: { entry: ChatEntry }) {
           rounded="lg"
           fontSize="sm"
           whiteSpace="pre-wrap"
+          {...(props.compact ? widgetUserStyle : {})}
         >
           {entry.text}
         </Box>
@@ -201,23 +208,28 @@ function Entry(props: { entry: ChatEntry }) {
 const widgetBorder = { borderWidth: "1px", borderColor: "fg/20" } as const;
 
 /**
- * The widget's chat history: a faint white wash, with text at 80% of its usual
+ * The widget's chat history: a faint white wash, with text at 90% of its usual
  * size. Entries size their text with Chakra's rem-based tokens, so a percentage
  * font-size here wouldn't reach them; scaling the tokens' variables does.
  */
 const widgetMessagesStyle = {
-  bg: "white/10",
-  padding: "1em 1.2em",
+  bg: "white/20",
+  padding: "0.7em 0.9em",
   // The same radius Chakra's textarea recipe gives the prompt field below.
   borderRadius: "l2",
-  boxShadow: surface.faintInsetShadow,
+  boxShadow: surface.chatInsetShadow,
   ...widgetBorder,
 } as const;
 
-/** Scales the rem-based `xs` and `sm` font sizes to 80% inside the widget's history. */
+/**
+ * Scales the rem-based `xs` and `sm` font sizes to 90% inside the widget's history,
+ * and makes muted text the column's own text color at 80%: Chakra's `fg.muted` is a
+ * fixed gray, which looks washed out in a column.
+ */
 const widgetFontScale = {
-  "--chakra-font-sizes-xs": "calc(0.75rem * 0.8)",
-  "--chakra-font-sizes-sm": "calc(0.875rem * 0.8)",
+  "--chakra-font-sizes-xs": "calc(0.75rem * 0.9)",
+  "--chakra-font-sizes-sm": "calc(0.875rem * 0.9)",
+  "--chakra-colors-fg-muted": "color-mix(in srgb, var(--chakra-colors-fg) 80%, transparent)",
 } as const;
 
 /** The conversation so far, kept scrolled to its latest message. */
@@ -249,7 +261,9 @@ function ChatMessages(props: { chat: Chat; px: string; compact?: boolean }) {
           I remember what I learn.
         </Text>
       )}
-      {chat.entries.map((entry, i) => <Entry key={i} entry={entry} />)}
+      {chat.entries.map((entry, i) => (
+        <Entry key={i} entry={entry} compact={props.compact ?? false} />
+      ))}
       {chat.busy && (
         <HStack gap="2" fontSize="sm" color="fg.muted">
           <Spinner size="xs" /> Working…

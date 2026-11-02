@@ -5,7 +5,9 @@ import {
   clampOffset,
   frameHeight,
   inView,
+  leadingColumnId,
   nearestGap,
+  offsetOfColumn,
   revealOffset,
   showNavigator,
   sideOf,
@@ -113,4 +115,17 @@ Deno.test("frameHeight leaves room for the margins and anything else shown", () 
     frameHeight(margins, ["40px", "(8px + 5px)"]),
     "calc(100% - 4px - 8px - 40px - (8px + 5px))",
   );
+});
+
+Deno.test("leadingColumnId names the column at the view's left edge", () => {
+  assertEquals(leadingColumnId(2, stripSlots(cols(6), false)), "c2");
+  assertEquals(leadingColumnId(0, stripSlots(cols(0), false)), null);
+});
+
+Deno.test("offsetOfColumn finds a remembered column, or starts at the beginning", () => {
+  assertEquals(offsetOfColumn("c3", stripSlots(cols(6), false)), 3);
+  assertEquals(offsetOfColumn("c3", stripSlots(cols(6, [1]), false)), 2);
+  assertEquals(offsetOfColumn("c1", stripSlots(cols(6, [1]), false)), 0);
+  assertEquals(offsetOfColumn("gone", stripSlots(cols(6), false)), 0);
+  assertEquals(offsetOfColumn(null, stripSlots(cols(6), false)), 0);
 });

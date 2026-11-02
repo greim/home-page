@@ -1,6 +1,9 @@
 import { createContext, useContext } from "react";
 import type { LayoutAction } from "../common/layout-ops.ts";
 
+/** The key that toggles admin mode. F2 has no browser default (F1 opens help in some). */
+export const adminModeKey = "F2";
+
 /** A request to open the column content editor, optionally with a widget selected. */
 export type EditRequest = {
   readonly columnId: string;

@@ -44,6 +44,19 @@ export const carousel = (offset: number, slots: ReadonlyArray<Slot>): Carousel =
   navigable: slots.length > columnsPerView,
 });
 
+/** The id of the column at the left edge of the view, to remember across reloads. */
+export const leadingColumnId = (offset: number, slots: ReadonlyArray<Slot>): string | null => {
+  const slot = slots[offset];
+  return slot?.is === "column" ? slot.column.id : null;
+};
+
+/**
+ * The offset that puts the column with id `columnId` at the left edge of the
+ * view (before clamping), or 0 if it isn't shown (removed, or hidden).
+ */
+export const offsetOfColumn = (columnId: string | null, slots: ReadonlyArray<Slot>): number =>
+  Math.max(0, slots.findIndex((slot) => slot.is === "column" && slot.column.id === columnId));
+
 /** Whether the navigator is shown: always in admin mode, otherwise when it's needed. */
 export const showNavigator = (view: Carousel, admin: boolean): boolean => admin || view.navigable;
 

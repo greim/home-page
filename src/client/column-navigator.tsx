@@ -466,6 +466,8 @@ export function ColumnNavigator(props: {
         borderStyle="solid"
         borderColor="rgba(255, 255, 255, 0.5)"
         {...columnCorners}
+        // 10% less rounded than a column.
+        borderRadius={`calc(${surface.cornerRadius} * 0.9)`}
       />
     </Box>
   );

@@ -39,6 +39,8 @@ export const surface = {
   thumbShadow: "var(--skin-thumb-shadow)",
   /** The code boxes' inset shadow, fainter, for subtle wells (the assistant widget). */
   faintInsetShadow: "var(--skin-faint-inset-shadow)",
+  /** The faint inset shadow at half its opacity, for the assistant widget's chat history. */
+  chatInsetShadow: "var(--skin-chat-inset-shadow)",
   /** Thickness of the white outline around the thumbnails of the columns in view. */
   thumbOutlineWidth: "2px",
   /** Height of the admin bar along the top of the viewport in admin mode. */

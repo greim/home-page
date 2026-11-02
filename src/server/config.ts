@@ -5,7 +5,11 @@ const path = (relative: string): string => new URL(relative, root).pathname;
 
 const hostname = "127.0.0.1";
 const home = Deno.env.get("HOME") ?? "";
-const port = 8443;
+/** `PORT` lets a dev server run beside the installed service, which uses the default. */
+const port = Number(Deno.env.get("PORT") ?? 8443);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error(`PORT must be a port number, got ${Deno.env.get("PORT")}`);
+}
 
 export const config = {
   repoRoot: path("."),

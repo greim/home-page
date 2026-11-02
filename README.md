@@ -43,8 +43,8 @@ back up or hand-edit while the server is stopped. Background images you upload o
 
 ## Using it
 
-- Press **Esc twice** quickly to toggle admin mode, where columns and widgets can be added, edited,
-  moved, hidden, and deleted.
+- Press **F2** to toggle admin mode, where columns and widgets can be added, edited, moved, hidden,
+  and deleted.
 - Bookmarks are edited as an outline: `Label | URL` per line; a line without a URL is a folder, and
   indented lines below it are its links.
 - Form grid URL templates use `{query}` as the placeholder.
@@ -93,7 +93,8 @@ served as-is under `/web/assets/`, and image files there appear as built-in back
 ## Development
 
 ```sh
-deno task dev     # run with auto-restart on changes to src/ or tooling/ (stop the service first)
+deno task dev     # run with auto-restart on changes to src/ or tooling/ (stop the service first,
+                  # or run beside it on another port: PORT=8444 deno task dev)
 deno task build   # type-check, format check, lint, test with 90% coverage threshold
 deno task fmt     # auto-format
 ```

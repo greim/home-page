@@ -73,6 +73,11 @@ Deno.test("skinVars scales the thumbnail shadow down from the column shadow", ()
     vars["--skin-faint-inset-shadow"],
     "inset 0rem 0.1rem 0.2rem rgba(0, 0, 0, 0.09)",
   );
+  // The chat history's is the faint inset shadow at half its opacity.
+  assertEquals(
+    vars["--skin-chat-inset-shadow"],
+    "inset 0rem 0.1rem 0.2rem rgba(0, 0, 0, 0.045)",
+  );
 });
 
 Deno.test("skinVars rounds away floating-point noise", () => {

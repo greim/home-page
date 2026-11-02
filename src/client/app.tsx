@@ -8,9 +8,8 @@ import { AdminBar, AdminBarButton } from "./admin-bar.tsx";
 import { Http, loadLayout, saveLayout } from "./api.ts";
 import { AssistantContext, AssistantPanel, useAssistants } from "./assistant-panel.tsx";
 import { BackgroundEditor } from "./background-editor.tsx";
-import { type Board, BoardContext, type EditRequest } from "./board-context.ts";
+import { adminModeKey, type Board, BoardContext, type EditRequest } from "./board-context.ts";
 import { ColumnStrip } from "./column-strip.tsx";
-import { initialEscapeState, onEscape } from "./double-escape.ts";
 import { HttpLive, run } from "./live.ts";
 import { makeSaveQueue } from "./save-queue.ts";
 import { ColumnEditor } from "./column-editor.tsx";
@@ -22,18 +21,16 @@ type LoadState =
   | { is: "failed"; message: string }
   | { is: "ready"; layout: Layout };
 
-/** Toggles admin mode when Escape is pressed twice in quick succession. */
+/** Toggles admin mode when F2 is pressed. */
 function useAdminMode(suspended: boolean): boolean {
   const [admin, setAdmin] = useState(false);
-  const escape = useRef(initialEscapeState);
   const suspendedRef = useRef(suspended);
   suspendedRef.current = suspended;
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || suspendedRef.current) return;
-      const result = onEscape(escape.current, event.timeStamp);
-      escape.current = result.state;
-      if (result.toggle) setAdmin((a) => !a);
+      if (event.key !== adminModeKey || event.repeat || suspendedRef.current) return;
+      event.preventDefault();
+      setAdmin((a) => !a);
     };
     globalThis.addEventListener("keydown", listener);
     return () => globalThis.removeEventListener("keydown", listener);
@@ -142,15 +139,17 @@ export function App() {
             background={state.layout.background}
             columns={state.layout.columns}
             adminBar={
-              <AdminBar shown={admin} message="Admin mode · press Esc twice to exit">
+              <AdminBar shown={admin} message={`Admin mode · press ${adminModeKey} to exit`}>
                 <BackgroundEditor
                   background={state.layout.background}
-                  onChange={(background) => dispatch({ is: "set-background", background })}
+                  onChange={(background) =>
+                    dispatch({ is: "set-background", background })}
                 />
                 <AdminBarButton
                   aria-pressed={assistantOpen}
                   bg={assistantOpen ? "gray.100" : undefined}
-                  onClick={() => setAssistantOpen((open) => !open)}
+                  onClick={() =>
+                    setAssistantOpen((open) => !open)}
                 >
                   <LuSparkles /> Assistant
                 </AdminBarButton>
