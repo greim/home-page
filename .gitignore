@@ -8,5 +8,8 @@ coverage/
 # Persisted home page layout (see src/server/main.ts)
 data/
 
+# Widget build output (see bin/build-widgets.ts)
+dist/
+
 # launchd service logs (see bin/install-service.ts)
 logs/

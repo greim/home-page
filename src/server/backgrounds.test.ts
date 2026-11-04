@@ -58,6 +58,7 @@ const noIo = ServerIo.of({
   readBackgroundFile: () => unused,
   writeBackgroundFile: () => unused,
   fetchRemote: () => unused,
+  readWidgetFile: () => unused,
 });
 
 const run = (req: HttpRequest, io: Partial<ServerIo["Type"]> = {}): Promise<HttpResponse> =>

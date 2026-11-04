@@ -90,6 +90,7 @@ const harness = (options: {
     readBackgroundFile: () => Effect.die("unused"),
     writeBackgroundFile: () => Effect.die("unused"),
     fetchRemote: () => Effect.die("unused"),
+    readWidgetFile: () => Effect.die("unused"),
   });
 
   const provide = <A, E>(effect: Effect.Effect<A, E, AssistantIo | ServerIo>) =>

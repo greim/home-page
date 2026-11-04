@@ -58,6 +58,7 @@ const noIo = ServerIo.of({
   readBackgroundFile: () => unused,
   writeBackgroundFile: () => unused,
   fetchRemote: () => unused,
+  readWidgetFile: () => unused,
 });
 
 const run = (req: HttpRequest, io = noIo): Promise<HttpResponse> =>
@@ -196,4 +197,45 @@ Deno.test("contentTypeFor maps known extensions", () => {
 Deno.test("/api/assistant only accepts POST", async () => {
   const res = await run(request("GET", "/api/assistant"));
   assertEquals([res.status, res.headers["allow"]], [405, "POST"]);
+});
+
+const widgetIo = (files: ReadonlyMap<string, string>) => ({
+  ...noIo,
+  readWidgetFile: (path: string) => {
+    const file = files.get(path);
+    return file === undefined
+      ? Effect.fail(new IoError({ cause: new Deno.errors.NotFound(path) }))
+      : Effect.succeed(new TextEncoder().encode(file));
+  },
+});
+
+Deno.test("GET /web/assets/widgets/ serves the widget build's output from disk", async () => {
+  const io = widgetIo(new Map([["clock/main.js", "js"], ["registry.json", "{}"]]));
+  const bundle = await run(request("GET", "/web/assets/widgets/clock/main.js?v=abc"), io);
+  assertEquals(bundle.status, 200);
+  assertEquals(bundle.headers["content-type"], "text/javascript; charset=utf-8");
+  assertEquals(bundle.headers["cache-control"], "public, max-age=31536000, immutable");
+  assertEquals(new TextDecoder().decode(bundle.body as Uint8Array), "js");
+
+  const unversioned = await run(request("GET", "/web/assets/widgets/clock/main.js"), io);
+  assertEquals(unversioned.headers["cache-control"], "no-cache");
+
+  const registry = await run(request("GET", "/web/assets/widgets/registry.json?v=1"), io);
+  assertEquals(registry.headers["content-type"], "application/json; charset=utf-8");
+  assertEquals(registry.headers["cache-control"], "no-cache");
+});
+
+Deno.test("GET /web/assets/widgets/ 404s for missing files, and never reads other paths", async () => {
+  const io = widgetIo(new Map());
+  for (
+    const path of [
+      "gone/main.js",
+      "../../.secrets/localhost-key.pem",
+      "clock/../../x/main.js",
+      "clock/other.js",
+      "Clock/main.js",
+    ]
+  ) {
+    assertEquals((await run(request("GET", `/web/assets/widgets/${path}`), io)).status, 404);
+  }
 });

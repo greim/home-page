@@ -17,6 +17,8 @@ import {
   text,
 } from "./http.ts";
 import { decodeLayoutJson, readLayout, writeLayout } from "./layout-store.ts";
+import { widgetAssetsPath } from "../common/widgets.ts";
+import { serveWidgetFile } from "./widget-files.ts";
 
 /** File name the bundler gives the client entry point (src/client/main.tsx). */
 export const clientScript = "main.js";
@@ -74,6 +76,12 @@ const route = (
       },
       body: page(site.buildId),
     });
+  }
+  if (pathname.startsWith(widgetAssetsPath) && isRead) {
+    return serveWidgetFile(
+      pathname.slice(widgetAssetsPath.length),
+      request.url.searchParams.has("v"),
+    );
   }
   if (pathname.startsWith("/web/assets/") && isRead) {
     const asset = site.assets.get(pathname.slice("/web/assets/".length));

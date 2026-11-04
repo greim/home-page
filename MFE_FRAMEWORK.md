@@ -42,21 +42,21 @@ imported by the shell, one imported by each MFE and bundled into it. It provides
 
 ```ts
 // Creating the manager singleton in the shell's main.tsx
-createManager({
+const manager = createManager({
   // This teaches the manager how to turn a MFE ID
   // into a URL to the MFE's .js bundle. It can be
   // a sync or async function. Include a version in
   // the URL so a rebuilt bundle isn't served from cache.
-  resolver: (id) => `/web/assets/widgets/${encodeURIComponent(id)}.js?v=${versionOf(id)}`,
-}).then((manager) => {
-  // Mount your React app as normal. Pass `manager` to it
+  resolver: (id) => `/web/assets/widgets/${id}/main.js?v=${versionOf(id)}`,
 });
+// Mount your React app as normal. Pass `manager` to it
 ```
 
 ```ts
 // Registering an MFE in the MFE's main.tsx
 registerMfe("my-mfe", (shell) => ({
-  // Use `shell` to talk to the shell
+  // Use `shell` to talk to the shell. Each view is
+  // given `{ props: unknown }`, to decode with Effect Schema.
   view1: MyReactComponent1,
   view2: MyReactComponent2,
   // etc...
@@ -65,7 +65,13 @@ registerMfe("my-mfe", (shell) => ({
 
 ```tsx
 // Embedding a view in the shell
-<MfeView manager={manager} mfe="my-mfe" view="view1" props={{ some: "props" }} />;
+<MfeView
+  manager={manager}
+  mfe="my-mfe"
+  view="view1"
+  props={{ some: "props" }}
+  fallback={(message) => <ErrorNotice message={message} />} // shown if the view can't be
+/>;
 ```
 
 ```ts
@@ -112,7 +118,9 @@ const result = await manager.send({ mfe, channel, message }, {
 - Views are React components, but the shell never renders them itself. The MFE half of the framework
   renders them with the MFE's own React, using `createRoot` from the MFE's own `react-dom`, into a
   mount node the embedder provides.
-- When the embedder unmounts, it tells the MFE to unmount that root.
+- Each time the embedder mounts, it creates a fresh mount node inside its own element, so a node
+  (and so a channel) is never reused, even when React's StrictMode mounts twice.
+- When the embedder unmounts, it tells the MFE to unmount that root, and removes the node.
 - An error thrown while a view renders is caught by an error boundary on the MFE side. It's reported
   to the embedder, which shows it in place of the view.
 
@@ -132,10 +140,11 @@ const result = await manager.send({ mfe, channel, message }, {
   shell. If the MFE has already loaded, the manager sends the message to it directly.
 - Any message can fail. The promise never rejects. It resolves to a result saying whether the
   message succeeded, and if not, why, with diagnostics. See "Results" below.
-- Embedding uses messaging behind the scenes. If the embedder doesn't yet have an MFE's views, it
-  sends a message to get them. This loads the MFE as a side effect. Once loaded, it sends a message
-  to it to get the views. The registration function (on the MFE side) is what sets up the listener
-  to respond with the MFE's views.
+- Embedding uses messaging behind the scenes, on two channels the framework keeps for itself
+  (`mfe:mount` and `mfe:unmount`; apps can't use channels starting `mfe:`). The embedder sends the
+  MFE the view's name, its mount node and its props on `mfe:mount`. This loads the MFE as a side
+  effect. The registration function (on the MFE side) is what sets up the listeners that render and
+  unmount its views.
 - Props passed to the embedder use messages behind the scenes to keep the embedded view updated.
   Each update must reach only that embedded instance, not every instance of that view. So the mount
   node is the channel, since both sides have a reference to it and it's guaranteed unique.

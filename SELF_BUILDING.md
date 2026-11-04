@@ -34,19 +34,22 @@ contains:
 - `main.tsx`: the entry point. Calls `registerMfe("<id>", …)` and provides two views:
   - `widget`: the widget's body, as shown in a column.
   - `editor`: the widget's settings form, shown in the column editor in admin mode.
-- `manifest.ts`: exports the widget's title, description, and an Effect Schema for its config.
+- `manifest.ts`: exports, as `manifest`, the widget's title, description, and an Effect Schema for
+  its config, declared with `defineManifest` from `src/common/widgets.ts`.
 - Tests, per [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md).
 
 ### The Widget Build
 
 `deno task build-widgets` bundles every `src/client/widgets/*/main.tsx` and writes:
 
-- `dist/widgets/<id>.js`: one bundle per widget.
+- `dist/widgets/<id>/main.js`: one bundle per widget, with its source map beside it.
 - `dist/widgets/registry.json`: every widget's ID, title, description, a content hash of its bundle,
   and its config schema (converted from Effect Schema to JSON Schema with `JSONSchema.make`).
 
-The build fails if a widget folder lacks `main.tsx` or `manifest.ts`, or its manifest doesn't
-decode. `dist/` is gitignored. The server runs this build at startup, so a fresh clone works, and
+The build fails if a widget folder's name isn't a valid ID (lowercase letters, digits and single
+hyphens), it lacks `main.tsx` or `manifest.ts`, its manifest doesn't decode, or it fails to bundle.
+It reports every broken widget at once, and leaves the last good output in place. `dist/` is
+gitignored. The server runs this build at startup, in its own process, so a fresh clone works, and
 `deno task build` runs it too.
 
 ### Serving Widgets
@@ -54,8 +57,8 @@ decode. `dist/` is gitignored. The server runs this build at startup, so a fresh
 `dist/widgets/` is served under `/web/assets/widgets/`, read from disk on each request (unlike the
 client bundle, which is kept in memory), so a rebuild is picked up without restarting the server.
 The shell fetches `registry.json` when it loads. The manager's resolver turns an ID into
-`/web/assets/widgets/<id>.js?v=<hash>`, using the hash from the registry, so a reload never gets a
-stale bundle from cache.
+`/web/assets/widgets/<id>/main.js?v=<hash>`, using the hash from the registry, so a reload never
+gets a stale bundle from cache.
 
 ### The Layout Schema
 

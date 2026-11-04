@@ -40,6 +40,7 @@ const io = ServerIo.of({
       const response = await fetch(url, { signal: AbortSignal.timeout(20_000) });
       return { status: response.status, bytes: new Uint8Array(await response.arrayBuffer()) };
     }),
+  readWidgetFile: (path) => attempt(() => Deno.readFile(`${config.widgetsOutDir}/${path}`)),
 });
 
 const toHttpRequest = (request: Request): HttpRequest => ({
@@ -55,6 +56,21 @@ const toResponse = (response: HttpResponse): Response =>
     status: response.status,
     headers: response.headers,
   });
+
+// In its own process, so each build imports widgets' manifests afresh. Its
+// output and any errors go to the server's log; a failed build leaves the last
+// good one in place.
+await new Deno.Command(Deno.execPath(), {
+  args: [
+    "run",
+    "--allow-read",
+    `--allow-write=${config.distDir}`,
+    "--allow-env",
+    config.widgetBuildScript,
+  ],
+  stdout: "inherit",
+  stderr: "inherit",
+}).output();
 
 const bundle = await Effect.runPromise(
   bundleClient(config.clientEntry).pipe(

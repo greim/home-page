@@ -21,6 +21,13 @@ export const config = {
   /** Files here are served as-is under /web/assets/ (flat; no subfolders). */
   staticDir: path("src/client/static"),
   serverEntry: path("src/server/main.ts"),
+  /** One folder per widget type. See SELF_BUILDING.md. */
+  widgetsSourceDir: path("src/client/widgets"),
+  /** Build output that isn't kept in git. */
+  distDir: path("dist"),
+  /** The widget build's output, served under /web/assets/widgets/. */
+  widgetsOutDir: path("dist/widgets"),
+  widgetBuildScript: path("bin/build-widgets.ts"),
   secretsDir: path(".secrets"),
   certFile: path(".secrets/localhost.pem"),
   keyFile: path(".secrets/localhost-key.pem"),

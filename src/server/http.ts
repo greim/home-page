@@ -35,6 +35,8 @@ export class ServerIo extends Context.Tag("ServerIo")<
     readonly writeBackgroundFile: (name: string, bytes: Bytes) => Effect.Effect<void, IoError>;
     /** GETs a remote URL. Fails only if no response arrives at all. */
     readonly fetchRemote: (url: URL) => Effect.Effect<RemoteResponse, IoError>;
+    /** Reads a file from the widget build's output, by its path there. */
+    readonly readWidgetFile: (path: string) => Effect.Effect<Bytes, IoError>;
   }
 >() {}
 

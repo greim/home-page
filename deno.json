@@ -21,6 +21,7 @@
   "exclude": [
     "coverage/",
     "data/",
+    "dist/",
     "logs/",
     ".secrets/"
   ],
@@ -31,7 +32,8 @@
     "fmt": "deno fmt",
     "lint": "deno fmt --check && deno lint",
     "test": "deno test --allow-read --allow-write --allow-run --coverage --clean --coverage-threshold=90",
-    "build": "deno task check && deno task lint && deno task test",
+    "build-widgets": "deno run --allow-read --allow-write=dist --allow-env bin/build-widgets.ts",
+    "build": "deno task check && deno task lint && deno task test && deno task build-widgets",
     "setup-certs": "deno run --allow-read --allow-write --allow-run --allow-env bin/setup-certs.ts",
     "install-service": "deno run --allow-read --allow-write --allow-run --allow-env bin/install-service.ts",
     "uninstall-service": "deno run --allow-read --allow-write --allow-run --allow-env bin/uninstall-service.ts"
