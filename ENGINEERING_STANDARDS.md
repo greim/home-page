@@ -241,3 +241,13 @@ shell starts needing several test cases, logic has leaked into it. Move that log
   keychain, registering a launchd service, calling a paid third-party API), write the integration
   test against the parts that can be exercised, and document the rest as a manual verification step
   next to the code.
+
+### Only Read the Environment At the Entry Point
+
+Using environment variables to customize or parameterize the program is fine, but only read the
+environment in the entry point, and pass it to the rest of the program as an I/O dependency (see
+functional core).
+
+Why? If different parts of a program read and re-read the environment, it makes the whole program
+harder to reason about, harder to test, and may result in occasional unexpected or obnoxious
+behavior.
