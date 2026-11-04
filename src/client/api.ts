@@ -2,6 +2,7 @@
 import { Context, Data, Effect, Either, Schema, Stream } from "effect";
 import { AssistantRequest, ChatEvent } from "../common/assistant.ts";
 import { BackgroundImageUrl, Layout } from "../common/model.ts";
+import { Registry, registryFile, widgetAssetsPath } from "../common/widgets.ts";
 
 export class ApiError extends Data.TaggedError("ApiError")<{
   message: string;
@@ -72,6 +73,15 @@ export const loadLayout: Effect.Effect<Layout, ApiError, Http> = requestJson(
   Layout,
   "GET",
   "/api/layout",
+  null,
+  jsonType,
+);
+
+/** The widget types the widget build found. */
+export const loadWidgetRegistry: Effect.Effect<Registry, ApiError, Http> = requestJson(
+  Registry,
+  "GET",
+  `${widgetAssetsPath}${registryFile}`,
   null,
   jsonType,
 );

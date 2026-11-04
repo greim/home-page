@@ -39,7 +39,9 @@ import type { Draft } from "./widget-draft.ts";
 const newId = () => crypto.randomUUID();
 
 const kindName = (draft: Draft): string =>
-  widgetKinds.find((k) => k.is === draft.widget.is)?.name ?? draft.widget.is;
+  draft.widget.is === "mfe"
+    ? draft.widget.mfe
+    : widgetKinds.find((k) => k.is === draft.widget.is)?.name ?? draft.widget.is;
 
 /** Drawn just above or below a list row to show where a dragged widget will land. */
 const dropLine = (side: "top" | "bottom") =>

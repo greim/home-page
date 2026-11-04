@@ -212,6 +212,12 @@ Work
           assistant in the admin bar.
         </Text>
       );
+    case "mfe":
+      return (
+        <Text fontSize="sm" color="fg.muted">
+          A "{widget.mfe}" widget. Its settings can't be edited here yet.
+        </Text>
+      );
     default:
       return widget satisfies never;
   }

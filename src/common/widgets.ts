@@ -63,7 +63,9 @@ export const bundleFile = (id: string): string => `${id}/main.js`;
 export const widgetAssetsPath = "/web/assets/widgets/";
 
 /** A widget's bundle URL, versioned so a reload never gets a stale one from cache. */
-export const widgetBundleUrl = (registry: Registry, id: string): string => {
-  const version = registry.widgets.find((w) => w.id === id)?.version ?? "unknown";
-  return `${widgetAssetsPath}${bundleFile(id)}?v=${version}`;
+export const widgetBundleUrl = (registry: Registry, id: string): Either.Either<string, string> => {
+  const entry = registry.widgets.find((w) => w.id === id);
+  return entry === undefined
+    ? Either.left(`There's no widget type called "${id}"`)
+    : Either.right(`${widgetAssetsPath}${bundleFile(id)}?v=${encodeURIComponent(entry.version)}`);
 };

@@ -36,6 +36,12 @@ Deno.test("widgetBundleUrl versions the URL from the registry", () => {
   const registry: Registry = {
     widgets: [{ id: "clock", title: "", description: "", version: "abc", configSchema: {} }],
   };
-  assertEquals(widgetBundleUrl(registry, "clock"), "/web/assets/widgets/clock/main.js?v=abc");
-  assertEquals(widgetBundleUrl(registry, "gone"), "/web/assets/widgets/gone/main.js?v=unknown");
+  assertEquals(
+    widgetBundleUrl(registry, "clock"),
+    Either.right("/web/assets/widgets/clock/main.js?v=abc"),
+  );
+  assertEquals(
+    widgetBundleUrl(registry, "gone"),
+    Either.left(`There's no widget type called "gone"`),
+  );
 });

@@ -1,6 +1,7 @@
-import { Box, chakra } from "@chakra-ui/react";
+import { Box, chakra, Text } from "@chakra-ui/react";
+import { useMemo } from "react";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
-import type { Widget } from "../common/model.ts";
+import type { MfeWidget, Widget } from "../common/model.ts";
 import { adminButton } from "./admin-button.ts";
 import { useBoard } from "./board-context.ts";
 import { AssistantWidget } from "./assistant-panel.tsx";
@@ -8,6 +9,24 @@ import { BookmarksWidget } from "./bookmarks-widget.tsx";
 import { FormGridWidget } from "./form-grid-widget.tsx";
 import { SnippetsWidget } from "./snippets-widget.tsx";
 import { widgetHeading } from "./surface.ts";
+import { MfeView } from "./mfe/mfe-view.tsx";
+import { useWidgetManager } from "./widget-host.ts";
+
+/** A widget built as an MFE. Its own bundle renders it, given its config. */
+function MfeWidgetBody(props: { widget: MfeWidget }) {
+  const manager = useWidgetManager();
+  const { config } = props.widget;
+  const viewProps = useMemo(() => ({ config }), [config]);
+  return (
+    <MfeView
+      manager={manager}
+      mfe={props.widget.mfe}
+      view="widget"
+      props={viewProps}
+      fallback={(message) => <Text fontSize="sm" color="fg.error">{message}</Text>}
+    />
+  );
+}
 
 function WidgetBody(props: { columnId: string; widget: Widget }) {
   const { dispatch } = useBoard();
@@ -32,6 +51,8 @@ function WidgetBody(props: { columnId: string; widget: Widget }) {
       return <FormGridWidget widget={widget} />;
     case "assistant":
       return <AssistantWidget widgetId={widget.id} />;
+    case "mfe":
+      return <MfeWidgetBody widget={widget} />;
     default:
       return widget satisfies never;
   }

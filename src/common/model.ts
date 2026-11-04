@@ -3,6 +3,7 @@
  * validated at both ends of the wire via Effect Schema.
  */
 import { Schema } from "effect";
+import { WidgetId } from "./widgets.ts";
 
 export const Link = Schema.Struct({
   is: Schema.Literal("link"),
@@ -82,14 +83,30 @@ export const AssistantWidget = Schema.Struct({
 });
 export type AssistantWidget = typeof AssistantWidget.Type;
 
+/**
+ * A widget whose type is an MFE, built from src/client/widgets/<mfe>/. Its
+ * config is decoded by the widget itself. Interim shape: once every widget is
+ * an MFE (SELF_BUILDING.md, phase 3), `is` becomes the widget type's ID.
+ */
+export const MfeWidget = Schema.Struct({
+  is: Schema.Literal("mfe"),
+  ...widgetBase,
+  mfe: WidgetId,
+  config: Schema.Unknown,
+});
+export type MfeWidget = typeof MfeWidget.Type;
+
 export const Widget = Schema.Union(
   BookmarksWidget,
   SnippetsWidget,
   FormGridWidget,
   AssistantWidget,
+  MfeWidget,
 );
 export type Widget = typeof Widget.Type;
 export type WidgetKind = Widget["is"];
+/** The widget types built into the app, which can be added from the column editor. */
+export type BuiltinWidgetKind = Exclude<WidgetKind, "mfe">;
 
 /** A `#rrggbb` color. */
 export const HexColor = Schema.String.pipe(Schema.pattern(/^#[0-9a-fA-F]{6}$/));
@@ -312,7 +329,7 @@ export const isUntouchedColumn = (column: Column): boolean =>
   column.heading === newColumnHeading && column.widgets.length === 0;
 
 export const widgetKinds: ReadonlyArray<
-  { readonly is: WidgetKind; readonly name: string }
+  { readonly is: BuiltinWidgetKind; readonly name: string }
 > = [
   { is: "bookmarks", name: "Bookmarks" },
   { is: "snippets", name: "Copyable Snippets" },
@@ -320,7 +337,7 @@ export const widgetKinds: ReadonlyArray<
   { is: "assistant", name: "Assistant" },
 ];
 
-export const newWidget = (is: WidgetKind, id: string): Widget => {
+export const newWidget = (is: BuiltinWidgetKind, id: string): Widget => {
   switch (is) {
     case "bookmarks":
       return { is, id, subheading: "Bookmarks", collapsed: false, items: [] };

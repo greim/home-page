@@ -77,6 +77,10 @@ The layout schema no longer lists widget types. A widget in the layout is:
 The existing types keep their IDs (`bookmarks`, `snippets`, `form-grid`, `assistant`), so existing
 layouts migrate by moving each widget's type-specific fields into `config`.
 
+Until then (phases 2 and 3), MFE widgets sit beside the built-in ones with an interim shape,
+`{ is: "mfe", mfe: "<type id>", config, ...}`, so `is` stays a literal the app's code can switch on.
+Phase 3 migrates them to the shape above along with the rest.
+
 ### Shell and Widget Contract
 
 - The shell embeds a widget's `widget` view inside its card, and passes it `config` and the current
