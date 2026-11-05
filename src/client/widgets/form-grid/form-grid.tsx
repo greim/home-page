@@ -1,7 +1,8 @@
 import { Input, SimpleGrid, Text } from "@chakra-ui/react";
 import { useState } from "react";
-import type { FormField, FormGridWidget as Model } from "../common/model.ts";
-import { fillUrlTemplate } from "../common/url-template.ts";
+import type { WidgetProps } from "../../widget-kit/views.tsx";
+import type { FormField, FormGridConfig } from "./config.ts";
+import { fillUrlTemplate } from "./url-template.ts";
 
 function FieldForm(props: { field: FormField }) {
   const [error, setError] = useState<string | null>(null);
@@ -34,13 +35,14 @@ function FieldForm(props: { field: FormField }) {
   );
 }
 
-export function FormGridWidget(props: { widget: Model }) {
-  if (props.widget.fields.length === 0) {
+export function FormGrid(props: WidgetProps<FormGridConfig>) {
+  const { config } = props;
+  if (config.fields.length === 0) {
     return <Text fontSize="sm" color="fg.muted">No fields yet.</Text>;
   }
   return (
-    <SimpleGrid columns={props.widget.gridColumns} gap="2">
-      {props.widget.fields.map((field) => <FieldForm key={field.id} field={field} />)}
+    <SimpleGrid columns={config.gridColumns} gap="2">
+      {config.fields.map((field) => <FieldForm key={field.id} field={field} />)}
     </SimpleGrid>
   );
 }

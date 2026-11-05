@@ -13,6 +13,8 @@ export type WidgetManifest<A, I> = {
   readonly description: string;
   /** Decodes the widget's config, as it's saved in the layout. */
   readonly config: Schema.Schema<A, I>;
+  /** The config a new widget of this type starts with. */
+  readonly defaultConfig: A;
 };
 
 /** Declares a manifest, checking its shape. */
@@ -30,6 +32,7 @@ const ManifestModule = Schema.Struct({
     title: Schema.NonEmptyTrimmedString,
     description: Schema.NonEmptyTrimmedString,
     config: AnySchema,
+    defaultConfig: Schema.Unknown,
   }),
 });
 
@@ -49,6 +52,8 @@ export const RegistryEntry = Schema.Struct({
   version: Schema.String,
   /** The config's JSON Schema, for the assistant. */
   configSchema: Schema.Unknown,
+  /** A new widget's config, as it's saved in the layout. */
+  defaultConfig: Schema.Unknown,
 });
 export type RegistryEntry = typeof RegistryEntry.Type;
 

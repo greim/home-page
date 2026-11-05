@@ -15,6 +15,7 @@ const manifest = defineManifest({
   title: "Clock",
   description: "Shows the time",
   config: Schema.Struct({ zone: Schema.String }),
+  defaultConfig: { zone: "UTC" },
 });
 
 const notFound = () => new BuildIoError({ cause: new Deno.errors.NotFound("missing") });
@@ -117,6 +118,7 @@ Deno.test("buildWidgets writes each bundle and a registry, then swaps them in", 
   assertEquals(registry.widgets[0].title, "Clock");
   assertEquals(registry.widgets[0].version, "h-clock");
   assertEquals(registry.widgets[0].configSchema.properties.zone, { type: "string" });
+  assertEquals(registry.widgets[0].defaultConfig, { zone: "UTC" });
   assertEquals(log, [
     "remove /dist/widgets.next",
     "remove /dist/widgets",
@@ -172,6 +174,14 @@ Deno.test("buildWidgets reports a config schema JSON Schema can't describe", () 
     manifest: { ...manifest, config: Schema.declare((u): u is Date => u instanceof Date) },
   });
   assertStringIncludes(problems(world).join(), "can't be described as JSON Schema");
+});
+
+Deno.test("buildWidgets reports a default config that doesn't fit the schema", () => {
+  const world = worldWith(["clock"]);
+  world.modules.set("/src/clock/manifest.ts", {
+    manifest: { ...manifest, defaultConfig: { zone: 5 } },
+  });
+  assertStringIncludes(problems(world).join(), "its defaultConfig doesn't fit");
 });
 
 Deno.test("buildWidgets reports a bundler that fails outright", () => {

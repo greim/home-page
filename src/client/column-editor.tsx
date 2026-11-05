@@ -17,7 +17,7 @@ import { useState } from "react";
 import { LuArrowRightLeft, LuGripVertical, LuPlus, LuTrash2 } from "react-icons/lu";
 import { gapToIndex } from "../common/arrays.ts";
 import type { LayoutAction } from "../common/layout-ops.ts";
-import { type Column, newWidget, widgetKinds } from "../common/model.ts";
+import { type Column, newWidget } from "../common/model.ts";
 import { action, ActionMenu } from "./admin-menu.tsx";
 import { ColorPicker } from "./color-picker.tsx";
 import {
@@ -35,13 +35,13 @@ import {
 import { IconPicker, NamedIcon } from "./icon-picker.tsx";
 import { Label, WidgetForm } from "./widget-editor.tsx";
 import type { Draft } from "./widget-draft.ts";
+import { registeredTypes, useWidgetHost } from "./widget-host.tsx";
 
 const newId = () => crypto.randomUUID();
 
-const kindName = (draft: Draft): string =>
-  draft.widget.is === "mfe"
-    ? draft.widget.mfe
-    : widgetKinds.find((k) => k.is === draft.widget.is)?.name ?? draft.widget.is;
+/** The widget type's title, or its ID if the registry doesn't have it. */
+const typeName = (types: ReturnType<typeof registeredTypes>, draft: Draft): string =>
+  types.find((t) => t.id === draft.widget.is)?.title ?? draft.widget.is;
 
 /** Drawn just above or below a list row to show where a dragged widget will land. */
 const dropLine = (side: "top" | "bottom") =>
@@ -94,6 +94,7 @@ function WidgetList(props: {
   onChange: (draft: ColumnDraft) => void;
 }) {
   const { draft, onChange } = props;
+  const types = registeredTypes(useWidgetHost().registry);
   // The widget being dragged, and the gap (0 = before the first) it would drop into.
   const [drag, setDrag] = useState<{ id: string; from: number; gap: number | null } | null>(
     null,
@@ -169,7 +170,7 @@ function WidgetList(props: {
               onClick={() => onChange(selectWidget(draft, id))}
             >
               <Text fontSize="sm" fontWeight="medium" truncate>{name}</Text>
-              <Text fontSize="xs" color="fg.muted" truncate>{kindName(w)}</Text>
+              <Text fontSize="xs" color="fg.muted" truncate>{typeName(types, w)}</Text>
             </chakra.button>
             <ActionMenu
               label={`Send ${name} to another column`}
@@ -206,12 +207,8 @@ function WidgetList(props: {
         <ActionMenu
           label="Add widget"
           portalled={false}
-          actions={widgetKinds.map((kind) =>
-            action(
-              kind.is,
-              kind.name,
-              () => onChange(addWidget(draft, newWidget(kind.is, newId()))),
-            )
+          actions={types.map((type) =>
+            action(type.id, type.title, () => onChange(addWidget(draft, newWidget(type, newId()))))
           )}
           trigger={
             <Button size="sm" variant="ghost" px="2">
@@ -244,7 +241,7 @@ export function ColumnEditor(props: {
   const selected = selectedDraft(draft);
 
   const save = () => {
-    const finished = finishColumnDraft(column, draft, newId);
+    const finished = finishColumnDraft(column, draft);
     if (finished.ok) {
       props.onSave(finished.action);
       return;

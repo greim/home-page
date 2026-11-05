@@ -104,6 +104,10 @@ const buildOne = (
       try: () => JSONSchema.make(manifest.right.config),
       catch: (cause) => `its config schema can't be described as JSON Schema: ${describe(cause)}`,
     });
+    const defaultConfig = yield* Either.mapLeft(
+      Schema.encodeEither(manifest.right.config)(manifest.right.defaultConfig),
+      (e) => `its defaultConfig doesn't fit its config schema: ${e.message}`,
+    );
     const output = yield* bundler.bundle(`${dir}/main.tsx`).pipe(
       Effect.mapError((e: BundleError) => `it failed to bundle: ${e.message}`),
     );
@@ -125,6 +129,7 @@ const buildOne = (
         description: manifest.right.description,
         version: script.hash,
         configSchema,
+        defaultConfig,
       },
       files: [
         [bundle, script.contents] as const,

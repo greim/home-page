@@ -1,17 +1,5 @@
-/** The clock widget's logic: decoding its props, and formatting the time. */
-import { Either, Schema } from "effect";
-import { ClockConfig } from "./manifest.ts";
-
-const ClockProps = Schema.Struct({ config: ClockConfig });
-
-export const decodeConfig = (props: unknown): Either.Either<ClockConfig, string> =>
-  Either.map(
-    Either.mapLeft(
-      Schema.decodeUnknownEither(ClockProps)(props),
-      (e) => `This clock's settings are invalid: ${e.message}`,
-    ),
-    (p) => p.config,
-  );
+/** The clock widget's logic: formatting the time. */
+import { Either } from "effect";
 
 export type ClockFace = { readonly time: string; readonly date: string; readonly zone: string };
 
@@ -42,3 +30,6 @@ export const formatClock = (
 
 /** Milliseconds until the next minute starts, when the face next changes. */
 export const untilNextMinute = (now: Date): number => 60_000 - (now.getTime() % 60_000);
+
+/** Every time zone the browser knows, for choosing one. */
+export const timeZones = (): ReadonlyArray<string> => Intl.supportedValuesOf("timeZone");

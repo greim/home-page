@@ -5,108 +5,52 @@
 import { Schema } from "effect";
 import { WidgetId } from "./widgets.ts";
 
-export const Link = Schema.Struct({
-  is: Schema.Literal("link"),
+/**
+ * A widget in a column. Its type is an MFE, built from
+ * src/client/widgets/<is>/, which decodes `config` itself (see SELF_BUILDING.md).
+ */
+export const Widget = Schema.Struct({
   id: Schema.String,
-  label: Schema.String,
-  url: Schema.String,
-});
-export type Link = typeof Link.Type;
-
-/** A branch node. Only one level of nesting: folders contain links only. */
-export const Folder = Schema.Struct({
-  is: Schema.Literal("folder"),
-  id: Schema.String,
-  label: Schema.String,
-  expanded: Schema.Boolean,
-  children: Schema.Array(Link),
-});
-export type Folder = typeof Folder.Type;
-
-export const BookmarkNode = Schema.Union(Link, Folder);
-export type BookmarkNode = typeof BookmarkNode.Type;
-
-export const SnippetCopy = Schema.Literal("whole", "char");
-export type SnippetCopy = typeof SnippetCopy.Type;
-
-export const Snippet = Schema.Struct({
-  id: Schema.String,
-  label: Schema.String,
-  text: Schema.String,
-  copy: SnippetCopy,
-});
-export type Snippet = typeof Snippet.Type;
-
-export const FormField = Schema.Struct({
-  id: Schema.String,
-  label: Schema.String,
-  /** A URL containing `{query}`, which is replaced by the field's value. */
-  urlTemplate: Schema.String,
-});
-export type FormField = typeof FormField.Type;
-
-const widgetBase = {
-  id: Schema.String,
+  /** The widget type's ID. */
+  is: WidgetId,
   subheading: Schema.String,
   collapsed: Schema.Boolean,
-};
-
-export const BookmarksWidget = Schema.Struct({
-  is: Schema.Literal("bookmarks"),
-  ...widgetBase,
-  items: Schema.Array(BookmarkNode),
-});
-export type BookmarksWidget = typeof BookmarksWidget.Type;
-
-export const SnippetsWidget = Schema.Struct({
-  is: Schema.Literal("snippets"),
-  ...widgetBase,
-  snippets: Schema.Array(Snippet),
-});
-export type SnippetsWidget = typeof SnippetsWidget.Type;
-
-export const GridColumns = Schema.Literal(1, 2, 3, 4);
-export type GridColumns = typeof GridColumns.Type;
-
-export const FormGridWidget = Schema.Struct({
-  is: Schema.Literal("form-grid"),
-  ...widgetBase,
-  gridColumns: GridColumns,
-  fields: Schema.Array(FormField),
-});
-export type FormGridWidget = typeof FormGridWidget.Type;
-
-/** A chat with the admin assistant, pinned into a column. It has nothing to configure. */
-export const AssistantWidget = Schema.Struct({
-  is: Schema.Literal("assistant"),
-  ...widgetBase,
-});
-export type AssistantWidget = typeof AssistantWidget.Type;
-
-/**
- * A widget whose type is an MFE, built from src/client/widgets/<mfe>/. Its
- * config is decoded by the widget itself. Interim shape: once every widget is
- * an MFE (SELF_BUILDING.md, phase 3), `is` becomes the widget type's ID.
- */
-export const MfeWidget = Schema.Struct({
-  is: Schema.Literal("mfe"),
-  ...widgetBase,
-  mfe: WidgetId,
+  /** The widget's settings, as JSON. Only the widget type knows its shape. */
   config: Schema.Unknown,
 });
-export type MfeWidget = typeof MfeWidget.Type;
-
-export const Widget = Schema.Union(
-  BookmarksWidget,
-  SnippetsWidget,
-  FormGridWidget,
-  AssistantWidget,
-  MfeWidget,
-);
 export type Widget = typeof Widget.Type;
-export type WidgetKind = Widget["is"];
-/** The widget types built into the app, which can be added from the column editor. */
-export type BuiltinWidgetKind = Exclude<WidgetKind, "mfe">;
+
+const isRecord = (u: unknown): u is Readonly<Record<string, unknown>> =>
+  typeof u === "object" && u !== null && !Array.isArray(u);
+
+/**
+ * Brings a widget saved in an older shape up to date:
+ * - Before widgets were MFEs, a widget's settings sat beside its id, e.g.
+ *   `{ is: "bookmarks", id, subheading, collapsed, items }`. They move into `config`.
+ * - Briefly, MFE widgets were `{ is: "mfe", mfe: "<type>", config, ... }`.
+ * Anything else is left for the schema to judge.
+ */
+export const migrateWidget = (stored: unknown): unknown => {
+  if (!isRecord(stored)) {
+    return stored;
+  }
+  if (stored.is === "mfe" && typeof stored.mfe === "string") {
+    const { mfe, ...rest } = stored;
+    return { ...rest, is: mfe };
+  }
+  if (!("config" in stored)) {
+    const { id, is, subheading, collapsed, ...config } = stored;
+    return { id, is, subheading, collapsed, config };
+  }
+  return stored;
+};
+
+/** A widget as saved, in any shape it has ever had. Always saved in the current one. */
+const StoredWidget = Schema.transform(Schema.Unknown, Widget, {
+  strict: true,
+  decode: (stored) => migrateWidget(stored) as typeof Widget.Encoded,
+  encode: (widget) => widget,
+});
 
 /** A `#rrggbb` color. */
 export const HexColor = Schema.String.pipe(Schema.pattern(/^#[0-9a-fA-F]{6}$/));
@@ -127,7 +71,7 @@ export const Column = Schema.Struct({
   color: Schema.optionalWith(HexColor, { default: () => defaultColumnColor }),
   /** Layouts saved before this field existed decode with the default icon. */
   icon: Schema.optionalWith(Schema.String, { default: () => defaultColumnIcon }),
-  widgets: Schema.Array(Widget),
+  widgets: Schema.Array(StoredWidget),
 });
 export type Column = typeof Column.Type;
 
@@ -328,33 +272,14 @@ export const newColumn = (id: string, icon: string): Column => ({
 export const isUntouchedColumn = (column: Column): boolean =>
   column.heading === newColumnHeading && column.widgets.length === 0;
 
-export const widgetKinds: ReadonlyArray<
-  { readonly is: BuiltinWidgetKind; readonly name: string }
-> = [
-  { is: "bookmarks", name: "Bookmarks" },
-  { is: "snippets", name: "Copyable Snippets" },
-  { is: "form-grid", name: "Form Grid" },
-  { is: "assistant", name: "Assistant" },
-];
-
-export const newWidget = (is: BuiltinWidgetKind, id: string): Widget => {
-  switch (is) {
-    case "bookmarks":
-      return { is, id, subheading: "Bookmarks", collapsed: false, items: [] };
-    case "snippets":
-      return { is, id, subheading: "Snippets", collapsed: false, snippets: [] };
-    case "form-grid":
-      return {
-        is,
-        id,
-        subheading: "Search",
-        collapsed: false,
-        gridColumns: 1,
-        fields: [],
-      };
-    case "assistant":
-      return { is, id, subheading: "Assistant", collapsed: false };
-    default:
-      return is satisfies never;
-  }
-};
+/** A new widget of a type the widget build found, with its default settings. */
+export const newWidget = (
+  type: { readonly id: string; readonly title: string; readonly defaultConfig: unknown },
+  id: string,
+): Widget => ({
+  id,
+  is: type.id,
+  subheading: type.title,
+  collapsed: false,
+  config: type.defaultConfig,
+});

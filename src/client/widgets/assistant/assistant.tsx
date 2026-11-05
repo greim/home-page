@@ -1,3 +1,4 @@
+/** The assistant's views: its chat, in the admin bar's panel or pinned into a column. */
 import {
   Box,
   chakra,
@@ -11,139 +12,81 @@ import {
   Theme,
 } from "@chakra-ui/react";
 import { Effect, Either } from "effect";
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LuCheck, LuDot, LuSend, LuSquarePen, LuTriangleAlert, LuX } from "react-icons/lu";
-import type { Layout } from "../common/model.ts";
-import { askAssistant } from "./api.ts";
-import {
-  type Chat,
-  type ChatAction,
-  type ChatEntry,
-  chatReducer,
-  restoreChat,
-  saveChat,
-} from "./assistant-chat.ts";
-import { captureScreenshot, run } from "./live.ts";
-import { screenshotRootId } from "./screenshot.ts";
-import { columnCorners, hiddenScrollbar, surface } from "./surface.ts";
+import type { Layout } from "../../../common/model.ts";
+import { askAssistant } from "../../api.ts";
+import { captureScreenshot, run } from "../../live.ts";
+import { screenshotRootId } from "../../screenshot.ts";
+import { columnCorners, hiddenScrollbar, surface } from "../../surface.ts";
+import { type Chat, type ChatEntry, restoreChat, saveChat } from "./chat.ts";
+import type { ChatHost, ChatStorage, Conversations } from "./conversations.ts";
 
 const { gap, adminBarHeight, assistantPanelWidth, assistantWidgetHeight } = surface;
 
-/** Where each conversation is kept in browser storage. */
-const storagePrefix = "home-page.assistant-chat";
-
-/** Which conversation: the admin bar's panel, or the assistant widget with this id. */
-export type ChatHost = { is: "panel" } | { is: "widget"; widgetId: string };
-
-const storageKey = (host: ChatHost) =>
-  host.is === "panel" ? storagePrefix : `${storagePrefix}.widget.${host.widgetId}`;
-
-/** Reads a saved conversation; storage can be unavailable (e.g. private windows). */
-const loadChat = (key: string): Chat => {
-  try {
-    return restoreChat(localStorage.getItem(key));
-  } catch {
-    return restoreChat(null);
-  }
+/** Browser storage for conversations. It can be unavailable (e.g. private windows). */
+export const browserChatStorage: ChatStorage = {
+  load: (key) => {
+    try {
+      return restoreChat(localStorage.getItem(key));
+    } catch {
+      return restoreChat(null);
+    }
+  },
+  save: (key, chat) => {
+    try {
+      if (chat.entries.length === 0) localStorage.removeItem(key);
+      else localStorage.setItem(key, saveChat(chat));
+    } catch {
+      // Not saved: the conversation still works, it just won't survive a reload.
+    }
+  },
 };
 
-const storeChat = (key: string, chat: Chat) => {
-  try {
-    if (chat.entries.length === 0) localStorage.removeItem(key);
-    else localStorage.setItem(key, saveChat(chat));
-  } catch {
-    // Not saved: the conversation still works, it just won't survive a reload.
-  }
+/** The page as the user sees it, for the agent to look at; null if that fails. */
+const screenshot = () => {
+  const surface = document.getElementById(screenshotRootId);
+  return Effect.runPromise(
+    surface === null ? Effect.succeed(null) : captureScreenshot(surface).pipe(
+      Effect.tapError((e) => Effect.sync(() => console.warn("Couldn't take a screenshot:", e))),
+      Effect.orElseSucceed(() => null),
+    ),
+  );
 };
 
-type Chats = Readonly<Record<string, Chat>>;
-
-const chatsReducer = (
-  chats: Chats,
-  action: { key: string; base: Chat; action: ChatAction },
-): Chats => ({
-  ...chats,
-  [action.key]: chatReducer(chats[action.key] ?? action.base, action.action),
-});
+export type Assistant = {
+  readonly chat: Chat;
+  readonly send: (message: string) => void;
+  readonly reset: () => void;
+};
 
 /**
- * The assistant's conversations, one per place it's hosted (the admin bar's
- * panel and each assistant widget), kept here rather than in their hosts so a
- * turn carries on while its panel is closed or its widget collapsed, and saved
- * so they survive reloads.
+ * A hook for the conversation hosted at a place. `onApplied` hears about each
+ * layout the assistant applies, so the page can show it.
  */
-export function useAssistants(onApplied: (layout: Layout) => void) {
-  const [chats, dispatchChat] = useReducer(chatsReducer, {});
-  // Conversations read from storage but not yet touched, read once each.
-  const loaded = useRef(new Map<string, Chat>());
-  const chatAt = (key: string): Chat => {
-    const live = chats[key];
-    if (live !== undefined) return live;
-    let saved = loaded.current.get(key);
-    if (saved === undefined) {
-      saved = loadChat(key);
-      loaded.current.set(key, saved);
-    }
-    return saved;
-  };
-  const stored = useRef<Chats>({});
-  useEffect(() => {
-    for (const [key, chat] of Object.entries(chats)) {
-      if (stored.current[key] !== chat) storeChat(key, chat);
-    }
-    stored.current = chats;
-  }, [chats]);
-  const onAppliedRef = useRef(onApplied);
-  onAppliedRef.current = onApplied;
-
-  /** The page as the user sees it, for the agent to look at; null if that fails. */
-  const screenshot = () => {
-    const surface = document.getElementById(screenshotRootId);
-    return Effect.runPromise(
-      surface === null ? Effect.succeed(null) : captureScreenshot(surface).pipe(
-        Effect.tapError((e) => Effect.sync(() => console.warn("Couldn't take a screenshot:", e))),
-        Effect.orElseSucceed(() => null),
-      ),
+export const makeUseAssistant = (
+  conversations: Conversations,
+  onApplied: (layout: Layout) => void,
+) =>
+(host: ChatHost): Assistant => {
+  const chat = useSyncExternalStore(conversations.subscribe, () => conversations.get(host));
+  const dispatch = (action: Parameters<Conversations["dispatch"]>[1]) =>
+    conversations.dispatch(host, action);
+  const send = (message: string) => {
+    dispatch({ is: "send", text: message });
+    screenshot().then((screenshot) =>
+      run(askAssistant({ message, sessionId: chat.sessionId, screenshot }, (event) => {
+        dispatch({ is: "event", event });
+        if (event.is === "applied") onApplied(event.layout);
+      }))
+    ).then((result) =>
+      dispatch(
+        Either.isLeft(result) ? { is: "failed", message: result.left.message } : { is: "finished" },
+      )
     );
   };
-
-  /** The conversation hosted at `host`. */
-  return (host: ChatHost) => {
-    const key = storageKey(host);
-    const chat = chatAt(key);
-    const dispatch = (action: ChatAction) => dispatchChat({ key, base: chat, action });
-    const send = (message: string) => {
-      dispatch({ is: "send", text: message });
-      screenshot().then((screenshot) =>
-        run(askAssistant({ message, sessionId: chat.sessionId, screenshot }, (event) => {
-          dispatch({ is: "event", event });
-          if (event.is === "applied") onAppliedRef.current(event.layout);
-        }))
-      ).then((result) =>
-        dispatch(
-          Either.isLeft(result)
-            ? { is: "failed", message: result.left.message }
-            : { is: "finished" },
-        )
-      );
-    };
-    return { chat, send, reset: () => dispatch({ is: "reset" }) };
-  };
-}
-
-export type Assistants = ReturnType<typeof useAssistants>;
-export type Assistant = ReturnType<Assistants>;
-
-/** Every conversation, for the admin bar's panel and any assistant widgets to find their own. */
-export const AssistantContext = createContext<Assistants | null>(null);
+  return { chat, send, reset: () => dispatch({ is: "reset" }) };
+};
 
 /**
  * A user message in the widget: a darker wash than the history box it sits in,
@@ -372,13 +315,8 @@ function NewConversationButton(props: { chat: Chat; onReset: () => void; size: "
 }
 
 /** A chat with the admin assistant, floating over the columns in the middle of the viewport. */
-export function AssistantPanel(props: {
-  chat: Chat;
-  onSend: (message: string) => void;
-  onReset: () => void;
-  onClose: () => void;
-}) {
-  const { chat } = props;
+export function AssistantPanel(props: { assistant: Assistant; onClose: () => void }) {
+  const { chat, send, reset } = props.assistant;
   return (
     <Theme appearance="light" hasBackground={false}>
       <Flex
@@ -401,7 +339,7 @@ export function AssistantPanel(props: {
       >
         <HStack px="4" py="2" borderBottomWidth="1px" borderColor="border">
           <Text fontWeight="semibold" flex="1">Assistant</Text>
-          <NewConversationButton chat={chat} onReset={props.onReset} size="xs" />
+          <NewConversationButton chat={chat} onReset={reset} size="xs" />
           <IconButton
             aria-label="Close"
             title="Close"
@@ -413,7 +351,7 @@ export function AssistantPanel(props: {
           </IconButton>
         </HStack>
         <ChatMessages chat={chat} px="4" />
-        <ChatComposer chat={chat} onSend={props.onSend} autoFocus inset />
+        <ChatComposer chat={chat} onSend={send} autoFocus inset />
       </Flex>
     </Theme>
   );
@@ -423,10 +361,8 @@ export function AssistantPanel(props: {
  * The assistant pinned into a column: a conversation of its own, separate from
  * the panel's, sized to sit among the other widgets and colored to suit its column.
  */
-export function AssistantWidget(props: { widgetId: string }) {
-  const assistants = useContext(AssistantContext);
-  if (assistants === null) throw new Error("AssistantWidget must be used within AssistantContext");
-  const assistant = assistants({ is: "widget", widgetId: props.widgetId });
+export function AssistantWidget(props: { assistant: Assistant }) {
+  const { assistant } = props;
   const { chat } = assistant;
   return (
     <Flex direction="column" h={assistantWidgetHeight}>

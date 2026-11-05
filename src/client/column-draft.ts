@@ -87,10 +87,10 @@ type Finished = { ok: true; widgets: ReadonlyArray<Widget> } | {
 };
 
 /** Finishes every draft, stopping at the first that fails. */
-const finishAll = (drafts: ReadonlyArray<Draft>, makeId: () => string): Finished =>
+const finishAll = (drafts: ReadonlyArray<Draft>): Finished =>
   drafts.reduce<Finished>((acc, draft) => {
     if (!acc.ok) return acc;
-    const finished = finishDraft(draft, makeId);
+    const finished = finishDraft(draft);
     return finished.ok
       ? { ok: true, widgets: [...acc.widgets, finished.widget] }
       : { ok: false, widgetId: idOf(draft), errorMessage: finished.errorMessage };
@@ -100,14 +100,10 @@ const finishAll = (drafts: ReadonlyArray<Draft>, makeId: () => string): Finished
  * The action that saves the draft over `column`, or the first widget whose draft
  * is invalid (e.g. a bookmark outline that doesn't parse).
  */
-export const finishColumnDraft = (
-  column: Column,
-  draft: ColumnDraft,
-  makeId: () => string,
-): FinishedColumn => {
-  const widgets = finishAll(draft.widgets, makeId);
+export const finishColumnDraft = (column: Column, draft: ColumnDraft): FinishedColumn => {
+  const widgets = finishAll(draft.widgets);
   if (!widgets.ok) return widgets;
-  const sent = finishAll(draft.sent.map((s) => s.draft), makeId);
+  const sent = finishAll(draft.sent.map((s) => s.draft));
   if (!sent.ok) return sent;
   return {
     ok: true,

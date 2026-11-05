@@ -1,7 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { applyAction } from "./layout-ops.ts";
 import {
-  type BookmarksWidget,
   type Column,
   defaultBackground,
   defaultSkin,
@@ -28,15 +27,15 @@ const ids = (l: Layout) => l.columns.map((c) => c.id);
 const widgetIds = (l: Layout, columnId: string) =>
   l.columns.find((c) => c.id === columnId)?.widgets.map((w) => w.id);
 
-const bookmarks: BookmarksWidget = {
+/** A widget type, as the registry lists it. */
+const type = (id: string) => ({ id, title: id, defaultConfig: {} });
+
+const bookmarks: Widget = {
   is: "bookmarks",
   id: "w1",
   subheading: "Links",
   collapsed: false,
-  items: [
-    { is: "folder", id: "f1", label: "F", expanded: false, children: [] },
-    { is: "link", id: "l1", label: "L", url: "https://x.test" },
-  ],
+  config: { items: [] },
 };
 
 Deno.test("replace-layout swaps in the new layout", () => {
@@ -124,10 +123,10 @@ Deno.test("set-column-color changes only the target column", () => {
 });
 
 Deno.test("edit-column swaps in the edited column and appends sent widgets", () => {
-  const snippets = newWidget("snippets", "s");
+  const snippets = newWidget(type("snippets"), "s");
   const start = layout(
     column("a", [bookmarks, snippets]),
-    column("b", [newWidget("form-grid", "g")]),
+    column("b", [newWidget(type("form-grid"), "g")]),
   );
   const l = applyAction(start, {
     is: "edit-column",
@@ -165,36 +164,22 @@ Deno.test("toggle-widget flips collapsed", () => {
   assertEquals(l.columns.at(0)?.widgets.at(0)?.collapsed, true);
 });
 
-Deno.test("toggle-folder flips only the target folder", () => {
-  const l = applyAction(layout(column("a", [bookmarks])), {
-    is: "toggle-folder",
+Deno.test("set-widget-config replaces only that widget's config", () => {
+  const other = { ...bookmarks, id: "w2" };
+  const l = applyAction(layout(column("a", [bookmarks, other])), {
+    is: "set-widget-config",
     columnId: "a",
     widgetId: "w1",
-    folderId: "f1",
+    config: { items: ["changed"] },
   });
-  const widget = l.columns.at(0)?.widgets.at(0);
-  assertEquals(widget?.is === "bookmarks" && widget.items, [
-    { is: "folder", id: "f1", label: "F", expanded: true, children: [] },
-    { is: "link", id: "l1", label: "L", url: "https://x.test" },
-  ]);
-});
-
-Deno.test("toggle-folder ignores non-bookmark widgets", () => {
-  const l = layout(column("a", [newWidget("snippets", "s")]));
-  assertEquals(
-    applyAction(l, {
-      is: "toggle-folder",
-      columnId: "a",
-      widgetId: "s",
-      folderId: "f1",
-    }),
-    l,
-  );
+  assertEquals(l.columns.at(0)?.widgets.map((w) => w.config), [{ items: ["changed"] }, {
+    items: [],
+  }]);
 });
 
 Deno.test("discard-untouched-columns removes only listed columns left as created", () => {
   const renamed = { ...column("renamed"), heading: "Work" };
-  const filled = column("filled", [newWidget("bookmarks", "w")]);
+  const filled = column("filled", [newWidget(type("bookmarks"), "w")]);
   const start = layout(column("fresh"), renamed, filled, column("unlisted"));
   const result = applyAction(start, {
     is: "discard-untouched-columns",

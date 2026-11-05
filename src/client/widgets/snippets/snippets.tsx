@@ -1,10 +1,13 @@
 import { chakra, Stack, Text, Theme } from "@chakra-ui/react";
 import { Effect } from "effect";
 import { Fragment, useState } from "react";
-import { graphemeLines, isCopyableChar } from "../common/graphemes.ts";
-import type { Snippet, SnippetsWidget as Model } from "../common/model.ts";
-import { copyToClipboard } from "./live.ts";
-import { codeBox } from "./surface.ts";
+import { codeBox } from "../../surface.ts";
+import type { WidgetProps } from "../../widget-kit/views.tsx";
+import type { Snippet, SnippetsConfig } from "./config.ts";
+import { graphemeLines, isCopyableChar } from "./graphemes.ts";
+
+const copyToClipboard = (text: string): Effect.Effect<void, string> =>
+  Effect.tryPromise({ try: () => navigator.clipboard.writeText(text), catch: String });
 
 const flashMs = 900;
 
@@ -129,16 +132,15 @@ function SnippetBox(props: {
   );
 }
 
-export function SnippetsWidget(props: { widget: Model }) {
+export function Snippets(props: WidgetProps<SnippetsConfig>) {
+  const { snippets } = props.config;
   const { flash, copy } = useCopy();
   return (
     <Stack gap="2">
-      {props.widget.snippets.map((snippet) => (
+      {snippets.map((snippet) => (
         <SnippetBox key={snippet.id} snippet={snippet} flash={flash} copy={copy} />
       ))}
-      {props.widget.snippets.length === 0 && (
-        <Text fontSize="sm" color="fg.muted">No snippets yet.</Text>
-      )}
+      {snippets.length === 0 && <Text fontSize="sm" color="fg.muted">No snippets yet.</Text>}
     </Stack>
   );
 }

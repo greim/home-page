@@ -1,6 +1,6 @@
-import { assertEquals, assertStringIncludes } from "@std/assert";
+import { assertEquals } from "@std/assert";
 import { Either } from "effect";
-import { decodeConfig, formatClock, untilNextMinute } from "./clock.ts";
+import { formatClock, timeZones, untilNextMinute } from "./clock.ts";
 
 const noon = new Date("2026-11-03T12:05:30Z");
 
@@ -30,10 +30,8 @@ Deno.test("formatClock fails for a zone that doesn't exist", () => {
   );
 });
 
-Deno.test("decodeConfig reads the config from the props", () => {
-  assertEquals(decodeConfig({ config: { timeZone: null } }), Either.right({ timeZone: null }));
-  const bad = decodeConfig({ config: { timeZone: 5 } });
-  assertStringIncludes(Either.isLeft(bad) ? bad.left : "", "settings are invalid");
+Deno.test("timeZones lists real zones", () => {
+  assertEquals(timeZones().includes("Asia/Tokyo"), true);
 });
 
 Deno.test("untilNextMinute counts down to the minute", () => {

@@ -9,7 +9,7 @@
  * otherwise a folder. Indented lines are links belonging to the folder above.
  * Blank lines are ignored.
  */
-import type { BookmarkNode, Folder, Link } from "./model.ts";
+import type { BookmarkNode, Folder, Link } from "./config.ts";
 
 const separator = " | ";
 

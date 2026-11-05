@@ -34,9 +34,18 @@ contains:
 - `main.tsx`: the entry point. Calls `registerMfe("<id>", …)` and provides two views:
   - `widget`: the widget's body, as shown in a column.
   - `editor`: the widget's settings form, shown in the column editor in admin mode.
-- `manifest.ts`: exports, as `manifest`, the widget's title, description, and an Effect Schema for
-  its config, declared with `defineManifest` from `src/common/widgets.ts`.
+
+  A widget may provide more views for the app to embed elsewhere. The assistant's `panel` is the
+  admin bar's chat.
+- `manifest.ts`: exports, as `manifest`, the widget's title, description, an Effect Schema for its
+  config, and the config a new widget starts with, declared with `defineManifest` from
+  `src/common/widgets.ts`.
 - Tests, per [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md).
+
+Widgets build their views with the kit in `src/client/widget-kit/`. `widgetView` and `editorView`
+decode a view's props with the widget's config schema, show what's wrong if they don't decode, and
+render the view with Chakra set up as the shell has it (`src/client/chakra-system.ts`). The kit also
+has small pieces editors share, such as labels and row controls.
 
 ### The Widget Build
 
@@ -44,13 +53,14 @@ contains:
 
 - `dist/widgets/<id>/main.js`: one bundle per widget, with its source map beside it.
 - `dist/widgets/registry.json`: every widget's ID, title, description, a content hash of its bundle,
-  and its config schema (converted from Effect Schema to JSON Schema with `JSONSchema.make`).
+  its config schema (converted from Effect Schema to JSON Schema with `JSONSchema.make`), and its
+  default config (encoded with its schema, as it's saved in the layout).
 
 The build fails if a widget folder's name isn't a valid ID (lowercase letters, digits and single
-hyphens), it lacks `main.tsx` or `manifest.ts`, its manifest doesn't decode, or it fails to bundle.
-It reports every broken widget at once, and leaves the last good output in place. `dist/` is
-gitignored. The server runs this build at startup, in its own process, so a fresh clone works, and
-`deno task build` runs it too.
+hyphens), it lacks `main.tsx` or `manifest.ts`, its manifest doesn't decode, its default config
+doesn't fit its schema, or it fails to bundle. It reports every broken widget at once, and leaves
+the last good output in place. `dist/` is gitignored. The server runs this build at startup, in its
+own process, so a fresh clone works, and `deno task build` runs it too.
 
 ### Serving Widgets
 
@@ -74,26 +84,41 @@ The layout schema no longer lists widget types. A widget in the layout is:
 }
 ```
 
-The existing types keep their IDs (`bookmarks`, `snippets`, `form-grid`, `assistant`), so existing
-layouts migrate by moving each widget's type-specific fields into `config`.
-
-Until then (phases 2 and 3), MFE widgets sit beside the built-in ones with an interim shape,
-`{ is: "mfe", mfe: "<type id>", config, ...}`, so `is` stays a literal the app's code can switch on.
-Phase 3 migrates them to the shape above along with the rest.
+The existing types keep their IDs (`bookmarks`, `snippets`, `form-grid`, `assistant`). A layout
+saved before widgets were MFEs is migrated as it's read: each widget's type-specific fields move
+into `config`. So is phase 2's interim shape, `{ is: "mfe", mfe: "<type id>", config, ...}`. Either
+way, it's saved in the current shape next time.
 
 ### Shell and Widget Contract
 
-- The shell embeds a widget's `widget` view inside its card, and passes it `config` and the current
-  look (skin colors, fonts, and the column's text color) as props.
-- A widget saves a changed config (e.g. a bookmark folder expanded) by sending it to the shell on a
-  `save-config` channel.
-- In the column editor, the `editor` view is passed the draft config and reports each change, and
-  whether it's valid, on a `draft-config` channel. The column editor's Save button applies it, like
-  any other change.
-- The add-widget menu lists widget types from the registry.
+Props cross between bundles as they are, functions included (see
+`src/client/widget-kit/contract.ts`). The config in them is JSON, as saved in the layout. The kit
+decodes it with the widget's schema and encodes it again before handing it back.
+
+- The shell embeds a widget's `widget` view inside its card, with props
+  `{ widgetId, config,
+  saveConfig }`. A widget saves a changed config (e.g. a bookmark folder
+  opened) by calling `saveConfig`.
+- In the column editor, the shell embeds the selected widget's `editor` view, with props
+  `{ widgetId,
+  config, reportDraft }`. `config` is where to start from; the editor owns its state
+  from then on. It calls `reportDraft` with `{ ok: true, config }` or `{ ok: false, errorMessage }`
+  when it opens and after each change. The column editor's Save button applies the latest valid
+  drafts, like any other change, or shows the first error. A widget whose editor never opened is
+  saved unchanged.
+- The look isn't passed as props. A widget's DOM sits inside its column, so it inherits the column's
+  text color and fonts, the skin's `--skin-*` variables, and Chakra's light or dark tokens through
+  CSS, as the built-in widgets did.
+- The add-widget menu lists widget types from the registry. A new widget gets the type's title as
+  its subheading, and its default config.
 - The shell shows an error in the widget's card when its type isn't in the registry, its bundle
   fails to load, its config doesn't decode, or it throws while rendering. If a developer deletes a
   widget type the layout still uses, that's the error they get.
+
+The assistant is a widget, but the app also embeds its `panel` view as the admin bar's chat. Its
+conversations live in its bundle, for the life of the page, so the panel and each assistant widget
+keep theirs while closed or collapsed. When it applies a layout, it sends it to the app on a
+`layout-applied` channel, for the page to show.
 
 ### Secrets
 

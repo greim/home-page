@@ -1,8 +1,17 @@
 /** The clock widget: the current time and date, updated each minute. */
+import { NativeSelect } from "@chakra-ui/react";
 import { Either } from "effect";
 import { useEffect, useState } from "react";
-import { registerMfe, type ViewProps } from "../../mfe/register-live.tsx";
-import { decodeConfig, formatClock, untilNextMinute } from "./clock.ts";
+import { registerMfe } from "../../mfe/register-live.tsx";
+import { Label } from "../../widget-kit/form.tsx";
+import {
+  type EditorProps,
+  editorView,
+  type WidgetProps,
+  widgetView,
+} from "../../widget-kit/views.tsx";
+import { formatClock, timeZones, untilNextMinute } from "./clock.ts";
+import { ClockConfig } from "./config.ts";
 
 /** The current time, updated as each minute starts. */
 const useNow = (): Date => {
@@ -14,12 +23,9 @@ const useNow = (): Date => {
   return now;
 };
 
-function Clock({ props }: ViewProps) {
+function Clock({ config }: WidgetProps<ClockConfig>) {
   const now = useNow();
-  const face = Either.flatMap(
-    decodeConfig(props),
-    (config) => formatClock(now, config.timeZone, undefined),
-  );
+  const face = formatClock(now, config.timeZone, undefined);
   if (Either.isLeft(face)) {
     return <p style={{ margin: 0, opacity: 0.8 }}>{face.left}</p>;
   }
@@ -33,4 +39,33 @@ function Clock({ props }: ViewProps) {
   );
 }
 
-registerMfe("clock", () => ({ widget: Clock }));
+const local = "";
+
+function ClockEditor({ config, reportDraft }: EditorProps<ClockConfig>) {
+  const [timeZone, setTimeZone] = useState(config.timeZone);
+  useEffect(() => reportDraft({ ok: true, config }), []);
+  return (
+    <>
+      <Label>Time zone</Label>
+      <NativeSelect.Root size="sm" width="72">
+        <NativeSelect.Field
+          value={timeZone ?? local}
+          onChange={(e) => {
+            const next = e.target.value === local ? null : e.target.value;
+            setTimeZone(next);
+            reportDraft({ ok: true, config: { timeZone: next } });
+          }}
+        >
+          <option value={local}>The computer's own</option>
+          {timeZones().map((zone) => <option key={zone} value={zone}>{zone}</option>)}
+        </NativeSelect.Field>
+        <NativeSelect.Indicator />
+      </NativeSelect.Root>
+    </>
+  );
+}
+
+registerMfe("clock", () => ({
+  widget: widgetView(ClockConfig, Clock),
+  editor: editorView(ClockConfig, ClockEditor),
+}));

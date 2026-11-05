@@ -31,12 +31,8 @@ export type LayoutAction =
    */
   | { is: "edit-column"; column: Column; sent: ReadonlyArray<SentWidget> }
   | { is: "toggle-widget"; columnId: string; widgetId: string }
-  | {
-    is: "toggle-folder";
-    columnId: string;
-    widgetId: string;
-    folderId: string;
-  };
+  /** A widget saved a change to its own config, e.g. a bookmark folder opened. */
+  | { is: "set-widget-config"; columnId: string; widgetId: string; config: unknown };
 
 export type SentWidget = { readonly toColumnId: string; readonly widget: Widget };
 
@@ -79,18 +75,6 @@ const editColumn = (
       })),
     replaced,
   );
-};
-
-const toggleFolder = (widget: Widget, folderId: string): Widget => {
-  if (widget.is !== "bookmarks") {
-    return widget;
-  }
-  return {
-    ...widget,
-    items: widget.items.map((node) =>
-      node.is === "folder" && node.id === folderId ? { ...node, expanded: !node.expanded } : node
-    ),
-  };
 };
 
 export const applyAction = (layout: Layout, action: LayoutAction): Layout => {
@@ -154,12 +138,12 @@ export const applyAction = (layout: Layout, action: LayoutAction): Layout => {
         action.widgetId,
         (widget) => ({ ...widget, collapsed: !widget.collapsed }),
       );
-    case "toggle-folder":
+    case "set-widget-config":
       return updateWidget(
         layout,
         action.columnId,
         action.widgetId,
-        (widget) => toggleFolder(widget, action.folderId),
+        (widget) => ({ ...widget, config: action.config }),
       );
     default:
       return action satisfies never;

@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert";
-import { parseOutline, serializeOutline } from "./bookmark-outline.ts";
-import type { BookmarkNode } from "./model.ts";
+import { parseOutline, serializeOutline } from "./outline.ts";
+import type { BookmarkNode } from "./config.ts";
 
 const counter = () => {
   let n = 0;

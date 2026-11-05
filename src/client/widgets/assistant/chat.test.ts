@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { emptyLayout } from "../common/model.ts";
+import { emptyLayout } from "../../../common/model.ts";
 import {
   type ChatAction,
   chatReducer,
@@ -7,7 +7,7 @@ import {
   restoreChat,
   saveChat,
   summaryText,
-} from "./assistant-chat.ts";
+} from "./chat.ts";
 
 const play = (actions: ReadonlyArray<ChatAction>) => actions.reduce(chatReducer, emptyChat);
 

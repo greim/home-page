@@ -1,50 +1,29 @@
-/** Pure editing logic behind the widget editor dialog. */
-import { moveWhere } from "../common/arrays.ts";
-import { parseOutline, serializeOutline } from "../common/bookmark-outline.ts";
+/** Pure editing logic behind a widget's pane in the column editor. */
 import type { Widget } from "../common/model.ts";
-import { placeholder } from "../common/url-template.ts";
+import type { DraftReport } from "./widget-kit/contract.ts";
 
-/** Bookmarks are edited as outline text; other widgets are edited directly. */
-export type Draft = { readonly widget: Widget; readonly outline: string };
+/**
+ * A widget being edited, and its editor's latest report on its config: null
+ * until its editor has opened, which leaves the config as it was.
+ */
+export type Draft = { readonly widget: Widget; readonly report: DraftReport | null };
 
-export const toDraft = (widget: Widget): Draft => ({
-  widget,
-  outline: widget.is === "bookmarks" ? serializeOutline(widget.items) : "",
-});
+export const toDraft = (widget: Widget): Draft => ({ widget, report: null });
+
+export const withReport = (draft: Draft, report: DraftReport): Draft => ({ ...draft, report });
+
+/** The config to (re)start the editor from: the latest valid one. */
+export const draftConfig = (draft: Draft): unknown =>
+  draft.report?.ok ? draft.report.config : draft.widget.config;
 
 export type Finished =
   | { ok: true; widget: Widget }
   | { ok: false; errorMessage: string };
 
-export const finishDraft = (draft: Draft, makeId: () => string): Finished => {
-  const { widget } = draft;
-  switch (widget.is) {
-    case "bookmarks": {
-      const parsed = parseOutline(draft.outline, widget.items, makeId);
-      return parsed.ok ? { ok: true, widget: { ...widget, items: parsed.items } } : parsed;
-    }
-    case "snippets":
-    case "assistant":
-    case "mfe":
-      return { ok: true, widget };
-    case "form-grid": {
-      const bad = widget.fields.find((f) => !f.urlTemplate.includes(placeholder));
-      return bad === undefined ? { ok: true, widget } : {
-        ok: false,
-        errorMessage: `"${bad.label || "Untitled"}": URL template must contain ${placeholder}`,
-      };
-    }
-    default:
-      return widget satisfies never;
+export const finishDraft = (draft: Draft): Finished => {
+  const { widget, report } = draft;
+  if (report === null) {
+    return { ok: true, widget };
   }
-};
-
-/** Moves the item with `id` one position up (-1) or down (+1). */
-export const nudge = <T extends { readonly id: string }>(
-  items: ReadonlyArray<T>,
-  id: string,
-  delta: -1 | 1,
-): ReadonlyArray<T> => {
-  const index = items.findIndex((item) => item.id === id);
-  return index === -1 ? items : moveWhere(items, (item) => item.id === id, index + delta);
+  return report.ok ? { ok: true, widget: { ...widget, config: report.config } } : report;
 };

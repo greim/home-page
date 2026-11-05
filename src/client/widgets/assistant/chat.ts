@@ -1,6 +1,6 @@
 /** The admin assistant's chat, as a pure reducer over what the user and server do. */
 import { Either, Schema } from "effect";
-import type { ChatEvent } from "../common/assistant.ts";
+import type { ChatEvent } from "../../../common/assistant.ts";
 
 export type ChatEntry =
   | { is: "user"; text: string }

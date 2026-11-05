@@ -8,7 +8,6 @@ import {
   Layout,
   newWidget,
   type Skin,
-  widgetKinds,
 } from "./model.ts";
 
 const decode = Schema.decodeUnknownEither(Layout);
@@ -24,7 +23,10 @@ Deno.test("Layout decodes a well-formed layout", () => {
       hidden: false,
       color: "#ffffff",
       icon: "LuStar",
-      widgets: widgetKinds.map((k) => newWidget(k.is, k.is)),
+      widgets: [
+        newWidget({ id: "clock", title: "Clock", defaultConfig: { timeZone: null } }, "w1"),
+        newWidget({ id: "assistant", title: "Assistant", defaultConfig: {} }, "w2"),
+      ],
     }],
   };
   assertEquals(decode(layout), Either.right(layout));
@@ -34,39 +36,51 @@ Deno.test("Layout decodes the empty layout", () => {
   assertEquals(decode(emptyLayout), Either.right(emptyLayout));
 });
 
-Deno.test("Layout rejects unknown widget kinds and bad grid sizes", () => {
-  const withWidget = (widget: unknown) => ({
-    version: 1,
-    columns: [{ id: "c", heading: "", hidden: false, widgets: [widget] }],
-  });
-  assertEquals(Either.isLeft(decode(withWidget({ is: "weather" }))), true);
+const withWidget = (widget: unknown) => ({
+  version: 1,
+  columns: [{ id: "c", heading: "", hidden: false, widgets: [widget] }],
+});
+
+const decodedWidget = (widget: unknown) =>
+  Either.map(decode(withWidget(widget)), (l) => l.columns.at(0)?.widgets.at(0));
+
+const base = { id: "w", subheading: "Links", collapsed: false };
+
+Deno.test("Layout leaves a widget's config to the widget", () => {
+  const widget = { ...base, is: "weather", config: { anything: [1, "two"] } };
+  assertEquals(decodedWidget(widget), Either.right(widget));
+});
+
+Deno.test("Layout rejects a widget type ID that isn't a folder name", () => {
+  assertEquals(Either.isLeft(decode(withWidget({ ...base, is: "Bad Type", config: {} }))), true);
+});
+
+Deno.test("Layout moves an older widget's settings into its config", () => {
+  const items = [{ is: "link", id: "l", label: "L", url: "https://x.test" }];
   assertEquals(
-    Either.isLeft(
-      decode(withWidget({ ...newWidget("form-grid", "f"), gridColumns: 7 })),
-    ),
-    true,
+    decodedWidget({ ...base, is: "bookmarks", items }),
+    Either.right({ ...base, is: "bookmarks", config: { items } }),
+  );
+  assertEquals(
+    decodedWidget({ ...base, is: "assistant" }),
+    Either.right({ ...base, is: "assistant", config: {} }),
   );
 });
 
-Deno.test("Layout rejects folders nested inside folders", () => {
-  const folder = {
-    is: "folder",
-    id: "f",
-    label: "",
-    expanded: false,
-    children: [],
-  };
-  const widget = {
-    ...newWidget("bookmarks", "b"),
-    items: [{ ...folder, children: [folder] }],
-  };
+Deno.test("Layout reads the interim MFE widget shape", () => {
   assertEquals(
-    Either.isLeft(decode({
-      version: 1,
-      columns: [{ id: "c", heading: "", hidden: false, widgets: [widget] }],
-    })),
-    true,
+    decodedWidget({ ...base, is: "mfe", mfe: "clock", config: { timeZone: null } }),
+    Either.right({ ...base, is: "clock", config: { timeZone: null } }),
   );
+});
+
+Deno.test("Layout saves migrated widgets in the current shape", () => {
+  const decoded = Either.getOrThrow(decode(withWidget({ ...base, is: "snippets", snippets: [] })));
+  assertEquals(Schema.encodeSync(Layout)(decoded).columns.at(0)?.widgets.at(0), {
+    ...base,
+    is: "snippets",
+    config: { snippets: [] },
+  });
 });
 
 Deno.test("Column color defaults to white for older layouts", () => {

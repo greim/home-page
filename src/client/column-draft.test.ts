@@ -11,16 +11,17 @@ import {
   toColumnDraft,
   updateWidget,
 } from "./column-draft.ts";
-import { toDraft } from "./widget-draft.ts";
+import { toDraft, withReport } from "./widget-draft.ts";
+
+const type = (id: string) => ({ id, title: id, defaultConfig: {} });
 
 const column: Column = {
   ...newColumn("c", "LuStar"),
-  widgets: [newWidget("snippets", "a"), newWidget("form-grid", "b"), newWidget("bookmarks", "x")],
-};
-
-const ids = () => {
-  let n = 0;
-  return () => `id${++n}`;
+  widgets: [
+    newWidget(type("snippets"), "a"),
+    newWidget(type("form-grid"), "b"),
+    newWidget(type("bookmarks"), "x"),
+  ],
 };
 
 const order = (draft: ReturnType<typeof toColumnDraft>) => draft.widgets.map((w) => w.widget.id);
@@ -40,15 +41,15 @@ Deno.test("selectWidget and selectedDraft track the selection", () => {
 
 Deno.test("updateWidget swaps in the edited draft by id", () => {
   const draft = toColumnDraft(column, null);
-  const edited = toDraft({ ...newWidget("form-grid", "b"), subheading: "Edited" });
+  const edited = toDraft({ ...newWidget(type("form-grid"), "b"), subheading: "Edited" });
   assertEquals(
     updateWidget(draft, edited).widgets.map((w) => w.widget.subheading),
-    ["Snippets", "Edited", "Bookmarks"],
+    ["snippets", "Edited", "bookmarks"],
   );
 });
 
 Deno.test("addWidget appends and selects", () => {
-  const draft = addWidget(toColumnDraft(column, "a"), newWidget("bookmarks", "n"));
+  const draft = addWidget(toColumnDraft(column, "a"), newWidget(type("bookmarks"), "n"));
   assertEquals(order(draft), ["a", "b", "x", "n"]);
   assertEquals(draft.selectedId, "n");
 });
@@ -79,7 +80,7 @@ Deno.test("finishColumnDraft builds an edit-column action", () => {
     "other",
   );
   const [a, b, x] = column.widgets;
-  assertEquals(finishColumnDraft(column, draft, ids()), {
+  assertEquals(finishColumnDraft(column, draft), {
     ok: true,
     action: {
       is: "edit-column",
@@ -91,10 +92,11 @@ Deno.test("finishColumnDraft builds an edit-column action", () => {
 
 Deno.test("finishColumnDraft reports the first invalid widget", () => {
   const draft = toColumnDraft(column, null);
-  const bad = (id: string) => ({ ...toDraft(newWidget("bookmarks", id)), outline: "A | nope" });
+  const bad = (id: string) =>
+    withReport(toDraft(newWidget(type("bookmarks"), id)), { ok: false, errorMessage: "Nope" });
   const inList = updateWidget(draft, bad("x"));
-  assertEquals(finishColumnDraft(column, inList, ids()).ok, false);
-  assertEquals((finishColumnDraft(column, inList, ids()) as { widgetId: string }).widgetId, "x");
+  assertEquals(finishColumnDraft(column, inList).ok, false);
+  assertEquals((finishColumnDraft(column, inList) as { widgetId: string }).widgetId, "x");
   const inSent = sendWidget(inList, "x", "other");
-  assertEquals((finishColumnDraft(column, inSent, ids()) as { widgetId: string }).widgetId, "x");
+  assertEquals((finishColumnDraft(column, inSent) as { widgetId: string }).widgetId, "x");
 });

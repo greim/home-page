@@ -4,7 +4,14 @@ import type { Registry } from "../common/widgets.ts";
 import { registryResolver } from "./widget-resolver.ts";
 
 const registry: Registry = {
-  widgets: [{ id: "clock", title: "Clock", description: "", version: "v1", configSchema: {} }],
+  widgets: [{
+    id: "clock",
+    title: "Clock",
+    description: "",
+    version: "v1",
+    configSchema: {},
+    defaultConfig: {},
+  }],
 };
 
 Deno.test("registryResolver finds a widget's versioned bundle URL", async () => {

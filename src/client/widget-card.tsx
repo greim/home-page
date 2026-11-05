@@ -1,61 +1,39 @@
 import { Box, chakra, Text } from "@chakra-ui/react";
 import { useMemo } from "react";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
-import type { MfeWidget, Widget } from "../common/model.ts";
+import type { Widget } from "../common/model.ts";
 import { adminButton } from "./admin-button.ts";
 import { useBoard } from "./board-context.ts";
-import { AssistantWidget } from "./assistant-panel.tsx";
-import { BookmarksWidget } from "./bookmarks-widget.tsx";
-import { FormGridWidget } from "./form-grid-widget.tsx";
-import { SnippetsWidget } from "./snippets-widget.tsx";
-import { widgetHeading } from "./surface.ts";
 import { MfeView } from "./mfe/mfe-view.tsx";
-import { useWidgetManager } from "./widget-host.ts";
+import { widgetHeading } from "./surface.ts";
+import { widgetViewName, type WidgetViewProps } from "./widget-kit/contract.ts";
+import { useWidgetHost } from "./widget-host.tsx";
 
-/** A widget built as an MFE. Its own bundle renders it, given its config. */
-function MfeWidgetBody(props: { widget: MfeWidget }) {
-  const manager = useWidgetManager();
-  const { config } = props.widget;
-  const viewProps = useMemo(() => ({ config }), [config]);
+/** Shown in place of a widget, or its editor, that can't be shown. */
+export const WidgetProblem = (props: { message: string }) => (
+  <Text fontSize="sm" color="fg.error">{props.message}</Text>
+);
+
+/** The widget's own view, rendered by its MFE bundle. */
+function WidgetBody(props: { columnId: string; widget: Widget }) {
+  const { dispatch } = useBoard();
+  const { manager } = useWidgetHost();
+  const { columnId, widget } = props;
+  const viewProps: WidgetViewProps = useMemo(() => ({
+    widgetId: widget.id,
+    config: widget.config,
+    saveConfig: (config: unknown) =>
+      dispatch({ is: "set-widget-config", columnId, widgetId: widget.id, config }),
+  }), [columnId, widget.id, widget.config, dispatch]);
   return (
     <MfeView
       manager={manager}
-      mfe={props.widget.mfe}
-      view="widget"
+      mfe={widget.is}
+      view={widgetViewName}
       props={viewProps}
-      fallback={(message) => <Text fontSize="sm" color="fg.error">{message}</Text>}
+      fallback={(message) => <WidgetProblem message={message} />}
     />
   );
-}
-
-function WidgetBody(props: { columnId: string; widget: Widget }) {
-  const { dispatch } = useBoard();
-  const { widget } = props;
-  switch (widget.is) {
-    case "bookmarks":
-      return (
-        <BookmarksWidget
-          widget={widget}
-          onToggleFolder={(folderId) =>
-            dispatch({
-              is: "toggle-folder",
-              columnId: props.columnId,
-              widgetId: widget.id,
-              folderId,
-            })}
-        />
-      );
-    case "snippets":
-      return <SnippetsWidget widget={widget} />;
-    case "form-grid":
-      return <FormGridWidget widget={widget} />;
-    case "assistant":
-      return <AssistantWidget widgetId={widget.id} />;
-    case "mfe":
-      return <MfeWidgetBody widget={widget} />;
-    default:
-      return widget satisfies never;
-  }
 }
 
 /**

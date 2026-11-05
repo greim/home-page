@@ -6,6 +6,7 @@ const manifest = defineManifest({
   title: "Clock",
   description: "Shows the time",
   config: Schema.Struct({ zone: Schema.String }),
+  defaultConfig: { zone: "UTC" },
 });
 
 Deno.test("decodeManifestModule accepts a module exporting a manifest", () => {
@@ -34,7 +35,14 @@ Deno.test("decodeManifestModule says what's wrong with a bad manifest", async (t
 
 Deno.test("widgetBundleUrl versions the URL from the registry", () => {
   const registry: Registry = {
-    widgets: [{ id: "clock", title: "", description: "", version: "abc", configSchema: {} }],
+    widgets: [{
+      id: "clock",
+      title: "",
+      description: "",
+      version: "abc",
+      configSchema: {},
+      defaultConfig: {},
+    }],
   };
   assertEquals(
     widgetBundleUrl(registry, "clock"),
