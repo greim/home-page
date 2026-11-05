@@ -336,8 +336,6 @@ export function ColumnNavigator(props: {
   const row = useRef<HTMLDivElement>(null);
   const targeted = (gap: number) => drag?.gap === gap;
   const endsWithColumn = slots.at(-1)?.is === "column";
-  // The add-at-start box sits before the first thumbnail, so shift the row left by one.
-  const lead = admin ? ` - ${thumbWidth} - ${thumbGap}` : "";
 
   const move = (columnId: string, toIndex: number) =>
     dispatch({ is: "move-column", columnId, toIndex });
@@ -375,19 +373,31 @@ export function ColumnNavigator(props: {
         gap={`calc(${thumbGap})`}
         h="full"
         // The thumbnail at `offset` starts where the centered view begins.
-        ml={`calc(50% - ${viewWidth} / 2${lead})`}
+        ml={`calc(50% - ${viewWidth} / 2)`}
         transform={`translateX(calc(${-offset} * (${thumbWidth} + ${thumbGap})))`}
-        transition="transform 300ms ease"
+        // Spacing animates along with the outline when admin mode toggles.
+        transition="transform 300ms ease, margin-left 300ms ease, gap 300ms ease"
       >
         {admin && (
-          <Place side="left" shift={outsideShift}>
-            <AddThumbnail
-              label="Add column at start"
-              gap={0}
-              targeted={targeted(0)}
-              onClick={() => props.onAdd(0)}
-            />
-          </Place>
+          // Out of the flow, just before the first thumbnail, so adding it doesn't
+          // shift the row (which would fight the row's spacing transition).
+          <Box
+            position="absolute"
+            right="100%"
+            top="0"
+            bottom="0"
+            display="flex"
+            mr={`calc(${thumbGap})`}
+          >
+            <Place side="left" shift={outsideShift}>
+              <AddThumbnail
+                label="Add column at start"
+                gap={0}
+                targeted={targeted(0)}
+                onClick={() => props.onAdd(0)}
+              />
+            </Place>
+          </Box>
         )}
         {slots.map((slot, i) => {
           const side = sideOf(offset, i);

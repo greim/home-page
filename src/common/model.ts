@@ -96,7 +96,7 @@ export type Background = typeof Background.Type;
 
 export const defaultBackground: Background = {
   imageUrl: "/web/assets/trees.jpg",
-  color: "#141416",
+  color: "#666666",
   opacity: 1,
 };
 

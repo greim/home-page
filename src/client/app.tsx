@@ -29,8 +29,8 @@ type LoadState =
   | { is: "failed"; message: string }
   | { is: "ready"; layout: Layout };
 
-/** Toggles admin mode when F2 is pressed. */
-function useAdminMode(suspended: boolean): boolean {
+/** Toggles admin mode when F2 is pressed; also returns a way to exit it. */
+function useAdminMode(suspended: boolean): [admin: boolean, exit: () => void] {
   const [admin, setAdmin] = useState(false);
   const suspendedRef = useRef(suspended);
   suspendedRef.current = suspended;
@@ -43,7 +43,8 @@ function useAdminMode(suspended: boolean): boolean {
     globalThis.addEventListener("keydown", listener);
     return () => globalThis.removeEventListener("keydown", listener);
   }, []);
-  return admin;
+  const exit = useCallback(() => setAdmin(false), []);
+  return [admin, exit];
 }
 
 export function App() {
@@ -54,7 +55,7 @@ export function App() {
   const editingColumn = state.is === "ready" && editing !== null
     ? state.layout.columns.find((c) => c.id === editing.columnId)
     : undefined;
-  const admin = useAdminMode(editingColumn !== undefined);
+  const [admin, exitAdmin] = useAdminMode(editingColumn !== undefined);
 
   useEffect(() => {
     run(loadLayout).then((result) =>
@@ -159,7 +160,11 @@ export function App() {
           background={state.layout.background}
           columns={state.layout.columns}
           adminBar={
-            <AdminBar shown={admin} message={`Admin mode · press ${adminModeKey} to exit`}>
+            <AdminBar
+              shown={admin}
+              message={`Admin mode · press ${adminModeKey} to exit`}
+              onExit={exitAdmin}
+            >
               <BackgroundEditor
                 background={state.layout.background}
                 onChange={(background) => dispatch({ is: "set-background", background })}

@@ -1,5 +1,6 @@
 import { Button, type ButtonProps, Flex, Text, Theme } from "@chakra-ui/react";
 import type { ReactNode } from "react";
+import { LuX } from "react-icons/lu";
 import { screenshotSkip } from "./screenshot.ts";
 import { smallCorners, surface } from "./surface.ts";
 
@@ -11,7 +12,12 @@ const { gap, adminBarHeight } = surface;
  * wide as its contents, with squircled bottom corners. It stays mounted, sliding
  * up off-screen (and inert) when hidden, so it can animate both in and out.
  */
-export function AdminBar(props: { shown: boolean; children: ReactNode; message: string }) {
+export function AdminBar(props: {
+  shown: boolean;
+  children: ReactNode;
+  message: string;
+  onExit: () => void;
+}) {
   return (
     <Theme appearance="light" hasBackground={false}>
       <Flex
@@ -39,7 +45,15 @@ export function AdminBar(props: { shown: boolean; children: ReactNode; message: 
         borderBottomRadius={smallCorners.borderRadius}
         css={{ cornerShape: smallCorners.cornerShape }}
       >
-        <Text alignSelf="center" px="4" fontSize="sm" color="fg.muted">
+        <AdminBarButton
+          title="Exit admin mode"
+          aria-label="Exit admin mode"
+          px="3"
+          onClick={props.onExit}
+        >
+          <LuX />
+        </AdminBarButton>
+        <Text alignSelf="center" ps="1" pe="4" fontSize="sm" color="fg.muted">
           {props.message}
         </Text>
         {props.children}
