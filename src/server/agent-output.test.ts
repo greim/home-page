@@ -64,16 +64,11 @@ Deno.test("other and malformed lines are ignored", () => {
   }
 });
 
-Deno.test("activity labels describe Unibrain and file tools", () => {
+Deno.test("activity labels describe web and file tools", () => {
   const cases: ReadonlyArray<[string, Record<string, unknown>, string]> = [
-    ["mcp__unibrain__unibrain_search", { query: "layout" }, "Searching Unibrain for “layout”"],
-    ["mcp__unibrain__unibrain_read", { id: "abc" }, "Reading Unibrain resource abc"],
-    ["mcp__unibrain__unibrain_create", { description: "A note" }, "Saving to Unibrain: A note"],
-    ["mcp__unibrain__unibrain_write", { id: "abc" }, "Updating Unibrain resource abc"],
-    ["mcp__unibrain__unibrain_rate", { id: "abc" }, "Rating Unibrain resource abc"],
-    ["mcp__unibrain__unibrain_delete", { id: "abc" }, "Deleting Unibrain resource abc"],
-    ["mcp__unibrain__unibrain_safe_execute", { id: "p1" }, "Running Unibrain program p1"],
-    ["mcp__unibrain__unibrain_execute", { id: "p1" }, "Running Unibrain program p1"],
+    ["WebSearch", { query: "stock quote API" }, "Searching the web for “stock quote API”"],
+    ["WebFetch", { url: "https://example.com/docs" }, "Reading https://example.com/docs"],
+    ["Edit", { file_path: "/repo/src/client/widgets/clock/main.tsx" }, "Editing clock/main.tsx"],
     ["Edit", { file_path: "/w/layout.json" }, "Editing layout.json"],
     ["Write", { file_path: "layout.json" }, "Editing layout.json"],
     ["Glob", { pattern: "**/*.ts" }, "Looking for files matching **/*.ts"],

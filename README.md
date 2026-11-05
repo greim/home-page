@@ -72,17 +72,22 @@ back up or hand-edit while the server is stopped. Background images you upload o
 
 The assistant is [Claude Code](https://code.claude.com/) run headlessly by the server, one process
 per message (`--resume` continues the conversation). It needs `claude` installed and signed in
-(looked for at `~/.local/bin/claude`; set `CLAUDE_PATH` to override), and uses
-[Unibrain](../unibrain) at `http://127.0.0.1:7420/mcp?client=home-page-assistant` (`UNIBRAIN_URL`)
-as its only MCP server: it looks up how the layout works there, and saves what it learns and the
-programs it writes (such as a layout validator), so later conversations are faster and cheaper. The
-`client` parameter names it in Unibrain's stats. The cost and time of each turn are shown under it.
+(looked for at `~/.local/bin/claude`; set `CLAUDE_PATH` to override). The cost and time of each turn
+are shown under it.
 
-It's confined (`--restricted`, `--permission-mode dontAsk`): no shell or web tools, it can read the
-app's `src/` and saved backgrounds, and the only file it can change is its copy of the layout,
-`data/assistant/layout.json`. When its turn ends the server validates that file and, if it changed,
-applies it to the live page. If it's invalid, or you changed the page by hand meanwhile, the agent
-is told why and tries again (up to 3 times in all). Only one turn runs at a time.
+Besides editing the layout, it can write new widget types, or change existing ones, in
+`src/client/widgets/`. Its prompt lists every widget type and its config schema, from the widget
+registry. See [SELF_BUILDING.md](./SELF_BUILDING.md).
+
+It's confined (`--restricted`, `--permission-mode dontAsk`, no MCP servers): no shell, it can read
+the repo (except `.secrets/`) and the web, and the only files it can change are its copy of the
+layout, `data/assistant/layout.json`, and those in `src/client/widgets/`. When its turn ends, the
+server checks its work: if widget code changed, it formats, type checks, lints and tests
+`src/client/widgets/` and rebuilds the widgets; then it checks the layout, including each widget's
+config against its type's schema. If everything passes, the layout is applied to the live page
+(reload to pick up new widget code). If something fails, or you changed the page by hand meanwhile,
+the agent is told why and tries again (up to 3 times in all). Only one turn runs at a time. Widget
+code it writes is yours to review and commit.
 
 ## Look and feel
 

@@ -200,8 +200,8 @@ function ChatMessages(props: { chat: Chat; px: string; compact?: boolean }) {
       {chat.entries.length === 0 && (
         <Text fontSize="sm" color="fg.muted">
           Ask me to change your home page, e.g. “add a column of news bookmarks” or “make the
-          background darker”. The first few requests may be slow while I learn how your page works;
-          I remember what I learn.
+          background darker”. I can also write new kinds of widget, e.g. “a widget that shows the
+          weather”.
         </Text>
       )}
       {chat.entries.map((entry, i) => (

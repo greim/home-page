@@ -3,58 +3,84 @@ import {
   agentArgs,
   type AgentSettings,
   conflictPrompt,
+  describeRegistry,
   instructions,
   invalidLayoutPrompt,
   userPrompt,
+  widgetChecksFailedPrompt,
 } from "./assistant-agent.ts";
+import type { Registry } from "../common/widgets.ts";
 
 const settings: AgentSettings = {
   claudePath: "/bin/claude",
   workspaceDir: "/repo/data/assistant",
-  sourceDir: "/repo/src",
+  repoDir: "/repo",
+  widgetsDir: "/repo/src/client/widgets",
+  secretsDir: "/repo/.secrets",
   backgroundsDir: "/repo/data/backgrounds",
-  unibrainUrl: "http://127.0.0.1:7420/mcp",
+};
+
+const registry: Registry = {
+  widgets: [{
+    id: "clock",
+    title: "Clock",
+    description: "Shows the time.",
+    version: "abc",
+    configSchema: { type: "object" },
+    defaultConfig: { timeZone: null },
+  }],
 };
 
 const valueAfter = (args: ReadonlyArray<string>, flag: string) => args.at(args.indexOf(flag) + 1);
 
-Deno.test("the agent is confined to editing its layout copy, with Unibrain as its only MCP server", () => {
-  const args = agentArgs(settings, null);
+Deno.test("the agent may edit only its layout copy and the widget source, with no shell or MCP servers", () => {
+  const args = agentArgs(settings, null, registry);
   assert(args.includes("--restricted"));
   assert(args.includes("--strict-mcp-config"));
-  assertEquals(valueAfter(args, "--tools"), "Read,Write,Edit,Glob,Grep");
+  assertEquals(args.includes("--mcp-config"), false);
+  assertEquals(valueAfter(args, "--tools"), "Read,Write,Edit,Glob,Grep,WebFetch,WebSearch");
   assertEquals(valueAfter(args, "--permission-mode"), "dontAsk");
   assertEquals(
     valueAfter(args, "--allowedTools"),
-    "Read Glob Grep Edit(./layout.json) Write(./layout.json) mcp__unibrain",
+    "Read Glob Grep WebFetch WebSearch Edit(./layout.json) Edit(//repo/src/client/widgets/**)",
   );
-  assertEquals(
-    JSON.parse(valueAfter(args, "--mcp-config") ?? ""),
-    { mcpServers: { unibrain: { type: "http", url: settings.unibrainUrl } } },
-  );
+  assertEquals(valueAfter(args, "--disallowedTools"), "Read(//repo/.secrets/**)");
   assertEquals(args.slice(args.indexOf("--add-dir") + 1, args.indexOf("--add-dir") + 3), [
-    settings.sourceDir,
+    settings.repoDir,
     settings.backgroundsDir,
   ]);
-  assertEquals(valueAfter(args, "--append-system-prompt"), instructions(settings));
+  assertEquals(valueAfter(args, "--append-system-prompt"), instructions(settings, registry));
   assertEquals(valueAfter(args, "--output-format"), "stream-json");
   assert(args.includes("--verbose"));
 });
 
 Deno.test("a conversation is resumed by session id", () => {
-  assertEquals(agentArgs(settings, null).includes("--resume"), false);
-  assertEquals(valueAfter(agentArgs(settings, "s1"), "--resume"), "s1");
+  assertEquals(agentArgs(settings, null, null).includes("--resume"), false);
+  assertEquals(valueAfter(agentArgs(settings, "s1", null), "--resume"), "s1");
 });
 
-Deno.test("instructions point the agent at its references and at Unibrain", () => {
-  const text = instructions(settings);
-  assertStringIncludes(text, settings.sourceDir);
+Deno.test("instructions point the agent at its references and list the widget types", () => {
+  const text = instructions(settings, registry);
+  assertStringIncludes(text, settings.repoDir);
+  assertStringIncludes(text, settings.widgetsDir);
   assertStringIncludes(text, settings.backgroundsDir);
-  assertStringIncludes(text, "search Unibrain");
-  assertStringIncludes(text, "unibrain_safe_execute");
+  assertStringIncludes(text, "SELF_BUILDING.md");
+  assertStringIncludes(text, "reload the page");
   assertStringIncludes(text, "screenshot.jpg");
   assertStringIncludes(text, "skin");
   assertStringIncludes(text, "fonts.google.com");
+  assertStringIncludes(text, describeRegistry(registry));
+  assertEquals(text.toLowerCase().includes("unibrain"), false);
+});
+
+Deno.test("the registry is listed with each type's config schema and default config", () => {
+  assertEquals(
+    describeRegistry(registry),
+    `- "clock": Clock. Shows the time.
+  Config JSON Schema: {"type":"object"}
+  A new widget's config: {"timeZone":null}`,
+  );
+  assertStringIncludes(describeRegistry(null), "couldn't be read");
 });
 
 Deno.test("prompts tell the agent what the app did with its layout", () => {
@@ -75,4 +101,6 @@ Deno.test("prompts tell the agent what the app did with its layout", () => {
   assertStringIncludes(invalidLayoutPrompt("Expected string"), "Expected string");
   assertStringIncludes(invalidLayoutPrompt("x"), "NOT applied");
   assertStringIncludes(conflictPrompt, "NOT applied");
+  assertStringIncludes(widgetChecksFailedPrompt("Lint failed"), "Lint failed");
+  assertStringIncludes(widgetChecksFailedPrompt("x"), "nothing was applied");
 });

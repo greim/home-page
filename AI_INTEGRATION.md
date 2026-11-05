@@ -23,19 +23,12 @@ the Claude instance on the local machine. The purpose is to confiugure the home 
 behalf, including anything it's possible for the user to do in admin mode, like modifying the
 background, adding/modifying columns, or adding/modifying widgets.
 
-The only MCP server the agent will have is _Unibrain_. If the agent doesn't know how the app's
-configuration scheme works, it should consult Unibrain. If it can't find that information, it should
-do the work to get that info, and when it gains clarity, save the insights in Unibrain. If it sees
-an opportunity to automate tasks that are repetitive and deterministic — such as validating a
-configuration before save — it should consult Unibrain to see if a program exists for that. If it
-doesn't, it should write it and save it to Unibrain for future use. If it finds outdated info, wrong
-info, or buggy programs in Unibrain, it should proactively correct them. The first time the user
-uses this feature, it may be slow and cumbersome, but over time, it should become significantly
-faster and cheaper token-wise, due to the accumulation of knowledge and capabilities stored in
-Unibrain.
+_Superseded:_ the agent originally used _Unibrain_ as its only MCP server, to look up how the app's
+configuration works and save what it learned. It now has no MCP servers: its prompt lists the widget
+types and their config schemas, and the server's checks give it diagnostics. See
+[SELF_BUILDING.md](./SELF_BUILDING.md).
 
 The UI will support multi-turn chat, so the agent is free to ask the user for clarity and/or
 details. The _action trigger_ is TBD. I'm open to suggestions on the best way for the agent to write
 an updated config for the app. The goal is that if it succeeds, the agent will see that and know
-it's done. If it fails, the agent sees an error diagnost and can consult Unibrain regarding the
-error details.
+it's done. If it fails, the agent sees an error diagnostic.

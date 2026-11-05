@@ -132,30 +132,40 @@ requests, though. A server-side proxy for those is deferred until a widget needs
 
 ## How Will the Agent Write Widgets?
 
-The assistant keeps its no-shell sandbox, but it can:
+The assistant keeps its no-shell sandbox (`--restricted`, `--permission-mode dontAsk`; see
+`src/server/assistant-agent.ts`), but it can:
 
-- Read the whole repo.
+- Read the whole repo, except `.secrets/`.
 - Write and edit only `src/client/widgets/**` and its copy of the layout.
 - Use `WebFetch` and `WebSearch`, to read API documentation.
 
-Its prompt includes the registry (every widget type's description and config schema), in place of
-looking up the layout's schema elsewhere.
+Its prompt lists the registry (every widget type's title, description, config schema and default
+config), read afresh for each run of the agent, in place of looking up the layout's schema
+elsewhere. It points the agent at this document, ENGINEERING_STANDARDS.md and the existing widgets
+for how to write one.
 
-When a turn ends and widget source changed, the server runs the widget build, type check, lint and
-tests for `src/client/widgets/`. Then it validates the layout, including each widget's config
-against its schema in the registry. This extends the check the server already runs on the layout
-when a turn ends. Any failure is sent back to the agent with its output, and the agent tries again
-(up to 3 times in all). When everything passes, the layout is applied to the live page. If widget
-code changed, the agent asks the user to reload to pick it up.
+When a turn ends, the server checks the agent's work (`src/server/widget-checks.ts`):
+
+- If any file under `src/client/widgets/` changed since it last passed, the server runs, in order,
+  `deno fmt`, `deno check`, `deno lint` and `deno test` on that folder, then the widget build. It
+  stops at the first failure. The build comes last, so the page only ever gets code that passed.
+- If the layout changed, or widget code did (which may change a config's schema), it runs
+  `bin/check-layout.ts` on the agent's layout: its shape, plus each widget's config decoded with its
+  type's schema from the manifest. That runs in its own process, so it sees the current manifests.
+
+Each step is a `deno` command run in the repo; output saying something passed is dropped, and the
+rest is trimmed to its end. Any failure is sent back to the agent, and the agent tries again (up to
+3 times in all). When everything passes, the layout is applied to the live page. If widget code
+changed, the agent asks the user to reload to pick it up. If it still fails after 3 tries, nothing
+is applied and the user is told the failing code is still in `src/client/widgets/`.
 
 If the user requests updates, the agent edits the source and the same check runs at the end of that
 turn. Committing and opening a PR is left to the developer.
 
 ## Decoupling From Unibrain
 
-The assistant no longer uses Unibrain. The registry tells it what widgets exist and how to configure
-them. The server's checks give it diagnostics. Its Unibrain MCP config is removed, and README.md and
-AI_INTEGRATION.md are updated to match.
+The assistant no longer uses Unibrain, or any MCP server. The registry tells it what widgets exist
+and how to configure them. The server's checks give it diagnostics.
 
 ## Phases
 

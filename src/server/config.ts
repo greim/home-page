@@ -38,15 +38,19 @@ export const config = {
   /** Background images uploaded or fetched from the web. */
   backgroundsDir: path("data/backgrounds"),
   logsDir: path("logs"),
-  /** The admin assistant's agent: Claude Code, run in its own workspace with Unibrain. */
+  /** The admin assistant's agent: Claude Code, run in its own workspace. See SELF_BUILDING.md. */
   assistant: {
     /** launchd gives the server a minimal PATH, so claude is found by its full path. */
     claudePath: Deno.env.get("CLAUDE_PATH") ?? `${home}/.local/bin/claude`,
     workspaceDir: path("data/assistant"),
-    sourceDir: path("src"),
+    repoDir: path("."),
+    widgetsDir: path("src/client/widgets"),
+    secretsDir: path(".secrets"),
     backgroundsDir: path("data/backgrounds"),
-    /** `?client=` names the assistant in Unibrain's event log, apart from interactive agents. */
-    unibrainUrl: Deno.env.get("UNIBRAIN_URL") ??
-      "http://127.0.0.1:7420/mcp?client=home-page-assistant",
+    distDir: path("dist"),
+    widgetBuildScript: path("bin/build-widgets.ts"),
+    layoutCheckScript: path("bin/check-layout.ts"),
+    registryFile: path("dist/widgets/registry.json"),
+    stepTimeoutMs: 180_000,
   },
 } as const;

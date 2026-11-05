@@ -52,6 +52,12 @@ const parseJson = (line: string): Option.Option<unknown> =>
 
 const baseName = (path: string): string => path.slice(path.lastIndexOf("/") + 1);
 
+/** A widget source file from its widget's folder (e.g. "clock/main.tsx"), else its name. */
+const shortPath = (path: string): string => {
+  const at = path.lastIndexOf("/widgets/");
+  return at === -1 ? baseName(path) : path.slice(at + "/widgets/".length);
+};
+
 /** A short, human description of a tool call, for the chat's activity lines. */
 export const activityLabel = (name: string, input: Readonly<Record<string, unknown>>): string => {
   const field = (key: string): string => {
@@ -59,26 +65,15 @@ export const activityLabel = (name: string, input: Readonly<Record<string, unkno
     return typeof value === "string" ? value : "?";
   };
   switch (name) {
-    case "mcp__unibrain__unibrain_search":
-      return `Searching Unibrain for “${field("query")}”`;
-    case "mcp__unibrain__unibrain_read":
-      return `Reading Unibrain resource ${field("id")}`;
-    case "mcp__unibrain__unibrain_create":
-      return `Saving to Unibrain: ${field("description")}`;
-    case "mcp__unibrain__unibrain_write":
-      return `Updating Unibrain resource ${field("id")}`;
-    case "mcp__unibrain__unibrain_rate":
-      return `Rating Unibrain resource ${field("id")}`;
-    case "mcp__unibrain__unibrain_delete":
-      return `Deleting Unibrain resource ${field("id")}`;
-    case "mcp__unibrain__unibrain_safe_execute":
-    case "mcp__unibrain__unibrain_execute":
-      return `Running Unibrain program ${field("id")}`;
+    case "WebSearch":
+      return `Searching the web for “${field("query")}”`;
+    case "WebFetch":
+      return `Reading ${field("url")}`;
     case "Read":
-      return `Reading ${baseName(field("file_path"))}`;
+      return `Reading ${shortPath(field("file_path"))}`;
     case "Edit":
     case "Write":
-      return `Editing ${baseName(field("file_path"))}`;
+      return `Editing ${shortPath(field("file_path"))}`;
     case "Glob":
       return `Looking for files matching ${field("pattern")}`;
     case "Grep":

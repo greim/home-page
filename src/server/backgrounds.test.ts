@@ -46,7 +46,11 @@ const noAssistantIo = AssistantIo.of({
   writeWorkspaceLayout: () => Effect.die("unexpected I/O"),
   writeWorkspaceScreenshot: () => Effect.die("unexpected I/O"),
   removeWorkspaceScreenshot: Effect.die("unexpected I/O"),
+  readRegistry: Effect.die("unexpected I/O"),
   startAgent: () => Effect.die("unexpected I/O"),
+  fingerprintWidgets: Effect.die("unexpected I/O"),
+  checkWidgets: Effect.die("unexpected I/O"),
+  checkWorkspaceLayout: Effect.die("unexpected I/O"),
   turnLock: Effect.runSync(Effect.makeSemaphore(1)),
 });
 

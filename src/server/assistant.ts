@@ -1,17 +1,26 @@
 /**
  * Functional core of the admin assistant. A turn copies the live layout into
- * the agent's workspace, runs the agent on the user's message, then applies the
- * workspace layout if the agent changed it. A rejected layout (invalid, or the
- * live layout changed meanwhile) is explained to the agent, which tries again.
+ * the agent's workspace, runs the agent on the user's message, then checks any
+ * widget code it changed and applies the workspace layout if it changed. Work
+ * that's rejected (failing checks, an invalid layout, or a live layout that
+ * changed meanwhile) is explained to the agent, which tries again.
  * Progress streams to the client as newline-delimited ChatEvents.
  */
 import { Clock, Context, Effect, Either, Schema, type Scope, Stream } from "effect";
 import { AssistantRequest, type ChatEvent } from "../common/assistant.ts";
 import type { Layout } from "../common/model.ts";
+import { Registry } from "../common/widgets.ts";
 import { type AgentSignal, parseAgentLine } from "./agent-output.ts";
-import { conflictPrompt, invalidLayoutPrompt, maxRetries, userPrompt } from "./assistant-agent.ts";
+import {
+  conflictPrompt,
+  invalidLayoutPrompt,
+  maxRetries,
+  userPrompt,
+  widgetChecksFailedPrompt,
+} from "./assistant-agent.ts";
 import { BadRequest, type HttpRequest, type HttpResponse, IoError, ServerIo } from "./http.ts";
 import { decodeLayoutJson, layoutText, readLayout, writeLayout } from "./layout-store.ts";
+import type { CheckOutcome } from "./widget-checks.ts";
 
 /** A running agent process. */
 export type AgentProcess = {
@@ -28,11 +37,20 @@ export class AssistantIo extends Context.Tag("AssistantIo")<
     readonly writeWorkspaceLayout: (text: string) => Effect.Effect<void, IoError>;
     readonly writeWorkspaceScreenshot: (jpeg: Uint8Array) => Effect.Effect<void, IoError>;
     readonly removeWorkspaceScreenshot: Effect.Effect<void, IoError>;
+    /** The widget build's registry.json, for the agent's prompt. */
+    readonly readRegistry: Effect.Effect<string, IoError>;
     /** Starts one turn of the agent; it's killed if still running when the scope closes. */
     readonly startAgent: (
       prompt: string,
       sessionId: string | null,
+      registry: Registry | null,
     ) => Effect.Effect<AgentProcess, IoError, Scope.Scope>;
+    /** Changes whenever any file in the widget source does. */
+    readonly fingerprintWidgets: Effect.Effect<string, IoError>;
+    /** Formats, type checks, lints, tests and builds the widget source. */
+    readonly checkWidgets: Effect.Effect<CheckOutcome, IoError>;
+    /** Checks the workspace layout's widget configs against their manifests. */
+    readonly checkWorkspaceLayout: Effect.Effect<CheckOutcome, IoError>;
     /** Held for the length of a turn, so turns never overlap. */
     readonly turnLock: Effect.Semaphore;
   }
@@ -75,11 +93,19 @@ const onSignal = (emit: Emit) => (state: RunState, signal: AgentSignal) => {
   }
 };
 
+/** The registry, or null if it's missing or unreadable (the prompt says so). */
+const registry = Effect.flatMap(AssistantIo, (io) => io.readRegistry).pipe(
+  Effect.flatMap((text) =>
+    Schema.decodeUnknown(Schema.parseJson(Registry))(text).pipe(Effect.orElseSucceed(() => null))
+  ),
+  Effect.orElseSucceed(() => null),
+);
+
 /** Runs the agent once, streaming what it says and does. */
 const runAgent = (prompt: string, sessionId: string | null, emit: Emit) =>
   Effect.scoped(Effect.gen(function* () {
     const io = yield* AssistantIo;
-    const agent = yield* io.startAgent(prompt, sessionId);
+    const agent = yield* io.startAgent(prompt, sessionId, yield* registry);
     const state = yield* agent.stdout.pipe(
       Stream.splitLines,
       Stream.mapConcat(parseAgentLine),
@@ -115,18 +141,25 @@ const runAgent = (prompt: string, sessionId: string | null, emit: Emit) =>
 
 /**
  * Applies the workspace layout if the agent changed it, it's valid, and the
- * live layout is still the one the agent started from.
+ * live layout is still the one the agent started from. Its widgets' configs are
+ * checked when it changed, or when widget code did (which may have changed a
+ * config's schema).
  */
-export const applyWorkspace = (snapshot: Layout) =>
+const applyWorkspace = (snapshot: Layout, widgetsChanged: boolean) =>
   Effect.gen(function* () {
     const io = yield* AssistantIo;
     const text = yield* io.readWorkspaceLayout;
-    if (text === layoutText(snapshot)) {
+    const layoutChanged = text !== layoutText(snapshot);
+    if (!layoutChanged && !widgetsChanged) {
       return { is: "unchanged" } satisfies ApplyOutcome;
     }
-    const edited = decodeLayoutJson(text);
+    const edited = layoutChanged ? decodeLayoutJson(text) : Either.right(snapshot);
     if (Either.isLeft(edited)) {
       return { is: "invalid", diagnostic: edited.left } satisfies ApplyOutcome;
+    }
+    const configs = yield* io.checkWorkspaceLayout;
+    if (!configs.ok) {
+      return { is: "invalid", diagnostic: configs.diagnostic } satisfies ApplyOutcome;
     }
     if (layoutText(edited.right) === layoutText(snapshot)) {
       return { is: "unchanged" } satisfies ApplyOutcome;
@@ -137,6 +170,28 @@ export const applyWorkspace = (snapshot: Layout) =>
     }
     yield* writeLayout(edited.right);
     return { is: "applied", layout: edited.right } satisfies ApplyOutcome;
+  });
+
+/** What became of the widget source after the agent's run. */
+type WidgetsOutcome =
+  | { is: "unchanged" }
+  | { is: "passed"; fingerprint: string }
+  | { is: "failed"; diagnostic: string };
+
+/** Checks the widget source if it changed since it last passed. */
+const checkWidgets = (passed: string, emit: Emit) =>
+  Effect.gen(function* () {
+    const io = yield* AssistantIo;
+    if ((yield* io.fingerprintWidgets) === passed) {
+      return { is: "unchanged" } satisfies WidgetsOutcome;
+    }
+    yield* emit({ is: "activity", label: "Checking and building the widget code" });
+    const checked = yield* io.checkWidgets;
+    if (!checked.ok) {
+      return { is: "failed", diagnostic: checked.diagnostic } satisfies WidgetsOutcome;
+    }
+    // Formatting may have changed it.
+    return { is: "passed", fingerprint: yield* io.fingerprintWidgets } satisfies WidgetsOutcome;
   });
 
 const addCost = (a: number | null, b: number | null) => a === null ? b : a + (b ?? 0);
@@ -160,6 +215,9 @@ const turn = (request: AssistantRequest, emit: Emit) =>
     });
     let sessionId = request.sessionId;
     let costUsd: number | null = null;
+    // The widget source as it last passed the checks, and whether this turn changed it.
+    let passedWidgets = yield* io.fingerprintWidgets;
+    let widgetsChanged = false;
     for (let attempt = 0;; attempt++) {
       const run = yield* runAgent(prompt, sessionId, emit);
       if (!run.ok) {
@@ -168,7 +226,14 @@ const turn = (request: AssistantRequest, emit: Emit) =>
       }
       sessionId = run.sessionId;
       costUsd = addCost(costUsd, run.costUsd);
-      const outcome = yield* applyWorkspace(snapshot);
+      const widgets = yield* checkWidgets(passedWidgets, emit);
+      if (widgets.is === "passed") {
+        passedWidgets = widgets.fingerprint;
+        widgetsChanged = true;
+      }
+      const outcome = widgets.is === "failed"
+        ? { is: "widgets-failed" as const, diagnostic: widgets.diagnostic }
+        : yield* applyWorkspace(snapshot, widgetsChanged);
       if (outcome.is === "unchanged") break;
       if (outcome.is === "applied") {
         yield* emit({ is: "applied", layout: outcome.layout });
@@ -179,9 +244,18 @@ const turn = (request: AssistantRequest, emit: Emit) =>
           is: "error",
           message: `The assistant's changes were rejected ${
             maxRetries + 1
-          } times, so nothing was applied.`,
+          } times, so nothing was applied.${
+            outcome.is === "widgets-failed"
+              ? " Its widget code is left in src/client/widgets/ as it was, failing the checks."
+              : ""
+          }`,
         });
         break;
+      }
+      if (outcome.is === "widgets-failed") {
+        yield* emit({ is: "rejected", message: outcome.diagnostic });
+        prompt = widgetChecksFailedPrompt(outcome.diagnostic);
+        continue;
       }
       if (outcome.is === "invalid") {
         yield* emit({ is: "rejected", message: outcome.diagnostic });

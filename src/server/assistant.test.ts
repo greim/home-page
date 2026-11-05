@@ -2,10 +2,15 @@ import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Effect, Stream } from "effect";
 import type { ChatEvent } from "../common/assistant.ts";
 import { emptyLayout, type Layout, newColumn } from "../common/model.ts";
-import { conflictPrompt, invalidLayoutPrompt } from "./assistant-agent.ts";
+import {
+  conflictPrompt,
+  invalidLayoutPrompt,
+  widgetChecksFailedPrompt,
+} from "./assistant-agent.ts";
 import { type AgentProcess, AssistantIo, routeAssistant, runTurn } from "./assistant.ts";
 import { type HttpRequest, IoError, ServerIo } from "./http.ts";
 import { layoutText } from "./layout-store.ts";
+import type { CheckOutcome } from "./widget-checks.ts";
 
 const withColumn = (id: string): Layout => ({ ...emptyLayout, columns: [newColumn(id, "LuStar")] });
 
@@ -22,10 +27,14 @@ const result = (costUsd: number) =>
     total_cost_usd: costUsd,
   });
 
-/** One scripted run of the agent: what it prints, and what it leaves in its layout copy. */
+/**
+ * One scripted run of the agent: what it prints, what it leaves in its layout
+ * copy, and what it leaves in the widget source (if it changes it).
+ */
 type Run = {
   readonly lines: ReadonlyArray<string>;
   readonly edit: string | null;
+  readonly widgets?: string;
   readonly code?: number;
   readonly stderr?: string;
 };
@@ -33,11 +42,16 @@ type Run = {
 /**
  * Fake pipes over in-memory files. `stored` is the saved layout file; `liveAfter`
  * replaces it after the given run, as if the user edited the page meanwhile.
+ * `widgetChecks` and `layoutChecks` are the checks' outcomes, in order; they
+ * pass once those run out. Formatting appends "!" to the widget source.
  */
 const harness = (options: {
   stored: string | null;
   runs: ReadonlyArray<Run>;
   liveAfter?: { run: number; text: string };
+  widgetChecks?: ReadonlyArray<CheckOutcome>;
+  layoutChecks?: ReadonlyArray<CheckOutcome>;
+  registry?: string;
   overrides?: Partial<AssistantIo["Type"]>;
 }) => {
   const files = {
@@ -45,8 +59,13 @@ const harness = (options: {
     workspace: "",
     temp: "",
     screenshot: null as Uint8Array | null,
+    widgets: "v1",
   };
   const calls: Array<{ prompt: string; sessionId: string | null }> = [];
+  const registries: Array<unknown> = [];
+  const checks: Array<"widgets" | "layout"> = [];
+  const widgetChecks = [...(options.widgetChecks ?? [])];
+  const layoutChecks = [...(options.layoutChecks ?? [])];
   const workspaceWrites: Array<string> = [];
 
   const agentProcess = (run: Run): AgentProcess => ({
@@ -54,6 +73,7 @@ const harness = (options: {
     stdout: Stream.make(...run.lines.map((l) => l + "\n").join("").match(/[^]{1,7}/g) ?? []),
     exit: Effect.sync(() => {
       if (run.edit !== null) files.workspace = run.edit;
+      if (run.widgets !== undefined) files.widgets = run.widgets;
       if (options.liveAfter?.run === calls.length - 1) files.stored = options.liveAfter.text;
       return { code: run.code ?? 0, stderr: run.stderr ?? "" };
     }),
@@ -68,10 +88,27 @@ const harness = (options: {
       }),
     writeWorkspaceScreenshot: (jpeg) => Effect.sync(() => void (files.screenshot = jpeg)),
     removeWorkspaceScreenshot: Effect.sync(() => void (files.screenshot = null)),
-    startAgent: (prompt, sessionId) =>
+    readRegistry: Effect.suspend(() =>
+      options.registry === undefined
+        ? Effect.fail(new IoError({ cause: new Deno.errors.NotFound() }))
+        : Effect.succeed(options.registry)
+    ),
+    fingerprintWidgets: Effect.sync(() => files.widgets),
+    checkWidgets: Effect.sync(() => {
+      checks.push("widgets");
+      const outcome = widgetChecks.shift() ?? { ok: true };
+      if (outcome.ok) files.widgets += "!";
+      return outcome;
+    }),
+    checkWorkspaceLayout: Effect.sync(() => {
+      checks.push("layout");
+      return layoutChecks.shift() ?? { ok: true };
+    }),
+    startAgent: (prompt, sessionId, registry) =>
       Effect.suspend(() => {
         const run = options.runs.at(calls.length);
         calls.push({ prompt, sessionId });
+        registries.push(registry);
         return run === undefined ? Effect.die("too many runs") : Effect.succeed(agentProcess(run));
       }),
     turnLock: Effect.runSync(Effect.makeSemaphore(1)),
@@ -112,7 +149,7 @@ const harness = (options: {
     return events.map((e) => e.is === "done" ? { ...e, durationMs: 0 } : e);
   };
 
-  return { files, calls, workspaceWrites, turn, provide, assistantIo };
+  return { files, calls, registries, checks, workspaceWrites, turn, provide, assistantIo };
 };
 
 const done = (costUsd: number | null): ChatEvent => ({ is: "done", costUsd, durationMs: 0 });
@@ -356,4 +393,121 @@ Deno.test("failing to remove an old screenshot doesn't stop the turn", async () 
     },
   });
   assertEquals(await h.turn("Hi"), [{ is: "session", sessionId: "s1" }, done(0)]);
+});
+
+const checking: ChatEvent = { is: "activity", label: "Checking and building the widget code" };
+
+Deno.test("the agent is given the registry, or null if it can't be read", async () => {
+  const registry = { widgets: [] };
+  const h = harness({
+    stored: null,
+    runs: [{ lines: [result(0)], edit: null }],
+    registry: JSON.stringify(registry),
+  });
+  await h.turn("Hi");
+  assertEquals(h.registries, [registry]);
+
+  for (const bad of [undefined, "{", `{"widgets": 3}`]) {
+    const missing = harness({
+      stored: null,
+      runs: [{ lines: [result(0)], edit: null }],
+      ...(bad === undefined ? {} : { registry: bad }),
+    });
+    await missing.turn("Hi");
+    assertEquals(missing.registries, [null]);
+  }
+});
+
+Deno.test("untouched widget code isn't checked, nor an unchanged layout", async () => {
+  const h = harness({ stored: null, runs: [{ lines: [result(0)], edit: null }] });
+  await h.turn("Hi");
+  assertEquals(h.checks, []);
+});
+
+Deno.test("a changed layout's widget configs are checked before it's applied", async () => {
+  const layout = withColumn("c1");
+  const h = harness({
+    stored: null,
+    runs: [
+      { lines: [result(0)], edit: JSON.stringify(layout) },
+      { lines: [result(0)], edit: JSON.stringify(layout) },
+    ],
+    layoutChecks: [{ ok: false, diagnostic: "Widget w1: its config is invalid" }],
+  });
+  const events = await h.turn("Add a clock");
+  assertEquals(events.map((e) => e.is), ["rejected", "applied", "done"]);
+  assertEquals(h.checks, ["layout", "layout"]);
+  assertEquals(h.calls.at(1)?.prompt, invalidLayoutPrompt("Widget w1: its config is invalid"));
+});
+
+Deno.test("changed widget code is checked; when it passes, so is the layout, even unchanged", async () => {
+  const h = harness({
+    stored: layoutText(emptyLayout),
+    runs: [{ lines: [result(0)], edit: null, widgets: "v2" }],
+  });
+  assertEquals(await h.turn("Make the clock show seconds"), [checking, done(0)]);
+  assertEquals(h.checks, ["widgets", "layout"]);
+  assertEquals(h.files.stored, layoutText(emptyLayout));
+});
+
+Deno.test("failing widget checks are sent back to the agent, and nothing is applied until they pass", async () => {
+  const layout = withColumn("c1");
+  const h = harness({
+    stored: null,
+    runs: [
+      { lines: [init("s1"), result(0.1)], edit: JSON.stringify(layout), widgets: "v2" },
+      { lines: [result(0.1)], edit: null, widgets: "v3" },
+    ],
+    widgetChecks: [{ ok: false, diagnostic: "Lint failed: no-unused-vars" }],
+  });
+  const events = await h.turn("Add a stock ticker");
+  assertEquals(events.map((e) => e.is), [
+    "session",
+    "activity",
+    "rejected",
+    "activity",
+    "applied",
+    "done",
+  ]);
+  assertEquals(h.calls.at(1), {
+    prompt: widgetChecksFailedPrompt("Lint failed: no-unused-vars"),
+    sessionId: "s1",
+  });
+  assertEquals(h.checks, ["widgets", "widgets", "layout"]);
+  assertEquals(h.files.stored, layoutText(layout));
+});
+
+Deno.test("code that passed isn't checked again when only the layout is retried", async () => {
+  const layout = withColumn("c1");
+  const h = harness({
+    stored: null,
+    runs: [
+      { lines: [result(0)], edit: `{"version": 2}`, widgets: "v2" },
+      { lines: [result(0)], edit: JSON.stringify(layout) },
+    ],
+  });
+  const events = await h.turn("Add a stock ticker");
+  assertEquals(events.map((e) => e.is), ["activity", "rejected", "applied", "done"]);
+  assertEquals(h.checks, ["widgets", "layout"]);
+});
+
+Deno.test("widget code that keeps failing is left in place, and the user is told", async () => {
+  const failing: CheckOutcome = { ok: false, diagnostic: "Tests failed" };
+  const h = harness({
+    stored: null,
+    runs: [1, 2, 3].map((n) => ({ lines: [result(0)], edit: null, widgets: `v${n + 1}` })),
+    widgetChecks: [failing, failing, failing],
+  });
+  const events = await h.turn("Add a stock ticker");
+  assertEquals(events.map((e) => e.is), [
+    "activity",
+    "rejected",
+    "activity",
+    "rejected",
+    "activity",
+    "error",
+    "done",
+  ]);
+  assertStringIncludes(JSON.stringify(events.at(-2)), "left in src/client/widgets/");
+  assertEquals(h.files.stored, null);
 });
