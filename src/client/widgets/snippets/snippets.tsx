@@ -1,7 +1,7 @@
 import { chakra, Stack, Text, Theme } from "@chakra-ui/react";
 import { Effect } from "effect";
 import { Fragment, useState } from "react";
-import { codeBox } from "../../surface.ts";
+import { codeBox, hiddenScrollbar } from "../../surface.ts";
 import type { WidgetProps } from "../../widget-kit/views.tsx";
 import type { Snippet, SnippetsConfig } from "./config.ts";
 import { graphemeLines, isCopyableChar } from "./graphemes.ts";
@@ -97,7 +97,7 @@ function SnippetBox(props: {
     <Theme
       appearance="dark"
       hasBackground={false}
-      css={codeBox}
+      css={{ ...codeBox, ...hiddenScrollbar }}
       overflowX="auto"
       {...(whole
         ? {
@@ -136,7 +136,7 @@ export function Snippets(props: WidgetProps<SnippetsConfig>) {
   const { snippets } = props.config;
   const { flash, copy } = useCopy();
   return (
-    <Stack gap="2">
+    <Stack gap="4">
       {snippets.map((snippet) => (
         <SnippetBox key={snippet.id} snippet={snippet} flash={flash} copy={copy} />
       ))}

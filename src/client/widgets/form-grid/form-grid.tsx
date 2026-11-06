@@ -1,4 +1,4 @@
-import { Input, SimpleGrid, Text } from "@chakra-ui/react";
+import { chakra, Input, SimpleGrid, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import type { WidgetProps } from "../../widget-kit/views.tsx";
 import type { FormField, FormGridConfig } from "./config.ts";
@@ -7,7 +7,10 @@ import { fillUrlTemplate } from "./url-template.ts";
 function FieldForm(props: { field: FormField }) {
   const [error, setError] = useState<string | null>(null);
   return (
-    <form
+    // Flex, so the form is exactly as tall as its input (no inline baseline gap below it),
+    // which keeps the grid's row gap the same as its column gap.
+    <chakra.form
+      display="flex"
       onSubmit={(event) => {
         event.preventDefault();
         const value = new FormData(event.currentTarget).get("q");
@@ -24,6 +27,10 @@ function FieldForm(props: { field: FormField }) {
       <Input
         name="q"
         size="sm"
+        // White whatever the column's color, so the text and placeholder are fixed dark too.
+        bg="white"
+        color="gray.900"
+        _placeholder={{ color: "gray.500" }}
         autoComplete="off"
         placeholder={props.field.label}
         aria-label={props.field.label}
@@ -31,7 +38,7 @@ function FieldForm(props: { field: FormField }) {
         aria-invalid={error !== null}
         onChange={() => setError(null)}
       />
-    </form>
+    </chakra.form>
   );
 }
 
@@ -41,7 +48,7 @@ export function FormGrid(props: WidgetProps<FormGridConfig>) {
     return <Text fontSize="sm" color="fg.muted">No fields yet.</Text>;
   }
   return (
-    <SimpleGrid columns={config.gridColumns} gap="2">
+    <SimpleGrid columns={config.gridColumns} gap="3">
       {config.fields.map((field) => <FieldForm key={field.id} field={field} />)}
     </SimpleGrid>
   );

@@ -4,10 +4,14 @@ import { widgetTextIndent } from "../../surface.ts";
 import type { WidgetProps } from "../../widget-kit/views.tsx";
 import { type BookmarksConfig, type Link as LinkModel, toggleFolder } from "./config.ts";
 
+// Heading text (the widget's and each folder's) sits one indent in, after its chevron; link
+// text sits one level deeper, with its bullet hanging in the space between.
+const linkIndent = `calc(2 * ${widgetTextIndent})`;
+
 function LinkItem(props: { link: LinkModel }) {
   return (
     // Truncating on an inner block, since overflow:hidden on the li would clip its bullet.
-    <chakra.li py="0.5">
+    <chakra.li py="0.5" ms={linkIndent}>
       <chakra.span display="block" truncate>
         <Link href={props.link.url} target="_blank" rel="noreferrer" title={props.link.url}>
           {props.link.label || props.link.url}
@@ -20,8 +24,7 @@ function LinkItem(props: { link: LinkModel }) {
 export function Bookmarks(props: WidgetProps<BookmarksConfig>) {
   const { config, saveConfig } = props;
   return (
-    // Bullets hang in the indent, so item text lines up with the widget heading's text.
-    <chakra.ul listStyleType="disc" m="0" ps={widgetTextIndent} fontSize="sm">
+    <chakra.ul listStyleType="disc" m="0" ps="0" fontSize="sm">
       {config.items.map((node) => {
         switch (node.is) {
           case "link":
@@ -42,7 +45,7 @@ export function Bookmarks(props: WidgetProps<BookmarksConfig>) {
                   {node.label}
                 </chakra.button>
                 {node.expanded && (
-                  <chakra.ul listStyleType="disc" m="0" ps="5">
+                  <chakra.ul listStyleType="disc" m="0" ps="0">
                     {node.children.map((link) => <LinkItem key={link.id} link={link} />)}
                   </chakra.ul>
                 )}
@@ -53,7 +56,9 @@ export function Bookmarks(props: WidgetProps<BookmarksConfig>) {
         }
       })}
       {config.items.length === 0 && (
-        <Box as="li" listStyleType="none" color="fg.muted">No bookmarks yet.</Box>
+        <Box as="li" listStyleType="none" ms={widgetTextIndent} color="fg.muted">
+          No bookmarks yet.
+        </Box>
       )}
     </chakra.ul>
   );
