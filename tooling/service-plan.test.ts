@@ -10,6 +10,7 @@ const settings = {
   serverEntry: "/repo/src/server/main.ts",
   logsDir: "/repo/logs",
   dataDir: "/repo/data",
+  claudePath: "/Users/me/.local/bin/claude",
 };
 
 Deno.test("plist keeps the server alive and logs to the repo", () => {
@@ -18,6 +19,13 @@ Deno.test("plist keeps the server alive and logs to the repo", () => {
   assertStringIncludes(xml, "<key>RunAtLoad</key><true/>");
   assertStringIncludes(xml, "<string>--allow-net</string>");
   assertStringIncludes(xml, "<string>/repo/logs/server.log</string>");
+});
+
+Deno.test("plist tells the server where claude is", () => {
+  assertStringIncludes(
+    plist(settings),
+    "<key>CLAUDE_PATH</key><string>/Users/me/.local/bin/claude</string>",
+  );
 });
 
 Deno.test("plist escapes XML special characters", () => {

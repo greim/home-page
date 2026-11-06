@@ -4,7 +4,6 @@ const root = new URL("../../", import.meta.url);
 const path = (relative: string): string => new URL(relative, root).pathname;
 
 const hostname = "127.0.0.1";
-const home = Deno.env.get("HOME") ?? "";
 /** `PORT` lets a dev server run beside the installed service, which uses the default. */
 const port = Number(Deno.env.get("PORT") ?? 8443);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -40,8 +39,11 @@ export const config = {
   logsDir: path("logs"),
   /** The admin assistant's agent: Claude Code, run in its own workspace. See SELF_BUILDING.md. */
   assistant: {
-    /** launchd gives the server a minimal PATH, so claude is found by its full path. */
-    claudePath: Deno.env.get("CLAUDE_PATH") ?? `${home}/.local/bin/claude`,
+    /**
+     * launchd gives the server a minimal PATH, so install-service asks for claude's full path
+     * and puts it in the service's environment. Run from a shell, claude is found on PATH.
+     */
+    claudePath: Deno.env.get("CLAUDE_PATH") ?? "claude",
     workspaceDir: path("data/assistant"),
     repoDir: path("."),
     widgetsDir: path("src/client/widgets"),

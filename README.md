@@ -25,7 +25,9 @@ service to renew.
 ### The service
 
 `install-service` registers a launchd user agent (`local.home-page`) with `KeepAlive`, so launchd
-restarts the server whenever it exits. Logs go to `logs/server.log`.
+restarts the server whenever it exits. Logs go to `logs/server.log`. launchd's PATH won't find
+`claude`, so it uses `CLAUDE_PATH` if set, otherwise asks for the path (Enter accepts what
+`which claude` finds) and puts it in the service's environment.
 
 ```sh
 launchctl print gui/$(id -u)/local.home-page      # status
@@ -72,8 +74,8 @@ back up or hand-edit while the server is stopped. Background images you upload o
 
 The assistant is [Claude Code](https://code.claude.com/) run headlessly by the server, one process
 per message (`--resume` continues the conversation). It needs `claude` installed and signed in
-(looked for at `~/.local/bin/claude`; set `CLAUDE_PATH` to override). The cost and time of each turn
-are shown under it.
+(`CLAUDE_PATH` if set, otherwise `claude` on PATH). The cost and time of each turn are shown under
+it.
 
 Besides editing the layout, it can write new widget types, or change existing ones, in
 `src/client/widgets/`. Its prompt lists every widget type and its config schema, from the widget

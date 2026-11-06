@@ -14,6 +14,8 @@ export type ServiceSettings = {
   readonly serverEntry: string;
   readonly logsDir: string;
   readonly dataDir: string;
+  /** Absolute path to claude, for the admin assistant (launchd's PATH won't find it). */
+  readonly claudePath: string;
 };
 
 const escapeXml = (s: string): string =>
@@ -52,6 +54,7 @@ ${serverArgs(s).map((a) => `    ${str(a)}`).join("\n")}
   <dict>
     <key>HOME</key>${str(s.home)}
     <key>NO_COLOR</key>${str("1")}
+    <key>CLAUDE_PATH</key>${str(s.claudePath)}
   </dict>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
