@@ -35,6 +35,22 @@ body {
 }
 ```
 
+## Hairlines
+
+A "hairline" is the thinnest possible line that can be drawn cleanly on the
+screen. Almost universally, a hairline is 1px thick, _regardless of viewport
+scaling factor_. That is, a hairline does not change relative to the viewport.
+Common usees for hairlines include subtle 3d accents such as:
+
+- **Inset text** — `text-indent: -1px -1px 0 rgba(0,0,0,0.3)`
+- **Outset text** — `text-indent: 1px 1px 0 rgba(0,0,0,0.3)`
+- **Grooves** — `border-top: 1px solid rgba(0,0,0,0.3)` +
+  `box-shadow: 0 1px 0 rgba(255,255,255,0.3);`
+- **Bevels** — `box-shadow: 1px 1px 0 rgba(0,0,0,0.3)`
+
+Hairlines are not intended to occupy space in the layout, so much as give a
+subtle indication.
+
 ## Usage in Home Page
 
 I want to use viewport-relative design (VRD) for home page, but we need to do some research first.
