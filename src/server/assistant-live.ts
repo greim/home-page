@@ -7,6 +7,7 @@ import { encodeHex } from "@std/encoding/hex";
 import { Effect, Stream } from "effect";
 import {
   agentArgs,
+  agentAuth,
   type AgentSettings,
   workspaceLayoutName,
   workspaceScreenshotName,
@@ -27,18 +28,27 @@ export type AssistantSettings = AgentSettings & CheckSettings & {
   readonly registryFile: string;
   /** Most time one check may take before it's stopped and counted as failed. */
   readonly stepTimeoutMs: number;
+  /** The user's Claude Code settings.json, for how the agent signs in. */
+  readonly userSettingsFile: string;
 };
 
 const attempt = <A>(fn: () => Promise<A>) =>
   Effect.tryPromise({ try: fn, catch: (cause) => new IoError({ cause }) });
 
 /** Spawns the agent with the prompt on stdin. Aborting the controller kills it. */
-const spawn = (command: string, args: ReadonlyArray<string>, cwd: string, prompt: string) =>
+const spawn = (
+  command: string,
+  args: ReadonlyArray<string>,
+  env: Readonly<Record<string, string>>,
+  cwd: string,
+  prompt: string,
+) =>
   Effect.try({
     try: () => {
       const controller = new AbortController();
       const child = new Deno.Command(command, {
         args: [...args],
+        env: { ...env },
         cwd,
         stdin: "piped",
         stdout: "piped",
@@ -51,6 +61,17 @@ const spawn = (command: string, args: ReadonlyArray<string>, cwd: string, prompt
   }).pipe(
     Effect.tap(({ child }) => attempt(() => writeAll(child.stdin, prompt))),
   );
+
+/** Read each turn, so a change to the user's sign-in applies without a restart. */
+const readAuth = (file: string) =>
+  Effect.promise(async () => {
+    try {
+      return agentAuth(JSON.parse(await Deno.readTextFile(file)));
+    } catch {
+      // Missing or unreadable: claude signs in however it would by default.
+      return agentAuth(null);
+    }
+  });
 
 const writeAll = async (stdin: WritableStream<Uint8Array>, text: string) => {
   const writer = stdin.getWriter();
@@ -131,12 +152,15 @@ export const assistantIoLive = (
       checkWorkspaceLayout: runSteps([layoutStep(settings, layoutFile)], runStep(settings)),
       startAgent: (prompt, sessionId, registry) =>
         Effect.acquireRelease(
-          spawn(
-            settings.claudePath,
-            agentArgs(settings, sessionId, registry),
-            settings.workspaceDir,
-            prompt,
-          ),
+          readAuth(settings.userSettingsFile).pipe(Effect.flatMap((auth) =>
+            spawn(
+              settings.claudePath,
+              agentArgs(settings, sessionId, registry, auth),
+              auth.env,
+              settings.workspaceDir,
+              prompt,
+            )
+          )),
           ({ controller }) => Effect.sync(() => controller.abort()),
         ).pipe(Effect.map(({ child }) => {
           // Read stderr as it comes, so a chatty agent can't fill the pipe and stall.

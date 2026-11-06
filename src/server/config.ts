@@ -54,5 +54,8 @@ export const config = {
     layoutCheckScript: path("bin/check-layout.ts"),
     registryFile: path("dist/widgets/registry.json"),
     stepTimeoutMs: 180_000,
+    userSettingsFile: `${
+      Deno.env.get("CLAUDE_CONFIG_DIR") ?? `${Deno.env.get("HOME") ?? ""}/.claude`
+    }/settings.json`,
   },
 } as const;

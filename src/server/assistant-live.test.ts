@@ -23,12 +23,14 @@ const settingsIn = (
   layoutCheckScript: `${dir}/check.ts`,
   registryFile: `${dir}/dist/registry.json`,
   stepTimeoutMs: 60_000,
+  userSettingsFile: `${dir}/user-settings.json`,
   ...overrides,
 });
 
 const fakeClaude = `#!/bin/sh
 cat > prompt.txt
 printf '%s\\n' "$@" > args.txt
+echo "$AWS_REGION" > region.txt
 echo '{"edited":true}' > layout.json
 echo '{"type":"system","subtype":"init","session_id":"s1"}'
 echo 'oops' >&2
@@ -40,6 +42,10 @@ Deno.test("the agent runs in its workspace with the prompt on stdin, and edits i
   const claudePath = `${dir}/claude`;
   await Deno.writeTextFile(claudePath, fakeClaude, { mode: 0o755 });
   const settings = settingsIn(dir, { claudePath });
+  await Deno.writeTextFile(
+    settings.userSettingsFile,
+    JSON.stringify({ awsCredentialExport: "creds", env: { AWS_REGION: "us-west-2" } }),
+  );
 
   const result = await Effect.runPromise(Effect.gen(function* () {
     const io = yield* assistantIoLive(settings);
@@ -63,6 +69,12 @@ Deno.test("the agent runs in its workspace with the prompt on stdin, and edits i
     await Deno.readTextFile(`${dir}/workspace/args.txt`),
     "--resume\ns0\n",
   );
+  // The user's sign-in comes along, though --restricted ignores their settings.
+  assertStringIncludes(
+    await Deno.readTextFile(`${dir}/workspace/args.txt`),
+    `--settings\n{"awsCredentialExport":"creds"}\n`,
+  );
+  assertEquals(await Deno.readTextFile(`${dir}/workspace/region.txt`), "us-west-2\n");
   await Deno.remove(dir, { recursive: true });
 });
 

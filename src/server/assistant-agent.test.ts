@@ -1,6 +1,7 @@
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import {
   agentArgs,
+  agentAuth,
   type AgentSettings,
   conflictPrompt,
   describeRegistry,
@@ -52,6 +53,31 @@ Deno.test("the agent may edit only its layout copy and the widget source, with n
   assertEquals(valueAfter(args, "--append-system-prompt"), instructions(settings, registry));
   assertEquals(valueAfter(args, "--output-format"), "stream-json");
   assert(args.includes("--verbose"));
+});
+
+Deno.test("the agent signs in as the user's Claude Code does", () => {
+  const auth = agentAuth({
+    awsCredentialExport: "claude default-credential-export",
+    apiKeyHelper: 7,
+    model: "opus",
+    permissions: { allow: ["Bash"] },
+    env: { AWS_REGION: "us-west-2", CLAUDE_CODE_USE_BEDROCK: "1", EDITOR: "vim" },
+  });
+  assertEquals(auth, {
+    settings: { awsCredentialExport: "claude default-credential-export" },
+    env: { AWS_REGION: "us-west-2", CLAUDE_CODE_USE_BEDROCK: "1" },
+  });
+  assertEquals(
+    valueAfter(agentArgs(settings, null, null, auth), "--settings"),
+    `{"awsCredentialExport":"claude default-credential-export"}`,
+  );
+});
+
+Deno.test("without sign-in settings, claude signs in however it would by default", () => {
+  for (const userSettings of [null, [], "x", { env: [] }, {}]) {
+    assertEquals(agentAuth(userSettings), { settings: {}, env: {} });
+  }
+  assertEquals(agentArgs(settings, null, null).includes("--settings"), false);
 });
 
 Deno.test("a conversation is resumed by session id", () => {

@@ -96,6 +96,41 @@ Talking to the user
 - New ids must be unique; random UUIDs are fine.`;
 
 /**
+ * How the agent signs in, taken from the user's own Claude Code settings, which `--restricted`
+ * otherwise ignores. Without it, a Bedrock setup falls back to whatever is in ~/.aws/credentials.
+ */
+export type AgentAuth = {
+  /** Credential helper commands, passed with `--settings`. */
+  readonly settings: Readonly<Record<string, string>>;
+  /** Provider, region, and model variables, added to the agent's environment (not its argv). */
+  readonly env: Readonly<Record<string, string>>;
+};
+
+export const noAuth: AgentAuth = { settings: {}, env: {} };
+
+const authSettingKeys = ["apiKeyHelper", "awsCredentialExport", "awsAuthRefresh"];
+const authEnvPattern = /^(AWS_|ANTHROPIC_|CLAUDE_CODE_USE_|CLAUDE_CODE_SKIP_)/;
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+const stringEntries = (o: Record<string, unknown>, keep: (key: string) => boolean) =>
+  Object.fromEntries(
+    Object.entries(o).filter(([k, v]) => keep(k) && typeof v === "string"),
+  ) as Record<string, string>;
+
+/** The sign-in parts of the user's settings.json (parsed; anything else counts as none). */
+export const agentAuth = (userSettings: unknown): AgentAuth =>
+  isRecord(userSettings)
+    ? {
+      settings: stringEntries(userSettings, (k) => authSettingKeys.includes(k)),
+      env: isRecord(userSettings.env)
+        ? stringEntries(userSettings.env, (k) => authEnvPattern.test(k))
+        : {},
+    }
+    : noAuth;
+
+/**
  * Command-line arguments for one turn of the conversation. The prompt goes to
  * stdin, so a message that starts with "-" can't be mistaken for an option.
  */
@@ -103,7 +138,9 @@ export const agentArgs = (
   s: AgentSettings,
   sessionId: string | null,
   registry: Registry | null,
+  auth: AgentAuth = noAuth,
 ): ReadonlyArray<string> => [
+  ...(Object.keys(auth.settings).length === 0 ? [] : ["--settings", JSON.stringify(auth.settings)]),
   "--print",
   ...(sessionId === null ? [] : ["--resume", sessionId]),
   "--output-format",

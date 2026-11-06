@@ -74,8 +74,10 @@ back up or hand-edit while the server is stopped. Background images you upload o
 
 The assistant is [Claude Code](https://code.claude.com/) run headlessly by the server, one process
 per message (`--resume` continues the conversation). It needs `claude` installed and signed in
-(`CLAUDE_PATH` if set, otherwise `claude` on PATH). The cost and time of each turn are shown under
-it.
+(`CLAUDE_PATH` if set, otherwise `claude` on PATH). It runs with `--restricted`, which ignores your
+Claude Code settings, so the server passes along just their sign-in parts (`awsCredentialExport`,
+`awsAuthRefresh`, `apiKeyHelper`, and `AWS_*`/`ANTHROPIC_*`/`CLAUDE_CODE_USE_*` env). The cost and
+time of each turn are shown under it.
 
 Besides editing the layout, it can write new widget types, or change existing ones, in
 `src/client/widgets/`. Its prompt lists every widget type and its config schema, from the widget
