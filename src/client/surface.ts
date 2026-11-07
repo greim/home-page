@@ -164,6 +164,10 @@ export const columnCorners = {
 /** Rounded corners for smaller things shaped like columns. */
 export const smallCorners = { borderRadius: smallCornerRadius } as const;
 
+/** Fine diagonal hatching, over the dark wells set into columns (code boxes, the workday bar). */
+export const hatching =
+  "repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 5px)";
+
 /**
  * A box of source code (e.g. a snippet): a dark wash, with tighter lines than
  * text, sunk into the column by a dark edge above and left and a light one
@@ -171,8 +175,7 @@ export const smallCorners = { borderRadius: smallCornerRadius } as const;
  */
 export const codeBox = {
   bgColor: "rgba(69, 69, 69, 0.5)",
-  /** Fine diagonal hatching. */
-  bgImage: "repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 5px)",
+  bgImage: hatching,
   lineHeight: String(codeTextSpacing),
   borderRadius: "0.25em",
   boxShadow:

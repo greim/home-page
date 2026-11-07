@@ -29,6 +29,3 @@ export const clockParts = (now: Date): ReadonlyArray<string> => {
     `${hours % 12 === 0 ? 12 : hours % 12}:${minutes} ${hours < 12 ? "am" : "pm"}`,
   ];
 };
-
-/** Milliseconds until the next minute starts, when the face next changes. */
-export const untilNextMinute = (now: Date): number => 60_000 - (now.getTime() % 60_000);

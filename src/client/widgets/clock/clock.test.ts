@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { clockParts, untilNextMinute } from "./clock.ts";
+import { clockParts } from "./clock.ts";
 
 // Local times, so the tests hold in any time zone.
 const at = (month: number, date: number, hours: number, minutes: number) =>
@@ -14,10 +14,4 @@ Deno.test("clockParts shows midnight and noon as 12", () => {
   assertEquals(clockParts(at(11, 25, 0, 0)).at(3), "12:00 am");
   assertEquals(clockParts(at(11, 25, 12, 0)).at(3), "12:00 pm");
   assertEquals(clockParts(at(11, 25, 23, 59)).at(3), "11:59 pm");
-});
-
-Deno.test("untilNextMinute counts down to the minute", () => {
-  const noon = new Date("2026-11-03T12:05:30Z");
-  assertEquals(untilNextMinute(noon), 30_000);
-  assertEquals(untilNextMinute(new Date("2026-11-03T12:06:00Z")), 60_000);
 });

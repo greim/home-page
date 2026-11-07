@@ -3,7 +3,7 @@
  * during the user's day or a moon outside it (see day-cycle.ts).
  */
 import { chakra, Text } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { LuMoon, LuSun } from "react-icons/lu";
 import { phaseAt } from "../../../common/day-cycle.ts";
 import { registerMfe } from "../../mfe/register-live.tsx";
@@ -13,18 +13,9 @@ import {
   type WidgetProps,
   widgetView,
 } from "../../widget-kit/views.tsx";
-import { clockParts, untilNextMinute } from "./clock.ts";
+import { useNow } from "../../widget-kit/now.ts";
+import { clockParts } from "./clock.ts";
 import { ClockConfig } from "./config.ts";
-
-/** The current time, updated as each minute starts. */
-const useNow = (): Date => {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const timer = setTimeout(() => setNow(new Date()), untilNextMinute(now));
-    return () => clearTimeout(timer);
-  }, [now]);
-  return now;
-};
 
 /** Faded slashes between the parts of the date and time. */
 const separated = {

@@ -2,7 +2,7 @@ import { defaultSchedule } from "../common/day-cycle.ts";
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Effect } from "effect";
 import { AssistantIo } from "./assistant.ts";
-import { defaultLayout, emptyLayout, type Layout, newColumn } from "../common/model.ts";
+import { defaultLayout, type Layout, newColumn } from "../common/model.ts";
 import {
   contentTypeFor,
   type HttpRequest,

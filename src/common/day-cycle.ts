@@ -116,3 +116,6 @@ export const nextChange = (now: Date, schedule: Schedule): Date => {
   // Tomorrow's start is always after now, so there's always one.
   return candidates.find((c) => c > now) ?? onDay(now, 1, schedule.startOfDay);
 };
+
+/** Milliseconds until the next minute starts, e.g. to update a clock. */
+export const untilNextMinute = (now: Date): number => 60_000 - (now.getTime() % 60_000);

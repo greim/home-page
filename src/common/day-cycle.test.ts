@@ -5,6 +5,7 @@ import {
   nextChange,
   phaseAt,
   Schedule,
+  untilNextMinute,
   type Workday,
   workdayAt,
 } from "./day-cycle.ts";
@@ -119,4 +120,9 @@ Deno.test("nextChange is the next start or end of day", () => {
   assertEquals(next(at(6, 12)), at(6, 17).getTime());
   assertEquals(next(at(6, 17)), at(7, 9).getTime());
   assertEquals(next(at(6, 23, 59)), at(7, 9).getTime());
+});
+
+Deno.test("untilNextMinute counts down to the minute", () => {
+  assertEquals(untilNextMinute(new Date("2026-11-03T12:05:30Z")), 30_000);
+  assertEquals(untilNextMinute(new Date("2026-11-03T12:06:00Z")), 60_000);
 });
