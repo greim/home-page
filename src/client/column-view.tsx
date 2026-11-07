@@ -10,7 +10,6 @@ import {
   columnBackground,
   columnBackgroundTransition,
   columnCorners,
-  columnCornersTransition,
   columnHeading,
   columnHeadingBand,
   columnHeadingHeight,
@@ -168,7 +167,7 @@ export function ColumnView(props: {
       appearance="dark"
       hasBackground={false}
       bgColor={columnBackground(column.color, night)}
-      transition={`${columnBackgroundTransition}, ${columnCornersTransition}`}
+      transition={columnBackgroundTransition}
       color="white"
       textShadow={surface.columnTextShadow}
       h="full"
@@ -218,7 +217,6 @@ export function AddColumnSlot(props: { index: number }) {
       pt={surface.columnPaddingTop}
       px={surface.columnPaddingX}
       css={columnCorners(admin)}
-      transition={columnCornersTransition}
       borderWidth="2px"
       borderStyle="dotted"
       borderColor={surface.ink}

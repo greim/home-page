@@ -178,15 +178,12 @@ export const hiddenScrollbar = {
  * Column corners. Columns normally hang from the top of the window, so their
  * top corners are square and only the bottom ones are rounded. In admin mode
  * they're detached from it, below the admin bar, so all four are rounded. The
- * change animates along with the columns making room for the admin bar.
+ * change is instant, not animated.
  */
 export const columnCorners = (detached: boolean) => ({
   borderTopRadius: detached ? cornerRadius : "0",
   borderBottomRadius: cornerRadius,
 });
-
-/** How column corners round off and square up as columns detach from the window's top. */
-export const columnCornersTransition = `border-radius ${surface.adminTransition}`;
 
 /** Rounded corners for smaller things shaped like columns. */
 export const smallCorners = { borderRadius: smallCornerRadius } as const;
