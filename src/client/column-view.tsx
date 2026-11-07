@@ -1,10 +1,10 @@
 import { Box, Button, chakra, Flex, Heading, Input, Stack, Theme } from "@chakra-ui/react";
 import { useRef, useState } from "react";
 import { LuPlus } from "react-icons/lu";
+import { columnColorCss } from "../common/column-color.ts";
 import { type Column, newColumn } from "../common/model.ts";
 import { adminButton } from "./admin-button.ts";
 import { useBoard } from "./board-context.ts";
-import { appearanceFor } from "./contrast.ts";
 import { IconPicker, NamedIcon } from "./icon-picker.tsx";
 import { randomIcon } from "./icon-set.ts";
 import {
@@ -117,7 +117,7 @@ function ColumnHeader(props: {
       position="sticky"
       top="0"
       zIndex="1"
-      bgColor={column.color}
+      bgColor={columnColorCss(column.color)}
       {...columnHeadingBand}
       align="center"
       gap="2"
@@ -159,11 +159,14 @@ export function ColumnView(props: {
   const { admin, edit } = useBoard();
   const { column } = props;
   return (
-    // Theme switches Chakra's tokens to light or dark to suit the column's color.
+    // Column text is always white: every column color shares one mid lightness,
+    // so Chakra's dark tokens suit them all.
     <Theme
-      appearance={appearanceFor(column.color)}
+      appearance="dark"
       hasBackground={false}
-      bg={column.color}
+      bg={columnColorCss(column.color)}
+      color="white"
+      textShadow={surface.columnTextShadow}
       h="full"
       css={{ ...columnCorners, ...hiddenScrollbar }}
       boxShadow={surface.columnInsetShadow}

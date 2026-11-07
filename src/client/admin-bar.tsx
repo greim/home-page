@@ -41,8 +41,9 @@ export function AdminBar(props: {
         align="stretch"
         overflow="hidden"
         borderBottomRadius={smallCorners.borderRadius}
-        // White on the white surface, so a shadow shows its edge.
-        boxShadow={surface.thumbShadow}
+        // White on the white surface, so a shadow shows its edge. Only while shown,
+        // or it would peek out below the top of the window.
+        boxShadow={props.shown ? surface.thumbShadow : "none"}
       >
         <AdminBarButton
           title="Exit admin mode"

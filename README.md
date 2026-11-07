@@ -59,8 +59,9 @@ back up or hand-edit while the server is stopped. Its `schedule` sets when your 
   icon to pick another, or a widget or the column's background to open the **column editor**.
 - The column editor edits a column's heading, icon and background color, and lists its widgets: drag
   them to reorder, send them to another column, delete them, add new ones, or select one to edit it.
-  Changes apply when you click Save. A column's text switches to light or dark automatically to suit
-  its background color.
+  Changes apply when you click Save. Column colors are
+  [OKLCH](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/color_value/oklch) at
+  one shared lightness: you pick a preset, or a hue and chroma, and text on them is always white.
 - In admin mode the column navigator along the bottom is always shown. Add columns with the dashed
   boxes at either end or the "+" markers between thumbnails; each thumbnail has icons to move (drag
   it, or use the arrow keys), delete, and hide the column.

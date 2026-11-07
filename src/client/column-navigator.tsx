@@ -1,3 +1,4 @@
+import { type ColumnColor, columnColorCss } from "../common/column-color.ts";
 import { Box, chakra, HStack, Popover, Portal, Theme } from "@chakra-ui/react";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { LuEye, LuEyeOff, LuMove, LuPalette, LuPlus, LuTrash2 } from "react-icons/lu";
@@ -16,7 +17,6 @@ import {
   type Slot,
 } from "./carousel.ts";
 import { ColorPicker } from "./color-picker.tsx";
-import { appearanceFor } from "./contrast.ts";
 import { smallCorners, surface } from "./surface.ts";
 
 const { gap, thumbWidth, thumbHeight, thumbOutlineWidth } = surface;
@@ -193,7 +193,11 @@ function ThumbIcon(props: ComponentProps<typeof chakra.button> & { label: string
  * A thumbnail's palette icon, which opens the column color swatches just above
  * the navigator. Picks apply at once, so the column itself is the preview.
  */
-function ColorButton(props: { label: string; value: string; onChange: (color: string) => void }) {
+function ColorButton(props: {
+  label: string;
+  value: ColumnColor;
+  onChange: (color: ColumnColor) => void;
+}) {
   return (
     <Popover.Root positioning={{ placement: "top" }} lazyMount unmountOnExit>
       <Popover.Trigger asChild>
@@ -229,20 +233,20 @@ function ColumnThumbnail(props: {
   onClick: () => void;
   onDelete: () => void;
   onToggleHidden: () => void;
-  onColor: (color: string) => void;
+  onColor: (color: ColumnColor) => void;
 }) {
   const { column, visible, admin } = props;
   const label = column.heading;
   return (
-    // Theme picks light or dark text to suit the column's color.
+    // White text, as on the column itself.
     <Theme
-      appearance={appearanceFor(column.color)}
+      appearance="dark"
       hasBackground={false}
       position="relative"
       flex={`0 0 ${thumbWidth}`}
       h={thumbHeight}
       {...thumbCorners}
-      bg={column.color}
+      bg={columnColorCss(column.color)}
       boxShadow={surface.thumbShadow}
       opacity={column.hidden ? 0.5 : 1}
     >

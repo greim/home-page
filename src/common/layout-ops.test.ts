@@ -1,4 +1,7 @@
+import { defaultColumnColor } from "./column-color.ts";
 import { defaultSchedule } from "./day-cycle.ts";
+
+const red = { c: 0.1, h: 25 };
 import { assertEquals } from "@std/assert";
 import { applyAction } from "./layout-ops.ts";
 import {
@@ -107,9 +110,9 @@ Deno.test("set-column-color changes only the target column", () => {
   const l = applyAction(layout(column("a"), column("b")), {
     is: "set-column-color",
     columnId: "b",
-    color: "#112233",
+    color: red,
   });
-  assertEquals(l.columns.map((c) => c.color), ["#ffffff", "#112233"]);
+  assertEquals(l.columns.map((c) => c.color), [defaultColumnColor, red]);
 });
 
 Deno.test("edit-column swaps in the edited column and appends sent widgets", () => {
@@ -120,12 +123,12 @@ Deno.test("edit-column swaps in the edited column and appends sent widgets", () 
   );
   const l = applyAction(start, {
     is: "edit-column",
-    column: { ...column("a", [snippets]), heading: "Edited", color: "#112233" },
+    column: { ...column("a", [snippets]), heading: "Edited", color: red },
     sent: [{ toColumnId: "b", widget: bookmarks }],
   });
   assertEquals(l.columns.map((c) => [c.heading, c.color]), [
-    ["Edited", "#112233"],
-    ["New Column", "#ffffff"],
+    ["Edited", red],
+    ["New Column", defaultColumnColor],
   ]);
   assertEquals(widgetIds(l, "a"), ["s"]);
   assertEquals(widgetIds(l, "b"), ["g", "w1"]);

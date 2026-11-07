@@ -1,5 +1,15 @@
-import { chakra, HStack, SimpleGrid, Text } from "@chakra-ui/react";
-import { columnColorPresets } from "./surface.ts";
+import { chakra, HStack, Slider, Stack, Text } from "@chakra-ui/react";
+import {
+  chromaGradient,
+  type ColumnColor,
+  columnColorCss,
+  columnColorPresets,
+  hueGradient,
+  maxChroma,
+  sameColumnColor,
+  withChroma,
+  withHue,
+} from "../common/column-color.ts";
 
 const swatch = {
   borderWidth: "1px",
@@ -8,43 +18,99 @@ const swatch = {
   cursor: "pointer",
 } as const;
 
-/** A row of preset swatches plus a custom color input. */
-export function ColorPicker(props: {
+/** One slider, its track painted with the colors it ranges over. */
+function ColorSlider(props: {
   label: string;
-  value: string;
-  onChange: (color: string) => void;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  /** How the value reads beside the label. */
+  display: string;
+  track: string;
+  onChange: (value: number) => void;
 }) {
   return (
-    <HStack gap="2" wrap="wrap" role="group" aria-label={props.label}>
-      <SimpleGrid columns={columnColorPresets.length} gap="2">
-        {columnColorPresets.map((color) => (
+    <Slider.Root
+      size="sm"
+      min={props.min}
+      max={props.max}
+      step={props.step}
+      value={[props.value]}
+      onValueChange={(details) => props.onChange(details.value.at(0) ?? props.value)}
+    >
+      <HStack justify="space-between">
+        <Slider.Label>{props.label}</Slider.Label>
+        <Text fontSize="xs" color="fg.muted" fontVariantNumeric="tabular-nums">
+          {props.display}
+        </Text>
+      </HStack>
+      <Slider.Control>
+        <Slider.Track bgImage={props.track} h="2.5" />
+        <Slider.Thumbs />
+      </Slider.Control>
+    </Slider.Root>
+  );
+}
+
+/**
+ * Picks a column color: a preset, or any hue and chroma at the column
+ * lightness. Chroma stops at the most the hue can show, and changing the hue
+ * lowers it if the new hue can't reach it.
+ */
+export function ColorPicker(props: {
+  label: string;
+  value: ColumnColor;
+  onChange: (color: ColumnColor) => void;
+}) {
+  const { value, onChange } = props;
+  return (
+    <Stack gap="3" w="64" role="group" aria-label={props.label}>
+      <HStack gap="2">
+        {columnColorPresets.map((color, i) => (
           <chakra.button
-            key={color}
+            key={i}
             {...swatch}
             boxSize="7"
-            bg={color}
-            aria-label={color}
-            aria-pressed={color === props.value}
-            outline={color === props.value ? "2px solid" : "none"}
+            bg={columnColorCss(color)}
+            aria-label={`Preset ${i + 1}`}
+            title={columnColorCss(color)}
+            aria-pressed={sameColumnColor(color, value)}
+            outline={sameColumnColor(color, value) ? "2px solid" : "none"}
             outlineColor="colorPalette.solid"
             outlineOffset="2px"
-            onClick={() => props.onChange(color)}
+            onClick={() => onChange(color)}
           />
         ))}
-      </SimpleGrid>
-      <HStack as="label" gap="2" cursor="pointer" ms="2">
-        <chakra.input
-          type="color"
-          value={props.value}
-          onChange={(e) => props.onChange(e.target.value)}
+        <chakra.div
+          ms="auto"
           boxSize="7"
-          p="0"
-          borderWidth="0"
-          bg="transparent"
-          cursor="pointer"
+          rounded="sm"
+          bg={columnColorCss(value)}
+          title={columnColorCss(value)}
+          aria-hidden
         />
-        <Text fontSize="sm">Custom…</Text>
       </HStack>
-    </HStack>
+      <ColorSlider
+        label="Hue"
+        value={value.h}
+        min={0}
+        max={359}
+        step={1}
+        display={`${Math.round(value.h)}°`}
+        track={hueGradient()}
+        onChange={(h) => onChange(withHue(value, h))}
+      />
+      <ColorSlider
+        label="Chroma"
+        value={value.c}
+        min={0}
+        max={maxChroma(value.h)}
+        step={0.0005}
+        display={value.c.toFixed(3)}
+        track={chromaGradient(value.h)}
+        onChange={(c) => onChange(withChroma(value, c))}
+      />
+    </Stack>
   );
 }

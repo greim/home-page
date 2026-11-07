@@ -3,6 +3,7 @@
  * attributes and widgets, edited freely and committed (or discarded) as a whole.
  */
 import { moveWhere, removeWhere } from "../common/arrays.ts";
+import type { ColumnColor } from "../common/column-color.ts";
 import type { LayoutAction, SentWidget } from "../common/layout-ops.ts";
 import type { Column, Widget } from "../common/model.ts";
 import { type Draft, finishDraft, toDraft } from "./widget-draft.ts";
@@ -10,7 +11,7 @@ import { type Draft, finishDraft, toDraft } from "./widget-draft.ts";
 export type ColumnDraft = {
   readonly heading: string;
   readonly icon: string;
-  readonly color: string;
+  readonly color: ColumnColor;
   /** The column's widgets, in order. */
   readonly widgets: ReadonlyArray<Draft>;
   /** Widgets sent to other columns, removed from this one. */

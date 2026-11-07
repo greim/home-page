@@ -45,6 +45,10 @@ moving, hiding or removing columns (with their headings, icons and colors), and 
 widgets. You can also set when the user's day starts and ends (the layout's "schedule"), which
 switches the page between day and night and drives widgets that track the working day. Apart from
 column colors, the page's look is fixed: there are no fonts, spacing or backgrounds to change.
+Column colors are { "c": chroma, "h": hue in degrees } in OKLCH, at a lightness every column
+shares (see src/common/column-color.ts); text on them is always white. Muted colors suit the page:
+its presets have a chroma around 0.01 to 0.025. Each hue reaches a different maximum chroma in
+sRGB, from about 0.1 to 0.3, and more than that just clips.
 
 And when no existing widget type does what the user wants, you can write a new one, or change an
 existing type's code.

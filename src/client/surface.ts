@@ -20,7 +20,7 @@ const smallCornerRadius = "0.25rem";
 
 /**
  * The page's look, which is fixed (see NEW_LAYOUT.md); only column colors are
- * the user's to choose.
+ * the user's to choose (see src/common/column-color.ts).
  */
 export const surface = {
   /**
@@ -46,6 +46,8 @@ export const surface = {
   columnPaddingBottom: "2rem",
   /** Drop shadow each column casts onto the surface. */
   columnShadow: "0.2rem 0.2rem 0.6rem rgba(0, 0, 0, 0.5)",
+  /** Lifts columns' white text off their color: a dark edge up and to the left. */
+  columnTextShadow: "-1px -1px 0 rgba(0, 0, 0, 0.5)",
   /** A dark hairline inside each column's top and left edges. */
   columnInsetShadow: "-1px -1px 0 rgba(0, 0, 0, 0.25) inset",
   /** Size of the icon left of each column heading. */
@@ -154,19 +156,6 @@ export const codeBox = {
   boxShadow:
     "-1px -1px 0 rgba(0, 0, 0, 0.7), 1px 1px 0 rgba(255, 255, 255, 0.25), 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.15) inset",
 } as const;
-
-/** Quick picks offered in the column color picker (any #rrggbb is allowed). */
-export const columnColorPresets: ReadonlyArray<string> = [
-  "#ffffff",
-  "#f7f3ea",
-  "#eef3fa",
-  "#edf6ef",
-  "#fbefef",
-  "#f3effa",
-  "#fdf6dd",
-  "#2b2d33",
-  "#1f2a3a",
-];
 
 /**
  * How far a widget heading's text sits from the widget's left edge: its 1em

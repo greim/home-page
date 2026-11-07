@@ -3,6 +3,7 @@
  * validated at both ends of the wire via Effect Schema.
  */
 import { Schema } from "effect";
+import { defaultColumnColor, StoredColumnColor } from "./column-color.ts";
 import { defaultSchedule, Schedule } from "./day-cycle.ts";
 import { WidgetId } from "./widgets.ts";
 
@@ -53,11 +54,6 @@ const StoredWidget = Schema.transform(Schema.Unknown, Widget, {
   encode: (widget) => widget,
 });
 
-/** A `#rrggbb` color. */
-export const HexColor = Schema.String.pipe(Schema.pattern(/^#[0-9a-fA-F]{6}$/));
-
-export const defaultColumnColor = "#ffffff";
-
 /**
  * Icon shown left of a column's heading, named by its react-icons export (e.g.
  * "LuStar"). Kept as a plain string so this module stays free of UI code.
@@ -68,8 +64,12 @@ export const Column = Schema.Struct({
   id: Schema.String,
   heading: Schema.String,
   hidden: Schema.Boolean,
-  /** Background color. Layouts saved before this field existed decode as white. */
-  color: Schema.optionalWith(HexColor, { default: () => defaultColumnColor }),
+  /**
+   * Background color, as OKLCH chroma and hue (see column-color.ts). Colors saved
+   * as `#rrggbb` keep their chroma and hue; layouts saved before this field
+   * existed get the default.
+   */
+  color: Schema.optionalWith(StoredColumnColor, { default: () => defaultColumnColor }),
   /** Layouts saved before this field existed decode with the default icon. */
   icon: Schema.optionalWith(Schema.String, { default: () => defaultColumnIcon }),
   widgets: Schema.Array(StoredWidget),

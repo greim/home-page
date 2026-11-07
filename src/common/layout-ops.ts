@@ -3,6 +3,7 @@
  * reducer that applies one. Actions referencing unknown ids are no-ops.
  */
 import { insertAt, mapWhere, moveWhere, removeWhere } from "./arrays.ts";
+import type { ColumnColor } from "./column-color.ts";
 import { type Column, isUntouchedColumn, type Layout, type Widget } from "./model.ts";
 
 export type LayoutAction =
@@ -16,7 +17,7 @@ export type LayoutAction =
   | { is: "move-column"; columnId: string; toIndex: number }
   | { is: "set-column-hidden"; columnId: string; hidden: boolean }
   | { is: "set-column-icon"; columnId: string; icon: string }
-  | { is: "set-column-color"; columnId: string; color: string }
+  | { is: "set-column-color"; columnId: string; color: ColumnColor }
   /**
    * Saves the column content editor: swaps in the edited column (matched by id)
    * and appends each sent widget to its target column. A widget sent to a column

@@ -1,3 +1,4 @@
+import { defaultColumnColor, fromHex } from "./column-color.ts";
 import { defaultSchedule } from "./day-cycle.ts";
 import { assertEquals } from "@std/assert";
 import { Either, Schema } from "effect";
@@ -13,7 +14,7 @@ Deno.test("Layout decodes a well-formed layout", () => {
       id: "c",
       heading: "Work",
       hidden: false,
-      color: "#ffffff",
+      color: defaultColumnColor,
       icon: "LuStar",
       widgets: [
         newWidget({ id: "clock", title: "Clock", defaultConfig: { timeZone: null } }, "w1"),
@@ -92,14 +93,14 @@ Deno.test("Layout saves migrated widgets in the current shape", () => {
   });
 });
 
-Deno.test("Column color defaults to white for older layouts", () => {
+Deno.test("Column color defaults for older layouts", () => {
   const legacy = {
     version: 1,
     columns: [{ id: "c", heading: "", hidden: false, widgets: [] }],
   };
   assertEquals(
     Either.map(decode(legacy), (l) => l.columns.at(0)?.color),
-    Either.right("#ffffff"),
+    Either.right(defaultColumnColor),
   );
 });
 
@@ -114,14 +115,17 @@ Deno.test("Column icon defaults for older layouts", () => {
   );
 });
 
-Deno.test("Column color must be a #rrggbb hex color", () => {
-  const withColor = (color: string) => ({
+Deno.test("Column colors saved as #rrggbb keep their chroma and hue, and save as { c, h }", () => {
+  const withColor = (color: unknown) => ({
     version: 1,
     columns: [{ id: "c", heading: "", hidden: false, color, widgets: [] }],
   });
-  assertEquals(Either.isRight(decode(withColor("#A0b1C2"))), true);
+  const decoded = Schema.decodeUnknownSync(Layout)(withColor("#A0b1C2"));
+  assertEquals(decoded.columns.at(0)?.color, fromHex("#A0b1C2"));
+  assertEquals(Schema.encodeSync(Layout)(decoded).columns.at(0)?.color, fromHex("#A0b1C2"));
+  assertEquals(Either.isRight(decode(withColor({ c: 0.02, h: 300 }))), true);
   assertEquals(Either.isLeft(decode(withColor("red"))), true);
-  assertEquals(Either.isLeft(decode(withColor("#fff"))), true);
+  assertEquals(Either.isLeft(decode(withColor({ c: 1, h: 300 }))), true);
 });
 
 Deno.test("Layouts saved with a background and skin decode without them, and save without them", () => {

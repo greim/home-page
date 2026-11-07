@@ -89,6 +89,7 @@ Deno.test("instructions point the agent at its references and list the widget ty
   assertStringIncludes(text, "reload the page");
   assertStringIncludes(text, "screenshot.jpg");
   assertStringIncludes(text, "schedule");
+  assertStringIncludes(text, "src/common/column-color.ts");
   assertEquals(text.includes("skin"), false);
   assertEquals(text.includes("fonts.google.com"), false);
   assertStringIncludes(text, describeRegistry(registry));
