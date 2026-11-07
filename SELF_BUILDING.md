@@ -99,9 +99,11 @@ Props cross between bundles as they are, functions included (see
 decodes it with the widget's schema and encodes it again before handing it back.
 
 - The shell embeds a widget's `widget` view inside its card, with props
-  `{ widgetId, config,
-  saveConfig }`. A widget saves a changed config (e.g. a bookmark folder
-  opened) by calling `saveConfig`.
+  `{ widgetId, config, saveConfig, schedule }`. A widget saves a changed config (e.g. a bookmark
+  folder opened) by calling `saveConfig`. `schedule` is when the user's day starts and ends (the
+  layout's `schedule`), for widgets that follow it, like the clock and workday;
+  `src/common/day-cycle.ts` says what any moment is by it, and the widget kit's `useNow` re-renders
+  each minute.
 - In the column editor, the shell embeds the selected widget's `editor` view, with props
   `{ widgetId,
   config, reportDraft }`. `config` is where to start from; the editor owns its state
