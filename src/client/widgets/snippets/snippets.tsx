@@ -113,7 +113,8 @@ function SnippetBox(props: {
       <chakra.pre
         m="0"
         px="0.5em"
-        py="0.4em"
+        pt="0.25em"
+        pb="0.4em"
         fontFamily="mono"
         color="fg"
         textShadow="0.05em 0.05em 0.1em rgba(0, 0, 0, 0.7)"

@@ -79,7 +79,7 @@ function Workday({ schedule }: WidgetProps<WorkdayConfig>) {
         mx="-0.2em"
         h="2em"
         bgColor="rgba(56, 56, 56, 0.5)"
-        bgImage={hatching}
+        {...hatching}
         boxShadow="-1px -1px 0 rgba(0, 0, 0, 0.5), 1px 1px 0 rgba(255, 255, 255, 0.35), 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.15) inset"
       >
         <chakra.div

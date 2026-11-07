@@ -183,9 +183,17 @@ export const columnCorners = {
 /** Rounded corners for smaller things shaped like columns. */
 export const smallCorners = { borderRadius: smallCornerRadius } as const;
 
-/** Fine diagonal hatching, over the dark wells set into columns (code boxes, the workday bar). */
-export const hatching =
-  "repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 5px)";
+/**
+ * Fine diagonal hatching, over the dark wells set into columns (code boxes, the
+ * workday bar): the reference design's 8×8 texture (look-at-this-layout.css,
+ * stripped of its metadata), tiled at its native size, not scaled with the page.
+ */
+export const hatching = {
+  bgImage:
+    "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAQElEQVR42mJgYGCI/P//vyYQM2DDzEDiL1DRdQYsgJGRMZIRpAqXJFDuAlZjka3FK4mhAJuD8UrCFeDzKkCAAQDTS4zmEvR9swAAAABJRU5ErkJggg==)",
+  bgRepeat: "repeat",
+  bgSize: "8px 8px",
+} as const;
 
 /**
  * A box of source code (e.g. a snippet): a dark wash, with tighter lines than
@@ -194,7 +202,7 @@ export const hatching =
  */
 export const codeBox = {
   bgColor: "rgba(69, 69, 69, 0.5)",
-  bgImage: hatching,
+  ...hatching,
   lineHeight: String(codeTextSpacing),
   borderRadius: "0.25em",
   boxShadow:
