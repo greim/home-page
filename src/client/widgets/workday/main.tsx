@@ -5,7 +5,9 @@
  * part ends and the next begins, the bar slides back to empty.
  */
 import { chakra, Text } from "@chakra-ui/react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { LuBed, LuHardHat, LuPartyPopper } from "react-icons/lu";
+import type { Workday as WorkdayState } from "../../../common/day-cycle.ts";
 import { workdayAt } from "../../../common/day-cycle.ts";
 import { registerMfe } from "../../mfe/register-live.tsx";
 import { hatching, widgetHeading } from "../../surface.ts";
@@ -18,6 +20,20 @@ import {
 } from "../../widget-kit/views.tsx";
 import { WorkdayConfig } from "./config.ts";
 import { labelRight, percent, workdayTitle } from "./workday.ts";
+
+/** The icon beside each part of the week's heading. */
+const workdayIcon = (is: WorkdayState["is"]): ReactNode => {
+  switch (is) {
+    case "workday":
+      return <LuHardHat />;
+    case "after-hours":
+      return <LuBed />;
+    case "weekend":
+      return <LuPartyPopper />;
+    default:
+      return is satisfies never;
+  }
+};
 
 /** How long the bar takes to grow, or to slide back to empty when the part of the week changes. */
 const fillTransition = "2s ease-in-out";
@@ -65,7 +81,19 @@ function Workday({ schedule }: WidgetProps<WorkdayConfig>) {
   return (
     <>
       <style>{rollKeyframes}</style>
-      <chakra.h3 {...widgetHeading}>{workdayTitle(workday.is)}</chakra.h3>
+      <chakra.h3
+        {...widgetHeading}
+        // A little closer to its bar than other widgets' headings are to their content.
+        mb="0.6rem"
+        display="flex"
+        alignItems="center"
+        gap="0.5em"
+      >
+        <chakra.span display="inline-flex" flexShrink={0} aria-hidden>
+          {workdayIcon(workday.is)}
+        </chakra.span>
+        {workdayTitle(workday.is)}
+      </chakra.h3>
       <chakra.div
         ref={track}
         role="progressbar"
