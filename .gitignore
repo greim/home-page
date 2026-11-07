@@ -13,3 +13,8 @@ dist/
 
 # launchd service logs (see bin/install-service.ts)
 logs/
+
+scratch-docs/
+
+# Claude Code permissions saved by "always allow" (per developer)
+.claude/settings.local.json
