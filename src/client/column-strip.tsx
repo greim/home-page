@@ -20,6 +20,7 @@ import { screenshotRootId } from "./screenshot.ts";
 import { Starfield } from "./starfield-view.tsx";
 import {
   columnCorners,
+  columnCornersTransition,
   night as nightStyle,
   pageTypography,
   surface,
@@ -139,7 +140,8 @@ export function ColumnStrip(props: {
                   content: '""',
                   position: "absolute",
                   inset: "0",
-                  ...columnCorners,
+                  ...columnCorners(admin),
+                  transition: columnCornersTransition,
                   zIndex: "-1",
                   boxShadow: surface.columnShadow,
                 }

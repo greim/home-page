@@ -10,6 +10,7 @@ import {
   columnBackground,
   columnBackgroundTransition,
   columnCorners,
+  columnCornersTransition,
   columnHeading,
   columnHeadingBand,
   columnHeadingHeight,
@@ -167,11 +168,11 @@ export function ColumnView(props: {
       appearance="dark"
       hasBackground={false}
       bgColor={columnBackground(column.color, night)}
-      transition={columnBackgroundTransition}
+      transition={`${columnBackgroundTransition}, ${columnCornersTransition}`}
       color="white"
       textShadow={surface.columnTextShadow}
       h="full"
-      css={{ ...columnCorners, ...hiddenScrollbar }}
+      css={{ ...columnCorners(admin), ...hiddenScrollbar }}
       boxShadow={surface.columnInsetShadow}
       overflowY="auto"
       overflowX="hidden"
@@ -203,7 +204,7 @@ export function ColumnView(props: {
 
 /** Fills empty horizontal space with a way to append a column. */
 export function AddColumnSlot(props: { index: number }) {
-  const { dispatch } = useBoard();
+  const { admin, dispatch } = useBoard();
   const [naming, setNaming] = useState(false);
   return (
     // A dotted outline drawn on the surface in its ink.
@@ -216,7 +217,8 @@ export function AddColumnSlot(props: { index: number }) {
       justifyContent="start"
       pt={surface.columnPaddingTop}
       px={surface.columnPaddingX}
-      css={columnCorners}
+      css={columnCorners(admin)}
+      transition={columnCornersTransition}
       borderWidth="2px"
       borderStyle="dotted"
       borderColor={surface.ink}
