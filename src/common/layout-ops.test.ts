@@ -1,3 +1,4 @@
+import { defaultSchedule } from "./day-cycle.ts";
 import { assertEquals } from "@std/assert";
 import { applyAction } from "./layout-ops.ts";
 import {
@@ -20,6 +21,7 @@ const layout = (...columns: ReadonlyArray<Column>): Layout => ({
   version: 1,
   background: defaultBackground,
   skin: defaultSkin,
+  schedule: defaultSchedule,
   columns,
 });
 

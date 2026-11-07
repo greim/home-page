@@ -3,6 +3,7 @@
  * validated at both ends of the wire via Effect Schema.
  */
 import { Schema } from "effect";
+import { defaultSchedule, Schedule } from "./day-cycle.ts";
 import { WidgetId } from "./widgets.ts";
 
 /**
@@ -246,6 +247,11 @@ export const Layout = Schema.Struct({
   background: Schema.optionalWith(Background, { default: () => defaultBackground }),
   /** Layouts saved before this field existed decode with the default skin. */
   skin: Schema.optionalWith(Skin, { default: () => defaultSkin }),
+  /**
+   * When the user's day starts and ends, which sets night mode and what time-aware
+   * widgets show. Layouts saved before this field existed decode with 9 to 5.
+   */
+  schedule: Schema.optionalWith(Schedule, { default: () => defaultSchedule }),
   columns: Schema.Array(Column),
 });
 export type Layout = typeof Layout.Type;
@@ -254,6 +260,7 @@ export const emptyLayout: Layout = {
   version: 1,
   background: defaultBackground,
   skin: defaultSkin,
+  schedule: defaultSchedule,
   columns: [],
 };
 

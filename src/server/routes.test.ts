@@ -1,3 +1,4 @@
+import { defaultSchedule } from "../common/day-cycle.ts";
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Effect } from "effect";
 import { AssistantIo } from "./assistant.ts";
@@ -77,6 +78,7 @@ const layout: Layout = {
   version: 1,
   background: defaultBackground,
   skin: defaultSkin,
+  schedule: defaultSchedule,
   columns: [newColumn("c", "LuStar")],
 };
 

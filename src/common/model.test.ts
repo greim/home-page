@@ -1,3 +1,4 @@
+import { defaultSchedule } from "./day-cycle.ts";
 import { assertEquals } from "@std/assert";
 import { Either, Schema } from "effect";
 import {
@@ -17,6 +18,7 @@ Deno.test("Layout decodes a well-formed layout", () => {
     version: 1,
     background: defaultBackground,
     skin: defaultSkin,
+    schedule: defaultSchedule,
     columns: [{
       id: "c",
       heading: "Work",
@@ -34,6 +36,23 @@ Deno.test("Layout decodes a well-formed layout", () => {
 
 Deno.test("Layout decodes the empty layout", () => {
   assertEquals(decode(emptyLayout), Either.right(emptyLayout));
+});
+
+Deno.test("Layouts saved before the schedule existed get 9 to 5", () => {
+  assertEquals(
+    Either.map(decode({ version: 1, columns: [] }), (l) => l.schedule),
+    Either.right(defaultSchedule),
+  );
+});
+
+Deno.test("Layout keeps the user's schedule, and rejects an invalid one", () => {
+  const schedule = { startOfDay: "07:30", endOfDay: "15:30" };
+  assertEquals(
+    Either.map(decode({ version: 1, schedule, columns: [] }), (l) => l.schedule),
+    Either.right(schedule),
+  );
+  const backwards = { startOfDay: "17:00", endOfDay: "09:00" };
+  assertEquals(Either.isLeft(decode({ version: 1, schedule: backwards, columns: [] })), true);
 });
 
 const withWidget = (widget: unknown) => ({
