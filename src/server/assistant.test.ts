@@ -123,10 +123,6 @@ const harness = (options: {
     ),
     writeLayoutTempFile: (text) => Effect.sync(() => void (files.temp = text)),
     commitLayoutTempFile: Effect.sync(() => void (files.stored = files.temp)),
-    listBackgroundFiles: Effect.die("unused"),
-    readBackgroundFile: () => Effect.die("unused"),
-    writeBackgroundFile: () => Effect.die("unused"),
-    fetchRemote: () => Effect.die("unused"),
     readWidgetFile: () => Effect.die("unused"),
   });
 
@@ -327,7 +323,6 @@ const post = (body: string): HttpRequest => ({
   url: new URL("https://localhost:8443/api/assistant"),
   origin: null,
   body: Effect.succeed(body),
-  bytes: Effect.die("unused"),
 });
 
 Deno.test("POST /api/assistant streams the turn's events as NDJSON", async () => {

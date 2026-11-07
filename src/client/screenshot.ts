@@ -1,9 +1,9 @@
 /**
  * Decisions behind the screenshot of the page sent with each message to the
- * admin assistant (taken in live.ts), so the agent can see what it's styling.
+ * admin assistant (taken in live.ts), so the agent can see what it's changing.
  */
 
-/** The element screenshotted: the surface, columns and all (but not the assistant's panel). */
+/** The element screenshotted: the surface, columns and all. */
 export const screenshotRootId = "surface";
 
 /** Marks an element (with its contents) to leave out of screenshots, e.g. the admin bar. */

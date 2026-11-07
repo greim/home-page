@@ -17,7 +17,7 @@ import {
 } from "./carousel.ts";
 import { ColorPicker } from "./color-picker.tsx";
 import { appearanceFor } from "./contrast.ts";
-import { columnCorners, smallCorners, surface } from "./surface.ts";
+import { smallCorners, surface } from "./surface.ts";
 
 const { gap, thumbWidth, thumbHeight, thumbOutlineWidth } = surface;
 
@@ -87,7 +87,7 @@ function AddThumbnail(props: {
   targeted: boolean;
   onClick: () => void;
 }) {
-  const color = props.targeted ? targetColor : "white";
+  const color = props.targeted ? targetColor : surface.ink;
   return (
     <chakra.button
       {...dropTarget(props.gap)}
@@ -127,7 +127,7 @@ function InsertMarker(props: {
   targeted: boolean;
   onClick: () => void;
 }) {
-  const color = props.targeted ? targetColor : "white";
+  const color = props.targeted ? targetColor : surface.ink;
   return (
     <chakra.button
       {...dropTarget(props.gap)}
@@ -153,7 +153,7 @@ function InsertMarker(props: {
         boxSize={`calc(2 * ${discRadius})`}
         rounded="full"
         bg={color}
-        color="gray.900"
+        color={surface.bg}
         display="flex"
         alignItems="center"
         justifyContent="center"
@@ -311,7 +311,7 @@ type Drag = { readonly columnId: string; readonly from: number; readonly gap: nu
 
 /**
  * A row of thumbnails, one per strip slot, along the bottom of the viewport. The
- * thumbnails of the columns in view sit centered inside a white outline; the rest
+ * thumbnails of the columns in view sit centered inside an outline; the rest
  * extend past it (and off screen, if there are many). Clicking one outside the
  * outline slides its column just into view. When the strip ends with the
  * add-column slot, its thumbnail adds a column at the end.
@@ -474,8 +474,7 @@ export function ColumnNavigator(props: {
         transition="left 300ms ease, width 300ms ease"
         borderWidth={thumbOutlineWidth}
         borderStyle="solid"
-        borderColor="rgba(255, 255, 255, 0.5)"
-        {...columnCorners}
+        borderColor={surface.ink}
         // 10% less rounded than a column.
         borderRadius={`calc(${surface.cornerRadius} * 0.9)`}
       />

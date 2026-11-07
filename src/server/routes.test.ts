@@ -2,13 +2,7 @@ import { defaultSchedule } from "../common/day-cycle.ts";
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Effect } from "effect";
 import { AssistantIo } from "./assistant.ts";
-import {
-  defaultBackground,
-  defaultSkin,
-  emptyLayout,
-  type Layout,
-  newColumn,
-} from "../common/model.ts";
+import { emptyLayout, type Layout, newColumn } from "../common/model.ts";
 import {
   contentTypeFor,
   type HttpRequest,
@@ -37,7 +31,6 @@ const request = (
   url: new URL(path, `https://${options.host ?? "localhost:8443"}`),
   origin: options.origin ?? null,
   body: Effect.succeed(options.body ?? ""),
-  bytes: Effect.succeed(new TextEncoder().encode(options.body ?? "")),
 });
 
 const unused = Effect.die("unexpected I/O");
@@ -59,10 +52,6 @@ const noIo = ServerIo.of({
   readLayoutFile: unused,
   writeLayoutTempFile: () => unused,
   commitLayoutTempFile: unused,
-  listBackgroundFiles: unused,
-  readBackgroundFile: () => unused,
-  writeBackgroundFile: () => unused,
-  fetchRemote: () => unused,
   readWidgetFile: () => unused,
 });
 
@@ -76,8 +65,6 @@ const run = (req: HttpRequest, io = noIo): Promise<HttpResponse> =>
 
 const layout: Layout = {
   version: 1,
-  background: defaultBackground,
-  skin: defaultSkin,
   schedule: defaultSchedule,
   columns: [newColumn("c", "LuStar")],
 };
@@ -181,8 +168,11 @@ Deno.test("PUT /api/layout rejects malformed JSON and invalid layouts", async ()
 
 Deno.test("/api/layout rejects other methods", async () => {
   const res = await run(request("DELETE", "/api/layout"));
-  assertEquals((await run(request("DELETE", "/api/backgrounds"))).status, 405);
   assertEquals([res.status, res.headers["allow"]], [405, "GET, PUT"]);
+});
+
+Deno.test("/api/backgrounds is gone", async () => {
+  assertEquals((await run(request("GET", "/api/backgrounds"))).status, 404);
 });
 
 Deno.test("contentTypeFor maps known extensions", () => {

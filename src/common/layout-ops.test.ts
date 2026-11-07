@@ -3,8 +3,6 @@ import { assertEquals } from "@std/assert";
 import { applyAction } from "./layout-ops.ts";
 import {
   type Column,
-  defaultBackground,
-  defaultSkin,
   emptyLayout,
   type Layout,
   newColumn,
@@ -19,8 +17,6 @@ const column = (id: string, widgets: ReadonlyArray<Widget> = []): Column => ({
 
 const layout = (...columns: ReadonlyArray<Column>): Layout => ({
   version: 1,
-  background: defaultBackground,
-  skin: defaultSkin,
   schedule: defaultSchedule,
   columns,
 });
@@ -43,14 +39,6 @@ const bookmarks: Widget = {
 Deno.test("replace-layout swaps in the new layout", () => {
   const layout = { ...emptyLayout, columns: [] };
   assertEquals(applyAction(emptyLayout, { is: "replace-layout", layout }), layout);
-});
-
-Deno.test("set-background replaces the background", () => {
-  const background = { imageUrl: null, color: "#000000", opacity: 0.5 };
-  assertEquals(
-    applyAction(emptyLayout, { is: "set-background", background }).background,
-    background,
-  );
 });
 
 Deno.test("add-column prepends, inserts, and appends", () => {

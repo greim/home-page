@@ -17,7 +17,6 @@ const settingsIn = (
   repoDir: dir,
   widgetsDir: `${dir}/widgets`,
   secretsDir: `${dir}/.secrets`,
-  backgroundsDir: `${dir}/backgrounds`,
   distDir: `${dir}/dist`,
   widgetBuildScript: `${dir}/build.ts`,
   layoutCheckScript: `${dir}/check.ts`,

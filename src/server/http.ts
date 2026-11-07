@@ -12,14 +12,9 @@ export class BadRequest extends Data.TaggedError("BadRequest")<{ message: string
 /** Data on disk can't be used (500). */
 export class CorruptData extends Data.TaggedError("CorruptData")<{ message: string }> {}
 
-/** A remote server we depend on failed (502). */
-export class UpstreamFailed extends Data.TaggedError("UpstreamFailed")<{ message: string }> {}
-
-export type RouteError = BadRequest | CorruptData | UpstreamFailed | IoError;
+export type RouteError = BadRequest | CorruptData | IoError;
 
 export type Bytes = Uint8Array<ArrayBuffer>;
-
-export type RemoteResponse = { readonly status: number; readonly bytes: Bytes };
 
 export class ServerIo extends Context.Tag("ServerIo")<
   ServerIo,
@@ -29,12 +24,6 @@ export class ServerIo extends Context.Tag("ServerIo")<
     readonly writeLayoutTempFile: (text: string) => Effect.Effect<void, IoError>;
     /** Atomically replaces the layout file with the temp file. */
     readonly commitLayoutTempFile: Effect.Effect<void, IoError>;
-    /** Names of the files in the saved-backgrounds directory. */
-    readonly listBackgroundFiles: Effect.Effect<ReadonlyArray<string>, IoError>;
-    readonly readBackgroundFile: (name: string) => Effect.Effect<Bytes, IoError>;
-    readonly writeBackgroundFile: (name: string, bytes: Bytes) => Effect.Effect<void, IoError>;
-    /** GETs a remote URL. Fails only if no response arrives at all. */
-    readonly fetchRemote: (url: URL) => Effect.Effect<RemoteResponse, IoError>;
     /** Reads a file from the widget build's output, by its path there. */
     readonly readWidgetFile: (path: string) => Effect.Effect<Bytes, IoError>;
   }
@@ -48,7 +37,7 @@ export type Asset = {
 export type Site = {
   /** Hosts (`name:port`) this server answers to. Guards DNS rebinding. */
   readonly hosts: ReadonlySet<string>;
-  /** Bundled client files and built-in static files, keyed by file name. */
+  /** Bundled client files, keyed by file name. */
   readonly assets: ReadonlyMap<string, Asset>;
   /** Cache-busting token for asset URLs embedded in the page. */
   readonly buildId: string;
@@ -58,10 +47,8 @@ export type HttpRequest = {
   readonly method: string;
   readonly url: URL;
   readonly origin: string | null;
-  /** The body as text. Read either this or `bytes`, not both. */
+  /** The body as text. */
   readonly body: Effect.Effect<string, IoError>;
-  /** The body as raw bytes. Read either this or `body`, not both. */
-  readonly bytes: Effect.Effect<Bytes, IoError>;
 };
 
 export type HttpResponse = {

@@ -10,6 +10,7 @@ import { randomIcon } from "./icon-set.ts";
 import {
   columnCorners,
   columnHeading,
+  columnHeadingBand,
   columnHeadingHeight,
   hiddenScrollbar,
   surface,
@@ -116,12 +117,14 @@ function ColumnHeader(props: {
       position="sticky"
       top="0"
       zIndex="1"
-      bg={column.color}
+      bgColor={column.color}
+      {...columnHeadingBand}
       align="center"
       gap="2"
+      mb="4"
       px={surface.columnPaddingX}
       pt={surface.columnPaddingTop}
-      pb="2"
+      pb={surface.columnHeadingPaddingBottom}
     >
       {admin
         ? (
@@ -163,6 +166,7 @@ export function ColumnView(props: {
       bg={column.color}
       h="full"
       css={{ ...columnCorners, ...hiddenScrollbar }}
+      boxShadow={surface.columnInsetShadow}
       overflowY="auto"
       overflowX="hidden"
       opacity={column.hidden ? 0.5 : 1}
@@ -196,9 +200,9 @@ export function AddColumnSlot(props: { index: number }) {
   const { dispatch } = useBoard();
   const [naming, setNaming] = useState(false);
   return (
-    // Sits directly on the dark surface, so always uses dark-mode styling.
+    // A dotted outline drawn on the surface in its ink.
     <Theme
-      appearance="dark"
+      appearance="light"
       hasBackground={false}
       display="flex"
       h="full"
@@ -208,8 +212,8 @@ export function AddColumnSlot(props: { index: number }) {
       px={surface.columnPaddingX}
       css={columnCorners}
       borderWidth="2px"
-      borderStyle="dashed"
-      borderColor="white"
+      borderStyle="dotted"
+      borderColor={surface.ink}
     >
       {naming
         ? (
@@ -244,7 +248,7 @@ export function AddColumnSlot(props: { index: number }) {
           <Button
             size="sm"
             variant="ghost"
-            color="white"
+            color={surface.ink}
             px="2"
             ms="-2"
             onClick={() => setNaming(true)}

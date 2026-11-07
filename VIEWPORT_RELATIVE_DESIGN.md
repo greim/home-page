@@ -96,6 +96,9 @@ our REM sizings instead of using its own internal absolute units? How is this do
 
 ### Make the app use VRD and make it skinnable
 
+> **Superseded:** the skin was removed by [NEW_LAYOUT.md](./NEW_LAYOUT.md). The page's look is now
+> fixed; VRD (the `1vw` root font size) still applies.
+
 Specifically, _non-admin mode elements_ should be skinnable. Admin mode elements that use Chakra
 such as the column content editor, etc., don't need to be skinnable.
 

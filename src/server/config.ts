@@ -17,8 +17,6 @@ export const config = {
   hosts: new Set([`localhost:${port}`, `${hostname}:${port}`]),
   appUrl: `https://localhost:${port}/web/app`,
   clientEntry: path("src/client/main.tsx"),
-  /** Files here are served as-is under /web/assets/ (flat; no subfolders). */
-  staticDir: path("src/client/static"),
   serverEntry: path("src/server/main.ts"),
   /** One folder per widget type. See SELF_BUILDING.md. */
   widgetsSourceDir: path("src/client/widgets"),
@@ -34,8 +32,6 @@ export const config = {
   dataDir: path("data"),
   layoutFile: path("data/layout.json"),
   layoutTempFile: path("data/layout.json.tmp"),
-  /** Background images uploaded or fetched from the web. */
-  backgroundsDir: path("data/backgrounds"),
   logsDir: path("logs"),
   /** The admin assistant's agent: Claude Code, run in its own workspace. See SELF_BUILDING.md. */
   assistant: {
@@ -48,7 +44,6 @@ export const config = {
     repoDir: path("."),
     widgetsDir: path("src/client/widgets"),
     secretsDir: path(".secrets"),
-    backgroundsDir: path("data/backgrounds"),
     distDir: path("dist"),
     widgetBuildScript: path("bin/build-widgets.ts"),
     layoutCheckScript: path("bin/check-layout.ts"),

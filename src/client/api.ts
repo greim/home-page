@@ -1,7 +1,7 @@
 /** Functional core of the client's server communication. */
 import { Context, Data, Effect, Either, Schema, Stream } from "effect";
 import { AssistantRequest, ChatEvent } from "../common/assistant.ts";
-import { BackgroundImageUrl, Layout } from "../common/model.ts";
+import { Layout } from "../common/model.ts";
 import { Registry, registryFile, widgetAssetsPath } from "../common/widgets.ts";
 
 export class ApiError extends Data.TaggedError("ApiError")<{
@@ -95,36 +95,6 @@ export const saveLayout = (
       Effect.flatMap(expectOk),
     );
   });
-
-const ImageList = Schema.Struct({ images: Schema.Array(BackgroundImageUrl) });
-const SavedImage = Schema.Struct({ url: BackgroundImageUrl });
-
-/** URLs of every available background image: built-in ones first, then saved ones. */
-export const listBackgrounds: Effect.Effect<ReadonlyArray<string>, ApiError, Http> = requestJson(
-  ImageList,
-  "GET",
-  "/api/backgrounds",
-  null,
-  jsonType,
-).pipe(Effect.map((r) => r.images));
-
-/** Saves an image file from disk on the server; returns its URL. */
-export const uploadBackground = (
-  bytes: Uint8Array<ArrayBuffer>,
-): Effect.Effect<string, ApiError, Http> =>
-  requestJson(SavedImage, "POST", "/api/backgrounds", bytes, "application/octet-stream").pipe(
-    Effect.map((r) => r.url),
-  );
-
-/** Has the server download an image from the web and save it; returns its local URL. */
-export const fetchBackground = (url: string): Effect.Effect<string, ApiError, Http> =>
-  requestJson(
-    SavedImage,
-    "POST",
-    "/api/backgrounds/fetch",
-    JSON.stringify({ url }),
-    jsonType,
-  ).pipe(Effect.map((r) => r.url));
 
 const decodeChatEvent = (line: string) =>
   Either.try({ try: (): unknown => JSON.parse(line), catch: String }).pipe(

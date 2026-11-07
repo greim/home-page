@@ -7,14 +7,12 @@ import { bundleClient, BundlerIo, BundlerIoLive } from "../../tooling/bundle-cli
 import { AssistantIo } from "./assistant.ts";
 import { assistantIoLive } from "./assistant-live.ts";
 import { config } from "./config.ts";
-import { contentTypeFor, type HttpRequest, type HttpResponse, IoError, ServerIo } from "./http.ts";
+import { type HttpRequest, type HttpResponse, IoError, ServerIo } from "./http.ts";
 import { handle } from "./routes.ts";
 
 /** Wraps a promise-returning call as an Effect that fails with IoError. */
 const attempt = <A>(fn: () => Promise<A>) =>
   Effect.tryPromise({ try: fn, catch: (cause) => new IoError({ cause }) });
-
-const backgroundFile = (name: string) => `${config.backgroundsDir}/${name}`;
 
 const io = ServerIo.of({
   readLayoutFile: Effect.tryPromise({
@@ -30,16 +28,6 @@ const io = ServerIo.of({
     try: () => Deno.rename(config.layoutTempFile, config.layoutFile),
     catch: (cause) => new IoError({ cause }),
   }),
-  listBackgroundFiles: attempt(() =>
-    Array.fromAsync(Deno.readDir(config.backgroundsDir), (entry) => entry.name)
-  ),
-  readBackgroundFile: (name) => attempt(() => Deno.readFile(backgroundFile(name))),
-  writeBackgroundFile: (name, bytes) => attempt(() => Deno.writeFile(backgroundFile(name), bytes)),
-  fetchRemote: (url) =>
-    attempt(async () => {
-      const response = await fetch(url, { signal: AbortSignal.timeout(20_000) });
-      return { status: response.status, bytes: new Uint8Array(await response.arrayBuffer()) };
-    }),
   readWidgetFile: (path) => attempt(() => Deno.readFile(`${config.widgetsOutDir}/${path}`)),
 });
 
@@ -48,7 +36,6 @@ const toHttpRequest = (request: Request): HttpRequest => ({
   url: new URL(request.url),
   origin: request.headers.get("origin"),
   body: attempt(() => request.text()),
-  bytes: attempt(async () => new Uint8Array(await request.arrayBuffer())),
 });
 
 const toResponse = (response: HttpResponse): Response =>
@@ -77,21 +64,12 @@ const bundle = await Effect.runPromise(
     Effect.provideService(BundlerIo, BundlerIoLive),
   ),
 );
-const staticAssets = await Array.fromAsync(
-  Deno.readDir(config.staticDir),
-  async (entry) =>
-    [entry.name, {
-      contentType: contentTypeFor(entry.name),
-      body: await Deno.readFile(`${config.staticDir}/${entry.name}`),
-    }] as const,
-);
-await Deno.mkdir(config.backgroundsDir, { recursive: true });
 const assistantIo = await Effect.runPromise(assistantIoLive(config.assistant));
 
 const site = {
   hosts: config.hosts,
   buildId: bundle.buildId,
-  assets: new Map([...bundle.assets, ...staticAssets]),
+  assets: new Map(bundle.assets),
 };
 
 Deno.serve(

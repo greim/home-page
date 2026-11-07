@@ -3,23 +3,17 @@ import { Effect, Either, Schema } from "effect";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyAction, type LayoutAction } from "../common/layout-ops.ts";
 import { Layout } from "../common/model.ts";
-import { LuSparkles } from "react-icons/lu";
-import { AdminBar, AdminBarButton } from "./admin-bar.tsx";
+import { AdminBar } from "./admin-bar.tsx";
 import { Http, loadLayout, saveLayout } from "./api.ts";
-import { BackgroundEditor } from "./background-editor.tsx";
 import { adminModeKey, type Board, BoardContext, type EditRequest } from "./board-context.ts";
 import { ColumnStrip } from "./column-strip.tsx";
 import { HttpLive, run } from "./live.ts";
 import { makeSaveQueue } from "./save-queue.ts";
 import { ColumnEditor } from "./column-editor.tsx";
-import { googleFontsUrl } from "./fonts.ts";
-import { skinVars } from "./skin.ts";
-import { MfeView } from "./mfe/mfe-view.tsx";
-import { WidgetProblem } from "./widget-card.tsx";
 import { useWidgetHost } from "./widget-host.tsx";
-import { layoutAppliedChannel, panelViewName } from "./widgets/assistant/protocol.ts";
+import { layoutAppliedChannel } from "./widgets/assistant/protocol.ts";
 
-/** The widget type that provides the assistant, and its panel in the admin bar. */
+/** The widget type that provides the assistant, which applies layouts itself. */
 const assistantType = "assistant";
 
 const decodeLayout = Schema.decodeUnknownEither(Layout);
@@ -120,15 +114,12 @@ export function App() {
       }),
     [manager, dispatch],
   );
-  const [assistantOpen, setAssistantOpen] = useState(false);
-  const panelProps = useMemo(() => ({ onClose: () => setAssistantOpen(false) }), []);
 
   const board: Board = useMemo(
     () => ({ admin, dispatch, edit: setEditing }),
     [admin, dispatch],
   );
 
-  const fontsUrl = state.is === "ready" ? googleFontsUrl(state.layout.skin) : null;
   switch (state.is) {
     case "loading":
       return (
@@ -150,45 +141,16 @@ export function App() {
 
   return (
     <BoardContext.Provider value={board}>
-      {/* The skin's CSS variables, for everything on the page (portals aside). */}
-      {
-        /* The skin's Google fonts. CORS mode lets screenshots read and embed them. */
-      }
-      {fontsUrl !== null && <link rel="stylesheet" href={fontsUrl} crossOrigin="anonymous" />}
-      <Box display="contents" css={skinVars(state.layout.skin)}>
-        <ColumnStrip
-          background={state.layout.background}
-          columns={state.layout.columns}
-          adminBar={
-            <AdminBar
-              shown={admin}
-              message={`Admin mode · press ${adminModeKey} to exit`}
-              onExit={exitAdmin}
-            >
-              <BackgroundEditor
-                background={state.layout.background}
-                onChange={(background) => dispatch({ is: "set-background", background })}
-              />
-              <AdminBarButton
-                aria-pressed={assistantOpen}
-                bg={assistantOpen ? "gray.100" : undefined}
-                onClick={() => setAssistantOpen((open) => !open)}
-              >
-                <LuSparkles /> Assistant
-              </AdminBarButton>
-            </AdminBar>
-          }
-        />
-        {admin && assistantOpen && (
-          <MfeView
-            manager={manager}
-            mfe={assistantType}
-            view={panelViewName}
-            props={panelProps}
-            fallback={(message) => <WidgetProblem message={message} />}
+      <ColumnStrip
+        columns={state.layout.columns}
+        adminBar={
+          <AdminBar
+            shown={admin}
+            message={`Admin mode · press ${adminModeKey} to exit`}
+            onExit={exitAdmin}
           />
-        )}
-      </Box>
+        }
+      />
       {editing !== null && editingColumn !== undefined && (
         <ColumnEditor
           column={editingColumn}

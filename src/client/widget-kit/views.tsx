@@ -1,7 +1,7 @@
 /**
  * Wraps a widget's components as MFE views: decodes their props, and renders
- * them with Chakra set up as the shell has it. Colors, fonts and the skin's
- * variables are inherited from where the shell embeds them.
+ * them with Chakra set up as the shell has it. Colors and fonts are inherited
+ * from where the shell embeds them.
  */
 import { ChakraProvider, Text } from "@chakra-ui/react";
 import { Either, type Schema } from "effect";

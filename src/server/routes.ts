@@ -4,7 +4,6 @@
  */
 import { Effect, Either } from "effect";
 import { AssistantIo, routeAssistant } from "./assistant.ts";
-import { routeBackgrounds } from "./backgrounds.ts";
 import {
   BadRequest,
   type HttpRequest,
@@ -109,9 +108,6 @@ const route = (
       ? routeAssistant(request)
       : Effect.succeed(methodNotAllowed("POST"));
   }
-  if (pathname === "/api/backgrounds" || pathname.startsWith("/api/backgrounds/")) {
-    return routeBackgrounds(request, site);
-  }
   return Effect.succeed(text(404, "Not found"));
 };
 
@@ -131,7 +127,6 @@ export const handle = (
     Effect.catchTags({
       BadRequest: (e) => Effect.succeed(text(400, e.message)),
       CorruptData: (e) => Effect.succeed(text(500, e.message)),
-      UpstreamFailed: (e) => Effect.succeed(text(502, e.message)),
       IoError: (e) => Effect.succeed(text(500, String(e.cause))),
     }),
   );

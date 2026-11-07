@@ -35,8 +35,7 @@ contains:
   - `widget`: the widget's body, as shown in a column.
   - `editor`: the widget's settings form, shown in the column editor in admin mode.
 
-  A widget may provide more views for the app to embed elsewhere. The assistant's `panel` is the
-  admin bar's chat.
+  A widget may provide more views for the app to embed elsewhere.
 - `manifest.ts`: exports, as `manifest`, the widget's title, description, an Effect Schema for its
   config, and the config a new widget starts with, declared with `defineManifest` from
   `src/common/widgets.ts`.
@@ -107,18 +106,18 @@ decodes it with the widget's schema and encodes it again before handing it back.
   drafts, like any other change, or shows the first error. A widget whose editor never opened is
   saved unchanged.
 - The look isn't passed as props. A widget's DOM sits inside its column, so it inherits the column's
-  text color and fonts, the skin's `--skin-*` variables, and Chakra's light or dark tokens through
-  CSS, as the built-in widgets did.
+  text color and fonts (monospace), and Chakra's light or dark tokens through CSS, as the built-in
+  widgets did.
 - The add-widget menu lists widget types from the registry. A new widget gets the type's title as
   its subheading, and its default config.
 - The shell shows an error in the widget's card when its type isn't in the registry, its bundle
   fails to load, its config doesn't decode, or it throws while rendering. If a developer deletes a
   widget type the layout still uses, that's the error they get.
 
-The assistant is a widget, but the app also embeds its `panel` view as the admin bar's chat. Its
-conversations live in its bundle, for the life of the page, so the panel and each assistant widget
-keep theirs while closed or collapsed. When it applies a layout, it sends it to the app on a
-`layout-applied` channel, for the page to show.
+The assistant is only a widget: the page has no other way in to it. Its conversations, one per
+assistant widget, live in its bundle for the life of the page, so each widget keeps its own while
+collapsed. When it applies a layout, it sends it to the app on a `layout-applied` channel, for the
+page to show.
 
 ### Secrets
 

@@ -1,6 +1,6 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useState } from "react";
-import { type Background, type Column, newColumn } from "../common/model.ts";
+import { type Column, newColumn } from "../common/model.ts";
 import { adminModeKey, useBoard } from "./board-context.ts";
 import { adminButtonStyles } from "./admin-button.ts";
 import {
@@ -13,12 +13,11 @@ import {
   showNavigator,
   stripSlots,
 } from "./carousel.ts";
-import { appearanceFor } from "./contrast.ts";
 import { ColumnNavigator, navigatorHeight } from "./column-navigator.tsx";
 import { AddColumnSlot, ColumnView } from "./column-view.tsx";
 import { randomIcon } from "./icon-set.ts";
 import { screenshotRootId } from "./screenshot.ts";
-import { columnCorners, skinTypography, surface } from "./surface.ts";
+import { columnCorners, pageTypography, surface, surfaceColors } from "./surface.ts";
 
 const { gap } = surface;
 
@@ -50,7 +49,6 @@ const storeLeadingColumn = (columnId: string | null) => {
 const slideTo = (offset: number) => `translateX(calc(${-offset} * (${slotWidth} + ${gap})))`;
 
 export function ColumnStrip(props: {
-  background: Background;
   columns: ReadonlyArray<Column>;
   /**
    * The admin bar, which positions itself along the top of the surface. In admin
@@ -58,7 +56,6 @@ export function ColumnStrip(props: {
    */
   adminBar: ReactNode;
 }) {
-  const { background } = props;
   const { admin, dispatch } = useBoard();
   const slots = stripSlots(props.columns, admin);
   const [rawOffset, setOffset] = useState(() => offsetOfColumn(loadLeadingColumn(), slots));
@@ -82,8 +79,9 @@ export function ColumnStrip(props: {
     setOffset(revealOffset(view.offset, index));
   };
 
-  // In admin mode the frame sits below the admin bar, half a gap from it.
-  const frameTop = admin ? `calc(${surface.adminBarHeight} + ${gap} / 2)` : gap;
+  // Columns hang from the top of the window. In admin mode they sit below the
+  // admin bar instead, half a gap from it.
+  const frameTop = admin ? `calc(${surface.adminBarHeight} + ${gap} / 2)` : "0px";
 
   return (
     // The surface fills the viewport and clips columns slid out of view.
@@ -95,29 +93,14 @@ export function ColumnStrip(props: {
       overflow="clip"
       // Unlike hidden, clip doesn't contain the frame's top margin; flow-root does.
       display="flow-root"
-      bgColor={background.color}
+      bgColor={surface.bg}
       isolation="isolate"
-      css={{ ...adminButtonStyles, ...skinTypography }}
+      css={{ ...surfaceColors, ...adminButtonStyles, ...pageTypography }}
     >
-      {
-        /* The tiled image, on its own layer (beneath everything) so its opacity
-          lets the background color show through without fading the columns. */
-      }
-      {background.imageUrl !== null && (
-        <Box
-          position="absolute"
-          inset="0"
-          zIndex="-1"
-          pointerEvents="none"
-          bgImage={`url(${background.imageUrl})`}
-          bgRepeat="repeat"
-          opacity={background.opacity}
-        />
-      )}
       {props.adminBar}
       {
-        /* Statically positioned frame, inset from the viewport by the gap on every
-          side (or half a gap below the admin bar), and shortened to make room for
+        /* Statically positioned frame, flush with the top of the viewport (or half
+          a gap below the admin bar) and inset by the gap on its other sides, and shortened to make room for
           the navigator when it's shown. It animates as the admin bar comes and goes. */
       }
       <Box
@@ -177,8 +160,7 @@ export function ColumnStrip(props: {
         />
       )}
       {
-        /* How to toggle admin mode, in the bottom-left corner: black or white,
-          whichever contrasts with the background color, at half opacity. */
+        /* How to toggle admin mode, in the bottom-left corner. */
       }
       <Box
         position="absolute"
@@ -188,8 +170,7 @@ export function ColumnStrip(props: {
         py="0.5"
         fontSize="66%"
         lineHeight="1"
-        color={appearanceFor(background.color) === "dark" ? "white" : "black"}
-        opacity={0.5}
+        color={surface.ink}
         pointerEvents="none"
         userSelect="none"
       >

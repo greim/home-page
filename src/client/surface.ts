@@ -6,96 +6,122 @@
  */
 export const rootFontSize = "1vw";
 
+/** Line height of all text on the page, as a multiple of the font size. */
+export const textSpacing = 1.6;
+
+/** Line height of code (e.g. snippets): tighter than text. */
+export const codeTextSpacing = 1.2;
+
+/** Corner radius of the bottom of each column; their tops sit flush with the window's. */
+const cornerRadius = "0.5rem";
+
+/** Corner radius of smaller things shaped like columns (e.g. navigator thumbnails). */
+const smallCornerRadius = "0.25rem";
+
 /**
- * Visual settings for the surface the columns float over. Those set by the skin
- * (see skin.ts, and Skin in model.ts) refer to the CSS variables it sets; the
- * rest are fixed. (The background is edited in admin mode and saved with the
- * layout.)
+ * The page's look, which is fixed (see NEW_LAYOUT.md); only column colors are
+ * the user's to choose.
  */
 export const surface = {
-  /** Space around and between columns, through which the texture shows. Set by the skin. */
-  gap: "var(--skin-gap)",
-  /** Corner radius of columns, and anything shaped like one. Set by the skin. */
-  cornerRadius: "var(--skin-corner-radius)",
   /**
-   * Shape of the rounded column corners (CSS `corner-shape`). "squircle" blends the
-   * straight edges smoothly into the curve. Browsers without support fall back to round.
+   * The surface the columns sit on. A CSS variable set at the surface's root
+   * (see surfaceColors), so night mode can change it.
    */
-  cornerShape: "squircle",
-  /** Left/right padding inside each column. Set by the skin. */
-  columnPaddingX: "var(--skin-column-padding-x)",
-  /** Space above each column's heading (and the "Add column" button). Set by the skin. */
-  columnPaddingTop: "var(--skin-column-padding-top)",
-  /** Space below the last item in each column. Set by the skin. */
-  columnPaddingBottom: "var(--skin-column-padding-bottom)",
-  /** Drop shadow each column casts onto the surface. Set by the skin. */
-  columnShadow: "var(--skin-column-shadow)",
+  bg: "var(--surface-bg)",
+  /**
+   * Marks drawn directly on the surface, such as the add-column outline and the
+   * navigator's markers: mid-gray, readable on the surface by day or night.
+   */
+  ink: "var(--surface-ink)",
+  /** Space around and between columns. */
+  gap: "1rem",
+  cornerRadius,
+  /** Left/right padding inside each column. */
+  columnPaddingX: "1.3rem",
+  /** Space above a column's heading (and the "Add column" button). */
+  columnPaddingTop: "0.9rem",
+  /** Space below a column's heading. */
+  columnHeadingPaddingBottom: "0.8rem",
+  /** Space below the last item in each column. */
+  columnPaddingBottom: "2rem",
+  /** Drop shadow each column casts onto the surface. */
+  columnShadow: "0.2rem 0.2rem 0.6rem rgba(0, 0, 0, 0.5)",
+  /** A dark hairline inside each column's top and left edges. */
+  columnInsetShadow: "-1px -1px 0 rgba(0, 0, 0, 0.25) inset",
   /** Size of the icon left of each column heading. */
-  columnIconSize: "1.75rem",
+  columnIconSize: "1.5rem",
   /** Size of each column thumbnail in the navigator (shown when columns overflow the view). */
   thumbWidth: "6rem",
   thumbHeight: "3.5rem",
   /** Drop shadow each navigator thumbnail casts: the column shadow, scaled down. */
-  thumbShadow: "var(--skin-thumb-shadow)",
-  /** The code boxes' inset shadow, fainter, for subtle wells (the assistant widget). */
-  faintInsetShadow: "var(--skin-faint-inset-shadow)",
+  thumbShadow: "0.08rem 0.08rem 0.24rem rgba(0, 0, 0, 0.5)",
+  /** A faint inset shadow, for subtle wells (the assistant widget's prompt). */
+  faintInsetShadow: "inset 0.05rem 0.05rem 0.1rem rgba(0, 0, 0, 0.15)",
   /** The faint inset shadow at half its opacity, for the assistant widget's chat history. */
-  chatInsetShadow: "var(--skin-chat-inset-shadow)",
-  /** Thickness of the white outline around the thumbnails of the columns in view. */
+  chatInsetShadow: "inset 0.05rem 0.05rem 0.1rem rgba(0, 0, 0, 0.075)",
+  /** Thickness of the outline around the thumbnails of the columns in view. */
   thumbOutlineWidth: "2px",
   /** Height of the admin bar along the top of the viewport in admin mode. */
   adminBarHeight: "2.5rem",
   /** Duration and easing of the admin bar sliding in/out and the columns making room for it. */
   adminTransition: "300ms ease",
-  /** Width of the admin assistant's chat panel. */
-  assistantPanelWidth: "25rem",
   /** Height of an assistant widget's chat, messages and input together. */
   assistantWidgetHeight: "26rem",
 } as const;
 
+/** The CSS variables behind `surface.bg` and `surface.ink`, set at the surface's root. */
+export const surfaceColors = {
+  "--surface-bg": "#ffffff",
+  "--surface-ink": "#999999",
+} as const;
+
 /**
- * Typography the skin controls, applied at the surface's root: line height and
- * the body font are inherited, and Chakra's fonts are CSS variables, so pointing
- * those at the skin's fonts restyles every use of them.
+ * Everything on the page is monospace. Chakra's fonts are CSS variables, so
+ * pointing them at monospace restyles every use of them, in the shell and in
+ * widgets alike. Dialogs and menus render outside the surface, so keep Chakra's
+ * own fonts.
  */
-const skinFonts = {
-  "--chakra-fonts-body": "var(--skin-body-font)",
-  "--chakra-fonts-heading": "var(--skin-heading-font)",
-  "--chakra-fonts-mono": "var(--skin-code-font)",
+const monospaceFonts = {
+  "--chakra-fonts-body": "monospace",
+  "--chakra-fonts-heading": "monospace",
+  "--chakra-fonts-mono": "monospace",
 } as const;
 
-export const skinTypography = {
-  lineHeight: "var(--skin-text-spacing)",
-  fontFamily: "var(--skin-body-font)",
-  ...skinFonts,
+/** Typography for the surface's root: inherited by everything on it. */
+export const pageTypography = {
+  lineHeight: String(textSpacing),
+  fontFamily: "monospace",
+  ...monospaceFonts,
   // Chakra's Theme (used by columns) declares all of Chakra's tokens afresh.
-  "& .chakra-theme": skinFonts,
+  "& .chakra-theme": monospaceFonts,
 } as const;
-
-/** `fg`, the text color (which adapts to light and dark columns), made translucent. */
-const fadedFg = (alpha: string) =>
-  `color-mix(in srgb, var(--chakra-colors-fg) ${alpha}, transparent)`;
 
 /** Text style for column headings (also used while renaming one in admin mode). */
 export const columnHeading = {
-  fontSize: "2rem",
-  lineHeight: "var(--skin-text-spacing)",
+  fontSize: "1.5rem",
+  lineHeight: String(textSpacing),
   fontFamily: "heading",
-  fontWeight: "var(--skin-column-heading-weight)",
-  /**
-   * The column's own text color at the skin's opacity, so it adapts to light and
-   * dark columns and picks up a hint of tinted ones.
-   */
-  color: fadedFg("var(--skin-column-heading-alpha)"),
+  fontWeight: "normal",
+  color: "fg",
 } as const;
 
 /** Height of a column heading's line: its font size times the line height. */
-export const columnHeadingHeight = "calc(2rem * var(--skin-text-spacing))";
+export const columnHeadingHeight = `calc(1.5rem * ${textSpacing})`;
 
-/** Text style for widget headings: like column headings, translucent so they adapt. */
+/**
+ * A column heading's band: a sheen from light at the top to dark at the bottom,
+ * over the column's color, with an edge below it that catches the light.
+ */
+export const columnHeadingBand = {
+  bgImage: "linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(0, 0, 0, 0.1) 100%)",
+  borderBottom: "1px solid rgba(0, 0, 0, 0.5)",
+  boxShadow: "0 1px 0 rgba(255, 255, 255, 0.25), 0 0 2rem rgba(255, 255, 255, 0.15)",
+} as const;
+
+/** Text style for widget headings. */
 export const widgetHeading = {
-  fontWeight: "var(--skin-widget-heading-weight)",
-  color: fadedFg("var(--skin-widget-heading-alpha)"),
+  fontWeight: "normal",
+  color: "fg",
 } as const;
 
 /**
@@ -107,29 +133,26 @@ export const hiddenScrollbar = {
   "&::-webkit-scrollbar": { display: "none" },
 } as const;
 
-/** Rounded corners for columns (and anything shaped like one), with the skin's radius. */
+/** Column corners: square at the top, where columns meet the window's edge; rounded below. */
 export const columnCorners = {
-  borderRadius: surface.cornerRadius,
-  cornerShape: surface.cornerShape,
+  borderTopRadius: "0",
+  borderBottomRadius: cornerRadius,
 } as const;
 
-/** Rounded corners for smaller things shaped like columns: half the column radius. */
-export const smallCorners = {
-  borderRadius: `calc(${surface.cornerRadius} / 2)`,
-  cornerShape: surface.cornerShape,
-} as const;
+/** Rounded corners for smaller things shaped like columns. */
+export const smallCorners = { borderRadius: smallCornerRadius } as const;
 
 /**
- * A box of source code (e.g. a snippet): dark grey, with tighter lines than text,
- * rounded at a third of the column radius, and inset by a shadow derived from the
- * column shadow.
+ * A box of source code (e.g. a snippet): a dark wash, with tighter lines than
+ * text, sunk into the column by a dark edge above and left and a light one
+ * below and right.
  */
 export const codeBox = {
-  bg: "gray.800",
-  lineHeight: "var(--skin-code-text-spacing)",
-  borderRadius: `calc(${surface.cornerRadius} / 3)`,
-  cornerShape: surface.cornerShape,
-  boxShadow: "var(--skin-inset-shadow)",
+  bg: "rgba(69, 69, 69, 0.5)",
+  lineHeight: String(codeTextSpacing),
+  borderRadius: "0.25em",
+  boxShadow:
+    "-1px -1px 0 rgba(0, 0, 0, 0.7), 1px 1px 0 rgba(255, 255, 255, 0.25), 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.15) inset",
 } as const;
 
 /** Quick picks offered in the column color picker (any #rrggbb is allowed). */

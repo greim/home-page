@@ -40,8 +40,8 @@ The server bundles the client in memory at startup, so restarting picks up code 
 ## Data
 
 Your layout is saved to `data/layout.json` (gitignored). It's plain, pretty-printed JSON, safe to
-back up or hand-edit while the server is stopped. Background images you upload or fetch are saved in
-`data/backgrounds/`, named by a hash of their contents.
+back up or hand-edit while the server is stopped. Its `schedule` sets when your day starts and ends
+(`{ "startOfDay": "09:00", "endOfDay": "17:00" }` by default), in local time.
 
 ## Using it
 
@@ -50,15 +50,10 @@ back up or hand-edit while the server is stopped. Background images you upload o
 - Bookmarks are edited as an outline: `Label | URL` per line; a line without a URL is a folder, and
   indented lines below it are its links.
 - Form grid URL templates use `{query}` as the placeholder.
-- In admin mode, an admin bar along the top holds the admin-wide controls.
-- The admin bar's **Background** button sets the image tiled behind the columns, the color beneath
-  it, and the image's opacity. Images can be built-in (anything in `src/client/static/`), uploaded
-  from disk, or fetched from a web URL, which the server downloads and saves locally. PNG, JPEG,
-  GIF, WebP and AVIF are supported, up to 10 MB.
-- The admin bar's **Assistant** button opens a chat with Claude, which can make any admin-mode
-  change for you ("add a column of news bookmarks", "make the background darker"). See below. To
-  keep it on view, add an **Assistant** widget to a column: it's the same conversation, usable
-  outside admin mode. The conversation survives a reload until you start a new one.
+- In admin mode, an admin bar along the top says how to leave it.
+- Add an **Assistant** widget to a column to chat with Claude, which can make any admin-mode change
+  for you ("add a column of news bookmarks", "my day starts at 8"). See below. Each assistant widget
+  keeps its own conversation, which survives a reload until you start a new one.
 - Admin mode doesn't add anything to the columns, so they look exactly the same. Instead, things you
   can change become clickable: click a column's heading to rename it (Enter saves, Esc cancels), its
   icon to pick another, or a widget or the column's background to open the **column editor**.
@@ -95,9 +90,9 @@ code it writes is yours to review and commit.
 
 ## Look and feel
 
-The gap around and between columns, the corner shape, and the column drop shadow are set in
-`src/client/surface.ts`, along with the preset column colors. Files in `src/client/static/` are
-served as-is under `/web/assets/`, and image files there appear as built-in backgrounds.
+The page's look is fixed (see [NEW_LAYOUT.md](./NEW_LAYOUT.md)): everything is monospace, and only
+column colors are yours to choose. Spacing, corners, shadows and the preset column colors are set in
+`src/client/surface.ts`.
 
 ## Development
 

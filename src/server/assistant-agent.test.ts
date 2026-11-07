@@ -18,7 +18,6 @@ const settings: AgentSettings = {
   repoDir: "/repo",
   widgetsDir: "/repo/src/client/widgets",
   secretsDir: "/repo/.secrets",
-  backgroundsDir: "/repo/data/backgrounds",
 };
 
 const registry: Registry = {
@@ -46,10 +45,7 @@ Deno.test("the agent may edit only its layout copy and the widget source, with n
     "Read Glob Grep WebFetch WebSearch Edit(./layout.json) Edit(//repo/src/client/widgets/**)",
   );
   assertEquals(valueAfter(args, "--disallowedTools"), "Read(//repo/.secrets/**)");
-  assertEquals(args.slice(args.indexOf("--add-dir") + 1, args.indexOf("--add-dir") + 3), [
-    settings.repoDir,
-    settings.backgroundsDir,
-  ]);
+  assertEquals(valueAfter(args, "--add-dir"), settings.repoDir);
   assertEquals(valueAfter(args, "--append-system-prompt"), instructions(settings, registry));
   assertEquals(valueAfter(args, "--output-format"), "stream-json");
   assert(args.includes("--verbose"));
@@ -89,12 +85,12 @@ Deno.test("instructions point the agent at its references and list the widget ty
   const text = instructions(settings, registry);
   assertStringIncludes(text, settings.repoDir);
   assertStringIncludes(text, settings.widgetsDir);
-  assertStringIncludes(text, settings.backgroundsDir);
   assertStringIncludes(text, "SELF_BUILDING.md");
   assertStringIncludes(text, "reload the page");
   assertStringIncludes(text, "screenshot.jpg");
-  assertStringIncludes(text, "skin");
-  assertStringIncludes(text, "fonts.google.com");
+  assertStringIncludes(text, "schedule");
+  assertEquals(text.includes("skin"), false);
+  assertEquals(text.includes("fonts.google.com"), false);
   assertStringIncludes(text, describeRegistry(registry));
   assertEquals(text.toLowerCase().includes("unibrain"), false);
 });

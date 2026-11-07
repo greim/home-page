@@ -1,22 +1,14 @@
 /**
- * The assistant's conversations, one per place it's hosted (the admin bar's
- * panel and each assistant widget). They live as long as the page, not their
- * views, so a turn carries on while its panel is closed or its widget is
- * collapsed, and they're saved so they survive reloads.
+ * The assistant's conversations, one per assistant widget, by its id. They live
+ * as long as the page, not their views, so a turn carries on while its widget
+ * is collapsed or being edited, and they're saved so they survive reloads.
  */
 import { type Chat, type ChatAction, chatReducer } from "./chat.ts";
 
-/** Which conversation: the admin bar's panel, or the assistant widget with this id. */
-export type ChatHost = { readonly is: "panel" } | {
-  readonly is: "widget";
-  readonly widgetId: string;
-};
-
 const storagePrefix = "home-page.assistant-chat";
 
-/** Where a conversation is kept in browser storage. */
-export const storageKey = (host: ChatHost): string =>
-  host.is === "panel" ? storagePrefix : `${storagePrefix}.widget.${host.widgetId}`;
+/** Where a widget's conversation is kept in browser storage. */
+export const storageKey = (widgetId: string): string => `${storagePrefix}.widget.${widgetId}`;
 
 export type ChatStorage = {
   readonly load: (key: string) => Chat;
@@ -24,8 +16,8 @@ export type ChatStorage = {
 };
 
 export type Conversations = {
-  readonly get: (host: ChatHost) => Chat;
-  readonly dispatch: (host: ChatHost, action: ChatAction) => void;
+  readonly get: (widgetId: string) => Chat;
+  readonly dispatch: (widgetId: string, action: ChatAction) => void;
   /** Calls `listener` after any conversation changes. Returns a function that stops it. */
   readonly subscribe: (listener: () => void) => () => void;
 };
@@ -34,8 +26,8 @@ export const makeConversations = (storage: ChatStorage): Conversations => {
   const chats = new Map<string, Chat>();
   const listeners = new Set<() => void>();
 
-  const get = (host: ChatHost): Chat => {
-    const key = storageKey(host);
+  const get = (widgetId: string): Chat => {
+    const key = storageKey(widgetId);
     const chat = chats.get(key) ?? storage.load(key);
     chats.set(key, chat);
     return chat;
@@ -43,10 +35,10 @@ export const makeConversations = (storage: ChatStorage): Conversations => {
 
   return {
     get,
-    dispatch: (host, action) => {
-      const chat = chatReducer(get(host), action);
-      chats.set(storageKey(host), chat);
-      storage.save(storageKey(host), chat);
+    dispatch: (widgetId, action) => {
+      const chat = chatReducer(get(widgetId), action);
+      chats.set(storageKey(widgetId), chat);
+      storage.save(storageKey(widgetId), chat);
       for (const listener of listeners) listener();
     },
     subscribe: (listener) => {

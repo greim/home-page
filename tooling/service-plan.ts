@@ -29,8 +29,7 @@ export const plistPath = (home: string): string =>
 export const serverArgs = (s: ServiceSettings): ReadonlyArray<string> => [
   s.denoPath,
   "run",
-  // Unrestricted so the server can fetch background images by URL. It only
-  // ever listens on 127.0.0.1 (see src/server/config.ts).
+  // To listen. It only ever listens on 127.0.0.1 (see src/server/config.ts).
   "--allow-net",
   "--allow-read",
   `--allow-write=${s.dataDir}`,

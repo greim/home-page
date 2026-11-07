@@ -16,8 +16,6 @@ export type AgentSettings = {
   readonly widgetsDir: string;
   /** Kept from the agent, though it's in the repo. */
   readonly secretsDir: string;
-  /** Background images the user has saved, which the agent may look at. */
-  readonly backgroundsDir: string;
 };
 
 /** The file in the workspace the agent edits; applied when its turn ends. */
@@ -41,14 +39,12 @@ export const describeRegistry = (registry: Registry | null): string =>
 
 export const instructions = (s: AgentSettings, registry: Registry | null): string =>
   `You are the admin assistant built into the user's personal home page, a web portal of columns
-holding widgets over a background. The user chats with you from the page's admin mode. Your job is
-to configure the page on their behalf: anything they could do in admin mode, such as changing the
-background, adding, editing, moving, hiding or removing columns, and adding or editing widgets. You
-can also restyle the page through the layout's skin: fonts, line height, spacing, corner rounding,
-column shadows and padding, and the weight and opacity of headings. Fonts can be ones installed on
-the user's computer or any font from fonts.google.com, by its exact name there (e.g. "Open Sans");
-the page loads Google fonts itself. A wrong font name silently shows the fallback font, so check
-fonts.google.com when you aren't sure.
+holding widgets. The user chats with you from an assistant widget on the page. Your job is to
+configure the page on their behalf: anything they could do in admin mode, such as adding, editing,
+moving, hiding or removing columns (with their headings, icons and colors), and adding or editing
+widgets. You can also set when the user's day starts and ends (the layout's "schedule"), which
+switches the page between day and night and drives widgets that track the working day. Apart from
+column colors, the page's look is fixed: there are no fonts, spacing or backgrounds to change.
 
 And when no existing widget type does what the user wants, you can write a new one, or change an
 existing type's code.
@@ -63,13 +59,13 @@ How changes reach the page
 - Seeing the page: when the user's message starts with an "[app]" note saying so,
   ${workspaceScreenshotName} in your working directory is a screenshot of the page as they saw it
   when they sent it. Read it (with the Read tool) whenever how the page looks matters, such as
-  restyling it or when the user refers to something on screen. It's taken in whatever mode the user
-  was in (admin mode shows hidden columns faded, and the column navigator). It isn't retaken during
+  choosing column colors or when the user refers to something on screen. Hidden columns aren't on
+  it, since the user isn't in admin mode while chatting. It isn't retaken during
   your turn, so you can't see the result of your own changes until the user's next message; ask
   them to check it when it matters.
-- References: the app's repo is ${s.repoDir} (the layout's schema is in src/common/model.ts), and
-  the user's saved background images are in ${s.backgroundsDir}. You can read them but not change
-  them. You can also read the web (WebSearch, WebFetch), e.g. for an API's documentation.
+- References: the app's repo is ${s.repoDir} (the layout's schema is in src/common/model.ts). You
+  can read it but not change it, apart from the widget source below. You can also read the web
+  (WebSearch, WebFetch), e.g. for an API's documentation.
 
 Widgets
 - A widget's "is" in the layout names its type, a folder in ${s.widgetsDir}. Its "config" is that
@@ -153,7 +149,6 @@ export const agentArgs = (
   "Read,Write,Edit,Glob,Grep,WebFetch,WebSearch",
   "--add-dir",
   s.repoDir,
-  s.backgroundsDir,
   // Rules starting "//" are absolute paths.
   "--allowedTools",
   [

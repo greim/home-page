@@ -2,17 +2,7 @@ import { assertEquals } from "@std/assert";
 import { Effect, Either, Stream } from "effect";
 import type { ChatEvent } from "../common/assistant.ts";
 import { emptyLayout } from "../common/model.ts";
-import {
-  ApiError,
-  askAssistant,
-  fetchBackground,
-  Http,
-  type HttpResult,
-  listBackgrounds,
-  loadLayout,
-  saveLayout,
-  uploadBackground,
-} from "./api.ts";
+import { ApiError, askAssistant, Http, type HttpResult, loadLayout, saveLayout } from "./api.ts";
 
 const noStream = () => Effect.die("unexpected stream");
 
@@ -69,58 +59,6 @@ Deno.test("saveLayout PUTs the layout as JSON", () => {
 Deno.test("saveLayout fails on rejection", () => {
   const result = run(saveLayout(emptyLayout), respond({ status: 400, text: "bad" }));
   assertEquals(result, Either.left("Server responded 400: bad"));
-});
-
-const recording = (result: HttpResult) => {
-  const sent: Array<unknown> = [];
-  const http = Http.of({
-    request: (method, path, body, contentType) =>
-      Effect.sync(() => {
-        sent.push([method, path, body, contentType]);
-        return result;
-      }),
-    stream: noStream,
-  });
-  return { sent, http };
-};
-
-Deno.test("listBackgrounds returns the image URLs", () => {
-  const images = ["/web/assets/trees.jpg", "/api/backgrounds/0123456789abcdef.png"];
-  const { http } = recording({ status: 200, text: JSON.stringify({ images }) });
-  assertEquals(run(listBackgrounds, http), Either.right(images));
-});
-
-Deno.test("listBackgrounds rejects non-local URLs", () => {
-  const { http } = recording({ status: 200, text: `{"images":["https://evil.test/x.png"]}` });
-  assertEquals(Either.isLeft(run(listBackgrounds, http)), true);
-});
-
-Deno.test("uploadBackground POSTs raw bytes and returns the saved URL", () => {
-  const url = "/api/backgrounds/0123456789abcdef.png";
-  const { sent, http } = recording({ status: 201, text: JSON.stringify({ url }) });
-  const bytes = new Uint8Array([1, 2, 3]);
-  assertEquals(run(uploadBackground(bytes), http), Either.right(url));
-  assertEquals(sent, [["POST", "/api/backgrounds", bytes, "application/octet-stream"]]);
-});
-
-Deno.test("fetchBackground asks the server to fetch a URL", () => {
-  const url = "/api/backgrounds/0123456789abcdef.jpg";
-  const { sent, http } = recording({ status: 201, text: JSON.stringify({ url }) });
-  assertEquals(run(fetchBackground("https://x.test/a.jpg"), http), Either.right(url));
-  assertEquals(sent, [[
-    "POST",
-    "/api/backgrounds/fetch",
-    `{"url":"https://x.test/a.jpg"}`,
-    "application/json",
-  ]]);
-});
-
-Deno.test("fetchBackground surfaces server errors", () => {
-  const { http } = recording({ status: 502, text: "Couldn't fetch: HTTP 404" });
-  assertEquals(
-    run(fetchBackground("https://x.test/a.jpg"), http),
-    Either.left("Server responded 502: Couldn't fetch: HTTP 404"),
-  );
 });
 
 const streaming = (status: number, chunks: ReadonlyArray<string>) => {

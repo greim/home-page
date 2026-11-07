@@ -44,12 +44,6 @@ export const copyToClipboard = (text: string): Effect.Effect<void, string> =>
     catch: String,
   });
 
-export const readFileBytes = (file: File): Effect.Effect<Uint8Array<ArrayBuffer>, string> =>
-  Effect.tryPromise({
-    try: async () => new Uint8Array(await file.arrayBuffer()),
-    catch: String,
-  });
-
 /**
  * A JPEG of how `element` looks, drawn from the DOM (no screen-capture permission
  * needed). Elements marked with screenshotSkip are left out.
