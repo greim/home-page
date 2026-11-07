@@ -2,7 +2,7 @@ import { defaultSchedule } from "../common/day-cycle.ts";
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Effect } from "effect";
 import { AssistantIo } from "./assistant.ts";
-import { emptyLayout, type Layout, newColumn } from "../common/model.ts";
+import { defaultLayout, emptyLayout, type Layout, newColumn } from "../common/model.ts";
 import {
   contentTypeFor,
   type HttpRequest,
@@ -119,14 +119,14 @@ Deno.test("GET /api/layout returns the stored layout", async () => {
   assertEquals([res.status, res.body], [200, JSON.stringify(layout)]);
 });
 
-Deno.test("GET /api/layout returns an empty layout when none is stored", async () => {
+Deno.test("GET /api/layout returns the default layout when none is stored", async () => {
   const res = await run(request("GET", "/api/layout"), {
     ...noIo,
     readLayoutFile: Effect.fail(
       new IoError({ cause: new Deno.errors.NotFound("gone") }),
     ),
   });
-  assertEquals([res.status, res.body], [200, JSON.stringify(emptyLayout)]);
+  assertEquals([res.status, res.body], [200, JSON.stringify(defaultLayout)]);
 });
 
 Deno.test("GET /api/layout reports read failures and corrupt data", async () => {

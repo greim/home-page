@@ -1,40 +1,23 @@
 import { assertEquals } from "@std/assert";
-import { Either } from "effect";
-import { formatClock, timeZones, untilNextMinute } from "./clock.ts";
+import { clockParts, untilNextMinute } from "./clock.ts";
 
-const noon = new Date("2026-11-03T12:05:30Z");
+// Local times, so the tests hold in any time zone.
+const at = (month: number, date: number, hours: number, minutes: number) =>
+  new Date(2026, month, date, hours, minutes);
 
-Deno.test("formatClock shows the time and date in the chosen zone", () => {
-  assertEquals(
-    formatClock(noon, "Europe/London", "en-US"),
-    Either.right({ time: "12:05 PM", date: "Tuesday, November 3", zone: "Europe/London" }),
-  );
-  assertEquals(
-    Either.map(formatClock(noon, "Asia/Tokyo", "en-US"), (f) => [f.time, f.date]),
-    Either.right(["9:05 PM", "Tuesday, November 3"]),
-  );
+Deno.test("clockParts shows the year, short month, day and 12-hour time", () => {
+  assertEquals(clockParts(at(10, 6, 15, 28)), ["2026", "Nov", "6", "3:28 pm"]);
+  assertEquals(clockParts(at(0, 31, 9, 5)), ["2026", "Jan", "31", "9:05 am"]);
 });
 
-Deno.test("formatClock uses the computer's zone when none is chosen", () => {
-  const face = formatClock(noon, null, "en-US");
-  assertEquals(
-    Either.map(face, (f) => f.zone),
-    Either.right(Intl.DateTimeFormat().resolvedOptions().timeZone),
-  );
-});
-
-Deno.test("formatClock fails for a zone that doesn't exist", () => {
-  assertEquals(
-    formatClock(noon, "Mars/Olympus", "en-US"),
-    Either.left(`"Mars/Olympus" isn't a time zone`),
-  );
-});
-
-Deno.test("timeZones lists real zones", () => {
-  assertEquals(timeZones().includes("Asia/Tokyo"), true);
+Deno.test("clockParts shows midnight and noon as 12", () => {
+  assertEquals(clockParts(at(11, 25, 0, 0)).at(3), "12:00 am");
+  assertEquals(clockParts(at(11, 25, 12, 0)).at(3), "12:00 pm");
+  assertEquals(clockParts(at(11, 25, 23, 59)).at(3), "11:59 pm");
 });
 
 Deno.test("untilNextMinute counts down to the minute", () => {
+  const noon = new Date("2026-11-03T12:05:30Z");
   assertEquals(untilNextMinute(noon), 30_000);
   assertEquals(untilNextMinute(new Date("2026-11-03T12:06:00Z")), 60_000);
 });

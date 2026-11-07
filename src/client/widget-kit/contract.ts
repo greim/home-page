@@ -2,6 +2,7 @@
  * What the shell passes a widget's views, and what they pass back. Props cross
  * between bundles as they are, functions included. See SELF_BUILDING.md.
  */
+import type { Schedule } from "../../common/day-cycle.ts";
 
 /** The view shown in a column. */
 export const widgetViewName = "widget";
@@ -14,6 +15,8 @@ export type WidgetViewProps = {
   readonly config: unknown;
   /** Saves a changed config, e.g. a bookmark folder opened. */
   readonly saveConfig: (config: unknown) => void;
+  /** When the user's day starts and ends, for widgets that follow it (see day-cycle.ts). */
+  readonly schedule: Schedule;
 };
 
 /** An editor's verdict on its current draft. */

@@ -1,5 +1,6 @@
 /** Decodes the props a widget's views are given, into its own config type. */
 import { Either, Schema } from "effect";
+import { Schedule } from "../../common/day-cycle.ts";
 
 const Callback = Schema.declare(
   (u: unknown): u is (value: unknown) => void => typeof u === "function",
@@ -10,6 +11,7 @@ const RawWidgetProps = Schema.Struct({
   widgetId: Schema.String,
   config: Schema.Unknown,
   saveConfig: Callback,
+  schedule: Schedule,
 });
 
 const RawEditorProps = Schema.Struct({
@@ -22,6 +24,8 @@ export type WidgetProps<A> = {
   readonly widgetId: string;
   readonly config: A;
   readonly saveConfig: (config: A) => void;
+  /** When the user's day starts and ends (see day-cycle.ts). */
+  readonly schedule: Schedule;
 };
 
 export type Draft<A> =
@@ -56,6 +60,7 @@ export const decodeWidgetProps = <A, I>(
         widgetId: raw.widgetId,
         config,
         saveConfig: (next: A) => raw.saveConfig(encoder(schema)(next)),
+        schedule: raw.schedule,
       })),
   );
 

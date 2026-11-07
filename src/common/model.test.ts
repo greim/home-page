@@ -2,7 +2,14 @@ import { defaultColumnColor, fromHex } from "./column-color.ts";
 import { defaultSchedule } from "./day-cycle.ts";
 import { assertEquals } from "@std/assert";
 import { Either, Schema } from "effect";
-import { defaultColumnIcon, emptyLayout, Layout, newWidget, widgetHeading } from "./model.ts";
+import {
+  defaultColumnIcon,
+  defaultLayout,
+  emptyLayout,
+  Layout,
+  newWidget,
+  widgetHeading,
+} from "./model.ts";
 
 const decode = Schema.decodeUnknownEither(Layout);
 
@@ -170,4 +177,9 @@ Deno.test("widgetHeading is the config's heading, when it has a non-blank one", 
   assertEquals(widgetHeading(widget({ heading: 3 })), null);
   assertEquals(widgetHeading(widget({})), null);
   assertEquals(widgetHeading(widget(null)), null);
+});
+
+Deno.test("the default layout is a valid layout with a clock in it", () => {
+  assertEquals(decode(defaultLayout), Either.right(defaultLayout));
+  assertEquals(defaultLayout.columns.flatMap((c) => c.widgets.map((w) => w.is)), ["clock"]);
 });

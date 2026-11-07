@@ -1,7 +1,7 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Effect, Stream } from "effect";
 import type { ChatEvent } from "../common/assistant.ts";
-import { emptyLayout, type Layout, newColumn } from "../common/model.ts";
+import { defaultLayout, emptyLayout, type Layout, newColumn } from "../common/model.ts";
 import {
   conflictPrompt,
   invalidLayoutPrompt,
@@ -161,7 +161,7 @@ Deno.test("a turn that leaves the layout alone just relays the conversation", as
     done(0.01),
   ]);
   assertEquals(h.calls, [{ prompt: "Hi", sessionId: null }]);
-  assertEquals(h.workspaceWrites, [layoutText(emptyLayout)]);
+  assertEquals(h.workspaceWrites, [layoutText(defaultLayout)]);
   assertEquals(h.files.stored, null);
 });
 

@@ -1,35 +1,34 @@
-/** The clock widget's logic: formatting the time. */
-import { Either } from "effect";
+/** The clock widget's logic: formatting the local date and time. */
 
-export type ClockFace = { readonly time: string; readonly date: string; readonly zone: string };
+const months = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
 
-/** `locale` is the browser's when undefined. Fails for a time zone that doesn't exist. */
-export const formatClock = (
-  now: Date,
-  timeZone: string | null,
-  locale: string | undefined,
-): Either.Either<ClockFace, string> =>
-  Either.try({
-    try: () => {
-      const zone = timeZone ?? undefined;
-      const time = new Intl.DateTimeFormat(locale, { timeStyle: "short", timeZone: zone });
-      const date = new Intl.DateTimeFormat(locale, {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        timeZone: zone,
-      });
-      return {
-        time: time.format(now),
-        date: date.format(now),
-        zone: time.resolvedOptions().timeZone,
-      };
-    },
-    catch: () => `"${timeZone}" isn't a time zone`,
-  });
+/**
+ * The parts of the clock's face, in the computer's local time, shown with "/"
+ * between them: `YYYY / MMM / D / h:mm a`, e.g. 2026 / Nov / 6 / 3:28 pm.
+ */
+export const clockParts = (now: Date): ReadonlyArray<string> => {
+  const hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return [
+    String(now.getFullYear()),
+    months.at(now.getMonth()) ?? "",
+    String(now.getDate()),
+    `${hours % 12 === 0 ? 12 : hours % 12}:${minutes} ${hours < 12 ? "am" : "pm"}`,
+  ];
+};
 
 /** Milliseconds until the next minute starts, when the face next changes. */
 export const untilNextMinute = (now: Date): number => 60_000 - (now.getTime() % 60_000);
-
-/** Every time zone the browser knows, for choosing one. */
-export const timeZones = (): ReadonlyArray<string> => Intl.supportedValuesOf("timeZone");

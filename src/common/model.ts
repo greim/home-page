@@ -108,6 +108,22 @@ export const emptyLayout: Layout = {
   columns: [],
 };
 
+/**
+ * What a user starts with, before saving anything: one column holding a clock.
+ * Its ids are fixed, so every read of it agrees until the first save.
+ */
+export const defaultLayout: Layout = {
+  ...emptyLayout,
+  columns: [{
+    id: "home",
+    heading: "Home",
+    hidden: false,
+    color: defaultColumnColor,
+    icon: "LuHouse",
+    widgets: [{ id: "clock", is: "clock", config: {} }],
+  }],
+};
+
 const newColumnHeading = "New Column";
 
 export const newColumn = (id: string, icon: string): Column => ({

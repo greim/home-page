@@ -1,16 +1,19 @@
-/** The clock widget: the current time and date, updated each minute. */
-import { NativeSelect } from "@chakra-ui/react";
-import { Either } from "effect";
+/**
+ * The clock widget: the local date and time, updated each minute, after a sun
+ * during the user's day or a moon outside it (see day-cycle.ts).
+ */
+import { chakra, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import { LuMoon, LuSun } from "react-icons/lu";
+import { phaseAt } from "../../../common/day-cycle.ts";
 import { registerMfe } from "../../mfe/register-live.tsx";
-import { Label } from "../../widget-kit/form.tsx";
 import {
   type EditorProps,
   editorView,
   type WidgetProps,
   widgetView,
 } from "../../widget-kit/views.tsx";
-import { formatClock, timeZones, untilNextMinute } from "./clock.ts";
+import { clockParts, untilNextMinute } from "./clock.ts";
 import { ClockConfig } from "./config.ts";
 
 /** The current time, updated as each minute starts. */
@@ -23,45 +26,51 @@ const useNow = (): Date => {
   return now;
 };
 
-function Clock({ config }: WidgetProps<ClockConfig>) {
+/** Faded slashes between the parts of the date and time. */
+const separated = {
+  "& > span + span::before": { content: `"/"`, mx: "0.4em", opacity: 0.4 },
+} as const;
+
+function Clock({ schedule }: WidgetProps<ClockConfig>) {
   const now = useNow();
-  const face = formatClock(now, config.timeZone, undefined);
-  if (Either.isLeft(face)) {
-    return <p style={{ margin: 0, opacity: 0.8 }}>{face.left}</p>;
-  }
-  const { time, date, zone } = face.right;
+  const day = phaseAt(now, schedule) === "day";
   // Colors and fonts are inherited from the column the widget sits in.
   return (
-    <div title={zone} style={{ lineHeight: 1.1 }}>
-      <div style={{ fontSize: "2.5em", fontVariantNumeric: "tabular-nums" }}>{time}</div>
-      <div style={{ opacity: 0.75 }}>{date}</div>
-    </div>
+    <chakra.div
+      display="flex"
+      alignItems="center"
+      gap="0.6em"
+      // Sized to fit "2026 / Nov / 30 / 10:59 pm" on one line in a column.
+      fontSize="1.25rem"
+      lineHeight="1.2"
+      whiteSpace="nowrap"
+      fontVariantNumeric="tabular-nums"
+    >
+      <chakra.span
+        display="inline-flex"
+        flexShrink={0}
+        color={day ? "#ffd84d" : "#fff1b0"}
+        title={day ? "Day" : "Night"}
+        aria-label={day ? "Day" : "Night"}
+        // Filled: a solid sun disc and crescent moon, as in the reference.
+        css={{ "& svg": { fill: "currentColor" } }}
+      >
+        {day ? <LuSun /> : <LuMoon />}
+      </chakra.span>
+      <chakra.span css={separated}>
+        {clockParts(now).map((part, i) => <span key={i}>{part}</span>)}
+      </chakra.span>
+    </chakra.div>
   );
 }
 
-const local = "";
-
 function ClockEditor({ config, reportDraft }: EditorProps<ClockConfig>) {
-  const [timeZone, setTimeZone] = useState(config.timeZone);
   useEffect(() => reportDraft({ ok: true, config }), []);
   return (
-    <>
-      <Label>Time zone</Label>
-      <NativeSelect.Root size="sm" width="72">
-        <NativeSelect.Field
-          value={timeZone ?? local}
-          onChange={(e) => {
-            const next = e.target.value === local ? null : e.target.value;
-            setTimeZone(next);
-            reportDraft({ ok: true, config: { timeZone: next } });
-          }}
-        >
-          <option value={local}>The computer's own</option>
-          {timeZones().map((zone) => <option key={zone} value={zone}>{zone}</option>)}
-        </NativeSelect.Field>
-        <NativeSelect.Indicator />
-      </NativeSelect.Root>
-    </>
+    <Text fontSize="sm" color="fg.muted">
+      Shows the computer's local date and time. A sun shows during your day, and a moon outside it;
+      when your day starts and ends is a setting of the whole page.
+    </Text>
   );
 }
 

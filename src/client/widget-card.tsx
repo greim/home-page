@@ -16,7 +16,7 @@ export const WidgetProblem = (props: { message: string }) => (
 
 /** The widget's own view, rendered by its MFE bundle. */
 function WidgetBody(props: { columnId: string; widget: Widget }) {
-  const { dispatch } = useBoard();
+  const { dispatch, schedule } = useBoard();
   const { manager } = useWidgetHost();
   const { columnId, widget } = props;
   const viewProps: WidgetViewProps = useMemo(() => ({
@@ -24,7 +24,8 @@ function WidgetBody(props: { columnId: string; widget: Widget }) {
     config: widget.config,
     saveConfig: (config: unknown) =>
       dispatch({ is: "set-widget-config", columnId, widgetId: widget.id, config }),
-  }), [columnId, widget.id, widget.config, dispatch]);
+    schedule,
+  }), [columnId, widget.id, widget.config, dispatch, schedule]);
   return (
     <MfeView
       manager={manager}

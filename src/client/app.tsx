@@ -2,6 +2,7 @@ import { Badge, Box, Center, Spinner, Text } from "@chakra-ui/react";
 import { Effect, Either, Schema } from "effect";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyAction, type LayoutAction } from "../common/layout-ops.ts";
+import { defaultSchedule } from "../common/day-cycle.ts";
 import { Layout } from "../common/model.ts";
 import { AdminBar } from "./admin-bar.tsx";
 import { Http, loadLayout, saveLayout } from "./api.ts";
@@ -115,9 +116,10 @@ export function App() {
     [manager, dispatch],
   );
 
+  const schedule = state.is === "ready" ? state.layout.schedule : defaultSchedule;
   const board: Board = useMemo(
-    () => ({ admin, dispatch, edit: setEditing }),
-    [admin, dispatch],
+    () => ({ admin, dispatch, edit: setEditing, schedule }),
+    [admin, dispatch, schedule],
   );
 
   switch (state.is) {

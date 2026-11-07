@@ -3,7 +3,7 @@
  * {@link ServerIo} pipes. Shared by the layout API and the admin assistant.
  */
 import { Effect, Either, Schema } from "effect";
-import { emptyLayout, Layout } from "../common/model.ts";
+import { defaultLayout, Layout } from "../common/model.ts";
 import { CorruptData, ServerIo } from "./http.ts";
 
 type StoredText = { found: true; text: string } | { found: false };
@@ -22,7 +22,7 @@ export const decodeLayoutJson = (raw: string): Either.Either<Layout, string> =>
 /** How a layout is written to disk: plain, pretty-printed JSON. */
 export const layoutText = (layout: Layout): string => JSON.stringify(layout, null, 2) + "\n";
 
-/** The saved layout, or the empty one if nothing has been saved yet. */
+/** The saved layout, or the default one if nothing has been saved yet. */
 export const readLayout = Effect.gen(function* () {
   const io = yield* ServerIo;
   const stored = yield* io.readLayoutFile.pipe(
@@ -33,7 +33,7 @@ export const readLayout = Effect.gen(function* () {
     ),
   );
   if (!stored.found) {
-    return emptyLayout;
+    return defaultLayout;
   }
   const layout = decodeLayoutJson(stored.text);
   if (Either.isLeft(layout)) {
