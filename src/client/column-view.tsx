@@ -1,13 +1,14 @@
 import { Box, Button, chakra, Flex, Heading, Input, Theme } from "@chakra-ui/react";
 import { useRef, useState } from "react";
 import { LuPlus } from "react-icons/lu";
-import { columnColorCss } from "../common/column-color.ts";
 import { type Column, newColumn } from "../common/model.ts";
 import { adminButton } from "./admin-button.ts";
 import { useBoard } from "./board-context.ts";
 import { IconPicker, NamedIcon } from "./icon-picker.tsx";
 import { randomIcon } from "./icon-set.ts";
 import {
+  columnBackground,
+  columnBackgroundTransition,
   columnCorners,
   columnHeading,
   columnHeadingBand,
@@ -98,7 +99,7 @@ function ColumnHeader(props: {
   editHeading: boolean;
   onHeadingEditEnd: () => void;
 }) {
-  const { admin, dispatch } = useBoard();
+  const { admin, dispatch, night } = useBoard();
   const { column } = props;
   // Shares the heading's adaptive color.
   const icon = (
@@ -117,7 +118,8 @@ function ColumnHeader(props: {
       position="sticky"
       top="0"
       zIndex="1"
-      bgColor={columnColorCss(column.color)}
+      bgColor={columnBackground(column.color, night)}
+      transition={columnBackgroundTransition}
       {...columnHeadingBand}
       align="center"
       gap="2"
@@ -156,7 +158,7 @@ export function ColumnView(props: {
   editHeading: boolean;
   onHeadingEditEnd: () => void;
 }) {
-  const { admin, edit } = useBoard();
+  const { admin, edit, night } = useBoard();
   const { column } = props;
   return (
     // Column text is always white: every column color shares one mid lightness,
@@ -164,7 +166,8 @@ export function ColumnView(props: {
     <Theme
       appearance="dark"
       hasBackground={false}
-      bg={columnColorCss(column.color)}
+      bgColor={columnBackground(column.color, night)}
+      transition={columnBackgroundTransition}
       color="white"
       textShadow={surface.columnTextShadow}
       h="full"

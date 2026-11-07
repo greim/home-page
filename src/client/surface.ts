@@ -1,3 +1,5 @@
+import { type ColumnColor, columnColorCss } from "../common/column-color.ts";
+
 /**
  * The root font size, which every rem on the page is relative to. Tying it to
  * the viewport's width scales the whole page with the window, so text never
@@ -72,9 +74,26 @@ export const surface = {
 } as const;
 
 /** The CSS variables behind `surface.bg` and `surface.ink`, set at the surface's root. */
-export const surfaceColors = {
-  "--surface-bg": "#ffffff",
+export const surfaceColors = (night: boolean) => ({
+  "--surface-bg": night ? "#333333" : "#ffffff",
   "--surface-ink": "#999999",
+});
+
+/**
+ * Night mode (see NEW_LAYOUT.md): between the end of the user's day and the
+ * start of the next, the page dims and stars come out.
+ */
+export const night = {
+  /** How long the page takes to change between day and night. */
+  transition: "20s linear",
+  /** Every column's color at night: the same gray, whatever its color by day. */
+  columnColor: "#4a4a4a",
+  /** How opaque the starfield gets: never fully, so it never gets in the way. */
+  starfieldOpacity: 0.25,
+  /** How long each star takes to fade in, once its delay is up. */
+  starFadeSeconds: 30,
+  /** Stars' delays are spread at random over this many seconds. */
+  starDelayWindowSeconds: 30,
 } as const;
 
 /**
@@ -181,3 +200,10 @@ export const codeBox = {
   boxShadow:
     "-1px -1px 0 rgba(0, 0, 0, 0.7), 1px 1px 0 rgba(255, 255, 255, 0.25), 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.15) inset",
 } as const;
+
+/** A column's background: its own color by day, and the night gray at night. */
+export const columnBackground = (color: ColumnColor, isNight: boolean): string =>
+  isNight ? night.columnColor : columnColorCss(color);
+
+/** How a column's background changes between day and night. */
+export const columnBackgroundTransition = `background-color ${night.transition}`;

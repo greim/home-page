@@ -17,7 +17,14 @@ import { ColumnNavigator, navigatorHeight } from "./column-navigator.tsx";
 import { AddColumnSlot, ColumnView } from "./column-view.tsx";
 import { randomIcon } from "./icon-set.ts";
 import { screenshotRootId } from "./screenshot.ts";
-import { columnCorners, pageTypography, surface, surfaceColors } from "./surface.ts";
+import { Starfield } from "./starfield-view.tsx";
+import {
+  columnCorners,
+  night as nightStyle,
+  pageTypography,
+  surface,
+  surfaceColors,
+} from "./surface.ts";
 
 const { gap } = surface;
 
@@ -56,7 +63,7 @@ export function ColumnStrip(props: {
    */
   adminBar: ReactNode;
 }) {
-  const { admin, dispatch } = useBoard();
+  const { admin, dispatch, night } = useBoard();
   const slots = stripSlots(props.columns, admin);
   const [rawOffset, setOffset] = useState(() => offsetOfColumn(loadLeadingColumn(), slots));
   const view = carousel(rawOffset, slots);
@@ -94,8 +101,9 @@ export function ColumnStrip(props: {
       // Unlike hidden, clip doesn't contain the frame's top margin; flow-root does.
       display="flow-root"
       bgColor={surface.bg}
+      transition={`background-color ${nightStyle.transition}`}
       isolation="isolate"
-      css={{ ...surfaceColors, ...adminButtonStyles, ...pageTypography }}
+      css={{ ...surfaceColors(night), ...adminButtonStyles, ...pageTypography }}
     >
       {props.adminBar}
       {
@@ -176,6 +184,7 @@ export function ColumnStrip(props: {
       >
         Press {adminModeKey} to {admin ? "exit" : "enter"} admin mode
       </Box>
+      <Starfield night={night} />
     </Box>
   );
 }

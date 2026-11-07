@@ -92,7 +92,9 @@ code it writes is yours to review and commit.
 ## Look and feel
 
 The page's look is fixed (see [NEW_LAYOUT.md](./NEW_LAYOUT.md)): everything is monospace, and only
-column colors are yours to choose. Spacing, corners, shadows and the preset column colors are set in
+column colors are yours to choose. Between the end of your day and the start of the next (the
+layout's `schedule`), the page fades to night over 20 seconds: columns turn gray and a starfield
+comes out over them. Spacing, corners, shadows and the preset column colors are set in
 `src/client/surface.ts`.
 
 ## Development

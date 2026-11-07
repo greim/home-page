@@ -1,4 +1,4 @@
-import { type ColumnColor, columnColorCss } from "../common/column-color.ts";
+import type { ColumnColor } from "../common/column-color.ts";
 import { Box, chakra, HStack, Popover, Portal, Theme } from "@chakra-ui/react";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { LuEye, LuEyeOff, LuMove, LuPalette, LuPlus, LuTrash2 } from "react-icons/lu";
@@ -17,7 +17,7 @@ import {
   type Slot,
 } from "./carousel.ts";
 import { ColorPicker } from "./color-picker.tsx";
-import { smallCorners, surface } from "./surface.ts";
+import { columnBackground, columnBackgroundTransition, smallCorners, surface } from "./surface.ts";
 
 const { gap, thumbWidth, thumbHeight, thumbOutlineWidth } = surface;
 
@@ -236,6 +236,7 @@ function ColumnThumbnail(props: {
   onColor: (color: ColumnColor) => void;
 }) {
   const { column, visible, admin } = props;
+  const { night } = useBoard();
   const label = column.heading;
   return (
     // White text, as on the column itself.
@@ -246,7 +247,8 @@ function ColumnThumbnail(props: {
       flex={`0 0 ${thumbWidth}`}
       h={thumbHeight}
       {...thumbCorners}
-      bg={columnColorCss(column.color)}
+      bgColor={columnBackground(column.color, night)}
+      transition={columnBackgroundTransition}
       boxShadow={surface.thumbShadow}
       opacity={column.hidden ? 0.5 : 1}
     >

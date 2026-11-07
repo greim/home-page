@@ -9,6 +9,7 @@ import { Http, loadLayout, saveLayout } from "./api.ts";
 import { adminModeKey, type Board, BoardContext, type EditRequest } from "./board-context.ts";
 import { ColumnStrip } from "./column-strip.tsx";
 import { HttpLive, run } from "./live.ts";
+import { useDayPhase } from "./use-day-phase.ts";
 import { makeSaveQueue } from "./save-queue.ts";
 import { ColumnEditor } from "./column-editor.tsx";
 import { useWidgetHost } from "./widget-host.tsx";
@@ -117,9 +118,11 @@ export function App() {
   );
 
   const schedule = state.is === "ready" ? state.layout.schedule : defaultSchedule;
+  const phase = useDayPhase(schedule);
+  const night = phase === "night";
   const board: Board = useMemo(
-    () => ({ admin, dispatch, edit: setEditing, schedule }),
-    [admin, dispatch, schedule],
+    () => ({ admin, dispatch, edit: setEditing, schedule, night }),
+    [admin, dispatch, schedule, night],
   );
 
   switch (state.is) {

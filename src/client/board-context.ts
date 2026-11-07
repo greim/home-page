@@ -17,6 +17,8 @@ export type Board = {
   readonly edit: (request: EditRequest) => void;
   /** When the user's day starts and ends, as the layout has it. */
   readonly schedule: Schedule;
+  /** Night mode: it's past the end of the user's day, and before the start of the next. */
+  readonly night: boolean;
 };
 
 export const BoardContext = createContext<Board | null>(null);
