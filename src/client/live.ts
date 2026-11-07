@@ -17,14 +17,9 @@ export const HttpLive = Http.of({
       },
       catch: (cause) => new ApiError({ message: String(cause) }),
     }),
-  stream: (path, json) =>
+  stream: (url) =>
     Effect.tryPromise({
-      try: () =>
-        fetch(path, {
-          method: "POST",
-          body: json,
-          headers: { "content-type": "application/json" },
-        }),
+      try: (signal) => fetch(url, { signal }),
       catch: (cause) => new ApiError({ message: String(cause) }),
     }).pipe(Effect.map((response) => ({
       status: response.status,

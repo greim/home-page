@@ -39,7 +39,7 @@ contains:
 - `manifest.ts`: exports, as `manifest`, the widget's title, description, an Effect Schema for its
   config, and the config a new widget starts with, declared with `defineManifest` from
   `src/common/widgets.ts`.
-- Tests, per [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md).
+- Tests, per the `testing` skill in [`.claude/skills/`](./.claude/skills/).
 
 Widgets build their views with the kit in `src/client/widget-kit/`. `widgetView` and `editorView`
 decode a view's props with the widget's config schema, show what's wrong if they don't decode, and
@@ -148,8 +148,8 @@ The assistant keeps its no-shell sandbox (`--restricted`, `--permission-mode don
 
 Its prompt lists the registry (every widget type's title, description, config schema and default
 config), read afresh for each run of the agent, in place of looking up the layout's schema
-elsewhere. It points the agent at this document, ENGINEERING_STANDARDS.md and the existing widgets
-for how to write one.
+elsewhere. It points the agent at the existing widgets for how to write one; the repo's skills
+(`.claude/skills/`), which Claude Code loads by itself, give its coding standards.
 
 When a turn ends, the server checks the agent's work (`src/server/widget-checks.ts`):
 

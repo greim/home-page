@@ -41,6 +41,8 @@ export type Site = {
   readonly assets: ReadonlyMap<string, Asset>;
   /** Cache-busting token for asset URLs embedded in the page. */
   readonly buildId: string;
+  /** Where the page finds the assistant service (on this host). */
+  readonly assistantPort: number;
 };
 
 export type HttpRequest = {

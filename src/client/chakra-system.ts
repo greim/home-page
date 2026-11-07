@@ -5,6 +5,9 @@
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
 import { rootFontSize } from "./surface.ts";
 
-// Viewport-relative design: every rem (Chakra's included) scales with the window's width.
-export const makeSystem = () =>
-  createSystem(defaultConfig, defineConfig({ globalCss: { html: { fontSize: rootFontSize } } }));
+/**
+ * By default, viewport-relative design: every rem (Chakra's included) scales with the
+ * window's width. A separate window (the assistant's) passes its own root size instead.
+ */
+export const makeSystem = (root: string = rootFontSize) =>
+  createSystem(defaultConfig, defineConfig({ globalCss: { html: { fontSize: root } } }));

@@ -70,6 +70,19 @@ const StoredWidget = Schema.transform(Schema.Unknown, Widget, {
  */
 export const defaultColumnIcon = "LuLayoutGrid";
 
+/**
+ * Widget types the page no longer has: widgets of these types are dropped when a layout
+ * is read (and so are gone when it's next saved). The assistant was a widget before it
+ * got a window of its own.
+ */
+export const retiredWidgetTypes: ReadonlySet<string> = new Set(["assistant"]);
+
+const StoredWidgets = Schema.transform(Schema.Array(StoredWidget), Schema.Array(Widget), {
+  strict: true,
+  decode: (widgets) => widgets.filter((w) => !retiredWidgetTypes.has(w.is)),
+  encode: (widgets) => widgets,
+});
+
 export const Column = Schema.Struct({
   id: Schema.String,
   heading: Schema.String,
@@ -82,7 +95,7 @@ export const Column = Schema.Struct({
   color: Schema.optionalWith(StoredColumnColor, { default: () => defaultColumnColor }),
   /** Layouts saved before this field existed decode with the default icon. */
   icon: Schema.optionalWith(Schema.String, { default: () => defaultColumnIcon }),
-  widgets: Schema.Array(StoredWidget),
+  widgets: StoredWidgets,
 });
 export type Column = typeof Column.Type;
 

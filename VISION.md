@@ -94,4 +94,4 @@ an easier and/or more secure way to set this up. The UI uses the
 
 ## Engineering Standards
 
-See [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md).
+See [the skills in `.claude/skills/`](./.claude/skills/).

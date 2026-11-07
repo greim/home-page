@@ -1,7 +1,6 @@
 import { defaultSchedule } from "../common/day-cycle.ts";
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Effect } from "effect";
-import { AssistantIo } from "./assistant.ts";
 import { defaultLayout, type Layout, newColumn } from "../common/model.ts";
 import {
   contentTypeFor,
@@ -20,6 +19,7 @@ const site: Site = {
     body: new TextEncoder().encode("js"),
   }]]),
   buildId: "abc",
+  assistantPort: 9443,
 };
 
 const request = (
@@ -35,19 +35,6 @@ const request = (
 
 const unused = Effect.die("unexpected I/O");
 
-const noAssistantIo = AssistantIo.of({
-  readWorkspaceLayout: Effect.die("unexpected I/O"),
-  writeWorkspaceLayout: () => Effect.die("unexpected I/O"),
-  writeWorkspaceScreenshot: () => Effect.die("unexpected I/O"),
-  removeWorkspaceScreenshot: Effect.die("unexpected I/O"),
-  readRegistry: Effect.die("unexpected I/O"),
-  startAgent: () => Effect.die("unexpected I/O"),
-  fingerprintWidgets: Effect.die("unexpected I/O"),
-  checkWidgets: Effect.die("unexpected I/O"),
-  checkWorkspaceLayout: Effect.die("unexpected I/O"),
-  turnLock: Effect.runSync(Effect.makeSemaphore(1)),
-});
-
 const noIo = ServerIo.of({
   readLayoutFile: unused,
   writeLayoutTempFile: () => unused,
@@ -58,7 +45,6 @@ const noIo = ServerIo.of({
 const run = (req: HttpRequest, io = noIo): Promise<HttpResponse> =>
   Effect.runPromise(
     handle(req, site).pipe(
-      Effect.provideService(AssistantIo, noAssistantIo),
       Effect.provideService(ServerIo, io),
     ),
   );
@@ -78,9 +64,11 @@ Deno.test("/web/app serves the page", async () => {
   for (const path of ["/web/app", "/web/app/"]) {
     const res = await run(request("GET", path));
     assertEquals(res.status, 200);
-    assertEquals(res.body, page("abc"));
+    assertEquals(res.body, page("abc", 9443));
   }
-  assertStringIncludes(page("abc"), `src="/web/assets/main.js?v=abc"`);
+  assertStringIncludes(page("abc", 9443), `src="/web/assets/main.js?v=abc"`);
+  // The page tells the client where the assistant service is.
+  assertStringIncludes(page("abc", 9443), `<meta name="assistant-port" content="9443">`);
 });
 
 Deno.test("/web/assets serves known assets and 404s otherwise", async () => {
@@ -190,9 +178,9 @@ Deno.test("contentTypeFor maps known extensions", () => {
   assertEquals(contentTypeFor("a.bin"), "application/octet-stream");
 });
 
-Deno.test("/api/assistant only accepts POST", async () => {
-  const res = await run(request("GET", "/api/assistant"));
-  assertEquals([res.status, res.headers["allow"]], [405, "POST"]);
+Deno.test("the assistant isn't served here: it's its own service", async () => {
+  const res = await run(request("POST", "/api/assistant"));
+  assertEquals(res.status, 404);
 });
 
 const widgetIo = (files: ReadonlyMap<string, string>) => ({

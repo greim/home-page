@@ -7,30 +7,14 @@ import {
   maxOutput,
   runSteps,
   type Step,
-  widgetSteps,
 } from "./widget-checks.ts";
 
 const settings: CheckSettings = {
   repoDir: "/repo",
-  widgetsDir: "/repo/src/client/widgets",
-  distDir: "/repo/dist",
-  widgetBuildScript: "/repo/bin/build-widgets.ts",
   layoutCheckScript: "/repo/bin/check-layout.ts",
 };
 
-Deno.test("widget code is formatted, type checked, linted and tested before it's built", () => {
-  const steps = widgetSteps(settings);
-  assertEquals(steps.map((s) => s.name), [
-    "Formatting",
-    "Type check",
-    "Lint",
-    "Tests",
-    "Widget build",
-  ]);
-  for (const step of steps.slice(0, 4)) {
-    assertEquals(step.args.at(-1), settings.widgetsDir);
-  }
-  assertEquals(steps.at(-1)?.args.includes("--allow-write=/repo/dist"), true);
+Deno.test("the layout check runs the check script on the given file", () => {
   assertEquals(layoutStep(settings, "/ws/layout.json").args.slice(-2), [
     settings.layoutCheckScript,
     "/ws/layout.json",
@@ -45,16 +29,20 @@ const runner = (codes: Record<string, number>, ran: Array<string>) => (step: Ste
 
 Deno.test("steps stop at the first failure, which is described with its output", async () => {
   const ran: Array<string> = [];
-  const steps = widgetSteps(settings);
+  const steps: ReadonlyArray<Step> = [
+    { name: "First", args: ["one"] },
+    { name: "Second", args: ["two"] },
+    { name: "Third", args: ["three"] },
+  ];
   assertEquals(await Effect.runPromise(runSteps(steps, runner({}, ran))), { ok: true });
-  assertEquals(ran.length, 5);
+  assertEquals(ran.length, 3);
 
   ran.length = 0;
-  const failed = await Effect.runPromise(runSteps(steps, runner({ Lint: 1 }, ran)));
-  assertEquals(ran, ["Formatting", "Type check", "Lint"]);
+  const failed = await Effect.runPromise(runSteps(steps, runner({ Second: 1 }, ran)));
+  assertEquals(ran, ["First", "Second"]);
   assertEquals(failed, {
     ok: false,
-    diagnostic: `Lint failed (deno lint ${settings.widgetsDir}):\noutput of Lint`,
+    diagnostic: "Second failed (deno two):\noutput of Second",
   });
 });
 

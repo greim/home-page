@@ -25,7 +25,7 @@ Deno.test("Layout decodes a well-formed layout", () => {
       icon: "LuStar",
       widgets: [
         newWidget({ id: "clock", defaultConfig: { timeZone: null } }, "w1"),
-        newWidget({ id: "assistant", defaultConfig: {} }, "w2"),
+        newWidget({ id: "snippets", defaultConfig: {} }, "w2"),
       ],
     }],
   };
@@ -103,8 +103,8 @@ Deno.test("Layout moves an older widget's settings into its config", () => {
     Either.right({ id: "w", is: "bookmarks", config: { ...moved, items } }),
   );
   assertEquals(
-    decodedWidget({ ...old, is: "assistant" }),
-    Either.right({ id: "w", is: "assistant", config: moved }),
+    decodedWidget({ ...old, is: "snippets" }),
+    Either.right({ id: "w", is: "snippets", config: moved }),
   );
 });
 
@@ -182,4 +182,21 @@ Deno.test("widgetHeading is the config's heading, when it has a non-blank one", 
 Deno.test("the default layout is a valid layout with a clock in it", () => {
   assertEquals(decode(defaultLayout), Either.right(defaultLayout));
   assertEquals(defaultLayout.columns.flatMap((c) => c.widgets.map((w) => w.is)), ["clock"]);
+});
+
+Deno.test("widgets of retired types (the old assistant widget) are dropped when a layout is read", () => {
+  const stored = {
+    version: 1,
+    columns: [{
+      id: "c",
+      heading: "Utility",
+      hidden: false,
+      widgets: [
+        { id: "a", is: "assistant", config: {} },
+        { id: "k", is: "clock", config: {} },
+      ],
+    }],
+  };
+  const layout = Schema.decodeUnknownSync(Layout)(stored);
+  assertEquals(layout.columns[0]?.widgets.map((w) => w.is), ["clock"]);
 });

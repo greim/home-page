@@ -1,9 +1,9 @@
 import { Badge, Box, Center, Spinner, Text } from "@chakra-ui/react";
-import { Effect, Either, Schema } from "effect";
+import { Effect, Either } from "effect";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyAction, type LayoutAction } from "../common/layout-ops.ts";
 import { defaultSchedule } from "../common/day-cycle.ts";
-import { Layout } from "../common/model.ts";
+import type { Layout } from "../common/model.ts";
 import { AdminBar } from "./admin-bar.tsx";
 import { Http, loadLayout, saveLayout } from "./api.ts";
 import { adminModeKey, type Board, BoardContext, type EditRequest } from "./board-context.ts";
@@ -14,13 +14,39 @@ import { dayPreviewAvailable, nextNightView, type NightView, showsNight } from "
 import { night as nightStyle } from "./surface.ts";
 import { makeSaveQueue } from "./save-queue.ts";
 import { ColumnEditor } from "./column-editor.tsx";
-import { useWidgetHost } from "./widget-host.tsx";
-import { layoutAppliedChannel } from "./widgets/assistant/protocol.ts";
+import { AssistantPanel } from "./assistant/assistant-panel.tsx";
+import {
+  AssistantWindow,
+  ReopenAssistant,
+  useAssistantWindow,
+  type WindowState,
+} from "./assistant/assistant-window.tsx";
+import { makeConversations } from "./assistant/conversations.ts";
+import { browserChatStorage, makeUseAssistant } from "./assistant/use-assistant.ts";
 
-/** The widget type that provides the assistant, which applies layouts itself. */
-const assistantType = "assistant";
+/** The assistant window's conversation, kept as long as the page. */
+const windowConversations = makeConversations(browserChatStorage);
+const windowConversationId = "window";
 
-const decodeLayout = Schema.decodeUnknownEither(Layout);
+/**
+ * The assistant window's conversation and, while it's open, the window. Always
+ * mounted, so a turn carries on (and applies its layout) while the window is closed.
+ * Its own component, so streamed text re-renders it rather than the whole page.
+ */
+function AssistantHost(props: {
+  window: WindowState;
+  onClose: () => void;
+  onApplied: (layout: Layout) => void;
+}) {
+  const { onApplied } = props;
+  const useAssistant = useMemo(() => makeUseAssistant(windowConversations, onApplied), [onApplied]);
+  const assistant = useAssistant(windowConversationId);
+  return (
+    <AssistantWindow state={props.window}>
+      <AssistantPanel assistant={assistant} onClose={props.onClose} />
+    </AssistantWindow>
+  );
+}
 
 type LoadState =
   | { is: "loading" }
@@ -104,19 +130,10 @@ export function App() {
     addedColumnIds.current = [];
   }, [admin, dispatch]);
 
-  // The assistant applies layouts from its own bundle, and tells the page here.
-  const { manager } = useWidgetHost();
-  useEffect(
-    () =>
-      manager.receive(assistantType, layoutAppliedChannel, (message) => {
-        const layout = decodeLayout(message);
-        if (Either.isLeft(layout)) {
-          throw new Error(`The assistant applied an invalid layout: ${layout.left.message}`);
-        }
-        dispatch({ is: "replace-layout", layout: layout.right });
-        return null;
-      }),
-    [manager, dispatch],
+  const assistantWindow = useAssistantWindow();
+  const onApplied = useCallback(
+    (layout: Layout) => dispatch({ is: "replace-layout", layout }),
+    [dispatch],
   );
 
   const schedule = state.is === "ready" ? state.layout.schedule : defaultSchedule;
@@ -172,6 +189,7 @@ export function App() {
               on: admin && dayPreview,
               onToggle: () => setDayPreview((on) => !on),
             }}
+            onAssistant={assistantWindow.open}
           />
         }
       />
@@ -185,6 +203,17 @@ export function App() {
             dispatch(action);
             setEditing(null);
           }}
+        />
+      )}
+      <AssistantHost
+        window={assistantWindow.state}
+        onClose={assistantWindow.close}
+        onApplied={onApplied}
+      />
+      {assistantWindow.reopen && (
+        <ReopenAssistant
+          onOpen={assistantWindow.open}
+          onDismiss={assistantWindow.dismissReopen}
         />
       )}
       {saveError !== null && (

@@ -23,20 +23,24 @@
     "data/",
     "dist/",
     "logs/",
-    ".secrets/"
+    ".secrets/",
+    "scratch-docs/"
   ],
   "tasks": {
     "start": "deno run --allow-net --allow-read --allow-write=data --allow-env --allow-run src/server/main.ts",
     "dev": "deno run --watch=src/,tooling/ --allow-net --allow-read --allow-write=data --allow-env --allow-run src/server/main.ts",
+    "start-assistant": "deno run --allow-net --allow-read --allow-write=data --allow-env --allow-run --allow-sys src/server/assistant-main.ts",
     "check": "deno check src/ tooling/ bin/",
     "fmt": "deno fmt",
     "lint": "deno fmt --check && deno lint",
-    "test": "deno test --allow-read --allow-write --allow-run --coverage --clean --coverage-threshold=90",
+    "test": "deno test --allow-read --allow-write --allow-run --allow-env --allow-sys --allow-net=127.0.0.1 --coverage --clean --coverage-threshold=90",
+    "doctor": "deno run --allow-read --allow-run --allow-env --allow-net=127.0.0.1 bin/doctor.ts",
     "build-widgets": "deno run --allow-read --allow-write=dist --allow-env bin/build-widgets.ts",
     "build": "deno task check && deno task lint && deno task test && deno task build-widgets",
     "setup-certs": "deno run --allow-read --allow-write --allow-run --allow-env bin/setup-certs.ts",
-    "install-service": "deno run --allow-read --allow-write --allow-run --allow-env bin/install-service.ts",
-    "uninstall-service": "deno run --allow-read --allow-write --allow-run --allow-env bin/uninstall-service.ts"
+    "install-service": "deno run --allow-read --allow-write --allow-run --allow-env --allow-sys=uid bin/install-service.ts",
+    "uninstall-service": "deno run --allow-read --allow-write --allow-run --allow-env --allow-sys=uid bin/uninstall-service.ts",
+    "restart-service": "deno run --allow-read --allow-run --allow-env --allow-sys=uid --allow-net=127.0.0.1 bin/restart-service.ts"
   },
   "fmt": {
     "lineWidth": 100
@@ -51,7 +55,9 @@
     }
   },
   "imports": {
+    "@anthropic-ai/claude-agent-sdk": "npm:@anthropic-ai/claude-agent-sdk@0.3.319",
     "@chakra-ui/react": "npm:@chakra-ui/react@3.37.0",
+    "@emotion/cache": "npm:@emotion/cache@^11.14.0",
     "@emotion/react": "npm:@emotion/react@^11.14.0",
     "@std/assert": "jsr:@std/assert@^1.0.0",
     "@std/encoding": "jsr:@std/encoding@^1.0.11",
@@ -63,6 +69,8 @@
     "react/": "npm:/react@^19.2.0/",
     "react-dom": "npm:react-dom@^19.2.0",
     "react-dom/": "npm:/react-dom@^19.2.0/",
-    "react-icons/": "npm:/react-icons@^5.5.0/"
+    "react-icons/": "npm:/react-icons@^5.5.0/",
+    "react-markdown": "npm:react-markdown@10.1.0",
+    "diff": "npm:diff@8.0.4"
   }
 }

@@ -1,17 +1,14 @@
 /**
- * The checks the server runs on the assistant's work when a turn ends: on widget
- * source it changed (format, type check, lint, tests, then the widget build), and
- * on its layout (shape, plus each widget's config against its manifest). Each
- * step is a `deno` command run in the repo. See SELF_BUILDING.md.
+ * The check the assistant service runs on the agent's layout when a turn ends:
+ * its shape, plus each widget's config against its type's manifest. It's a
+ * `deno` command run in the repo, in its own process so it always loads the
+ * current manifests.
  */
 import { Effect } from "effect";
 
 export type CheckSettings = {
   /** Where the commands run, so they pick up the repo's deno.json. */
   readonly repoDir: string;
-  readonly widgetsDir: string;
-  readonly distDir: string;
-  readonly widgetBuildScript: string;
   readonly layoutCheckScript: string;
 };
 
@@ -20,28 +17,6 @@ export type Step = { readonly name: string; readonly args: ReadonlyArray<string>
 export type StepResult = { readonly code: number; readonly output: string };
 
 export type CheckOutcome = { ok: true } | { ok: false; diagnostic: string };
-
-/** In order; the build comes last, so the page only ever gets code that passed the rest. */
-export const widgetSteps = (s: CheckSettings): ReadonlyArray<Step> => [
-  { name: "Formatting", args: ["fmt", s.widgetsDir] },
-  { name: "Type check", args: ["check", s.widgetsDir] },
-  { name: "Lint", args: ["lint", s.widgetsDir] },
-  {
-    name: "Tests",
-    args: [
-      "test",
-      "--allow-read",
-      "--allow-write",
-      "--allow-run",
-      "--permit-no-files",
-      s.widgetsDir,
-    ],
-  },
-  {
-    name: "Widget build",
-    args: ["run", "--allow-read", `--allow-write=${s.distDir}`, "--allow-env", s.widgetBuildScript],
-  },
-];
 
 export const layoutStep = (s: CheckSettings, layoutFile: string): Step => ({
   name: "Layout check",

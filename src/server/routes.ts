@@ -3,7 +3,6 @@
  * lives here. All I/O goes through the injected {@link ServerIo} pipes.
  */
 import { Effect, Either } from "effect";
-import { AssistantIo, routeAssistant } from "./assistant.ts";
 import {
   BadRequest,
   type HttpRequest,
@@ -16,18 +15,20 @@ import {
   text,
 } from "./http.ts";
 import { decodeLayoutJson, readLayout, writeLayout } from "./layout-store.ts";
+import { assistantPortMetaName } from "../common/assistant.ts";
 import { widgetAssetsPath } from "../common/widgets.ts";
 import { serveWidgetFile } from "./widget-files.ts";
 
 /** File name the bundler gives the client entry point (src/client/main.tsx). */
 export const clientScript = "main.js";
 
-export const page = (buildId: string): string =>
+export const page = (buildId: string, assistantPort: number): string =>
   `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="${assistantPortMetaName}" content="${assistantPort}">
     <title>Home</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏠</text></svg>">
     <style>html, body, #root { height: 100%; margin: 0; overflow: hidden; }</style>
@@ -55,7 +56,7 @@ const putLayout = (request: HttpRequest) =>
 const route = (
   request: HttpRequest,
   site: Site,
-): Effect.Effect<HttpResponse, RouteError, ServerIo | AssistantIo> => {
+): Effect.Effect<HttpResponse, RouteError, ServerIo> => {
   const { pathname } = request.url;
   const isRead = request.method === "GET" || request.method === "HEAD";
 
@@ -73,7 +74,7 @@ const route = (
         "content-type": "text/html; charset=utf-8",
         "cache-control": "no-cache",
       },
-      body: page(site.buildId),
+      body: page(site.buildId, site.assistantPort),
     });
   }
   if (pathname.startsWith(widgetAssetsPath) && isRead) {
@@ -103,18 +104,13 @@ const route = (
         return Effect.succeed(methodNotAllowed("GET, PUT"));
     }
   }
-  if (pathname === "/api/assistant") {
-    return request.method === "POST"
-      ? routeAssistant(request)
-      : Effect.succeed(methodNotAllowed("POST"));
-  }
   return Effect.succeed(text(404, "Not found"));
 };
 
 export const handle = (
   request: HttpRequest,
   site: Site,
-): Effect.Effect<HttpResponse, never, ServerIo | AssistantIo> => {
+): Effect.Effect<HttpResponse, never, ServerIo> => {
   if (!site.hosts.has(request.url.host)) {
     return Effect.succeed(text(421, "Misdirected request"));
   }

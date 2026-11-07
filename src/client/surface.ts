@@ -59,18 +59,12 @@ export const surface = {
   thumbHeight: "3.5rem",
   /** Drop shadow each navigator thumbnail casts: the column shadow, scaled down. */
   thumbShadow: "0.08rem 0.08rem 0.24rem rgba(0, 0, 0, 0.5)",
-  /** A faint inset shadow, for subtle wells (the assistant widget's prompt). */
-  faintInsetShadow: "inset 0.05rem 0.05rem 0.1rem rgba(0, 0, 0, 0.15)",
-  /** The faint inset shadow at half its opacity, for the assistant widget's chat history. */
-  chatInsetShadow: "inset 0.05rem 0.05rem 0.1rem rgba(0, 0, 0, 0.075)",
   /** Thickness of the outline around the thumbnails of the columns in view. */
   thumbOutlineWidth: "2px",
   /** Height of the admin bar along the top of the viewport in admin mode. */
   adminBarHeight: "2.5rem",
   /** Duration and easing of the admin bar sliding in/out and the columns making room for it. */
   adminTransition: "300ms ease",
-  /** Height of an assistant widget's chat, messages and input together. */
-  assistantWidgetHeight: "26rem",
 } as const;
 
 /** The CSS variables behind `surface.bg` and `surface.ink`, set at the surface's root. */

@@ -186,7 +186,7 @@ wait for a handler instead of failing, but a sender never waits forever unless i
 ### Results
 
 `send` resolves to a discriminated union, so callers branch on it instead of catching rejections
-(see [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md#error-handling)):
+(see the `effect-errors` skill in [`.claude/skills/`](./.claude/skills/)):
 
 ```ts
 type SendResult =
@@ -216,9 +216,9 @@ rejection into a `handler-failed` failure for the sender.
 
 ## Implementation
 
-The framework's internals follow the [Functional Core pattern](./FUNCTIONAL_CORE.md), written with
-Effect. Its public API, and everything that passes between the shell's and an MFE's halves, is plain
-TypeScript.
+The framework's internals follow the functional core pattern (the `functional-core` skill), written
+with Effect. Its public API, and everything that passes between the shell's and an MFE's halves, is
+plain TypeScript.
 
 ### The Core
 
