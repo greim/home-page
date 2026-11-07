@@ -29,7 +29,9 @@ export function AdminBar(props: {
         right="0"
         mx="auto"
         zIndex="1"
-        transform={props.shown ? "none" : "translateY(-100%)"}
+        // Hidden, it rests half a gap clear of the window's top, so the columns sliding
+        // up to reattach there don't seem to graze it on its way out.
+        transform={props.shown ? "none" : `translateY(calc(-100% - ${gap} / 2))`}
         transition={`transform ${surface.adminTransition}`}
         _motionReduce={{ transition: "none" }}
         inert={!props.shown}
