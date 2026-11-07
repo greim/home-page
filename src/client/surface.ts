@@ -84,8 +84,10 @@ export const surfaceColors = (night: boolean) => ({
  * start of the next, the page dims and stars come out.
  */
 export const night = {
-  /** How long the page takes to change between day and night. */
+  /** How long the page takes to change between day and night, as the day ends or begins. */
   transition: "20s linear",
+  /** The same change when the user makes it, previewing daytime in admin mode. */
+  quickTransition: "0.4s ease",
   /** Every column's color at night: the same gray, whatever its color by day. */
   columnColor: "#4a4a4a",
   /** How opaque the starfield gets: never fully, so it never gets in the way. */
@@ -221,5 +223,5 @@ export const codeBox = {
 export const columnBackground = (color: ColumnColor, isNight: boolean): string =>
   isNight ? night.columnColor : columnColorCss(color);
 
-/** How a column's background changes between day and night. */
-export const columnBackgroundTransition = `background-color ${night.transition}`;
+/** How a column's background changes between day and night, at the given pace. */
+export const columnBackgroundTransition = (pace: string) => `background-color ${pace}`;

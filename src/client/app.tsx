@@ -10,6 +10,8 @@ import { adminModeKey, type Board, BoardContext, type EditRequest } from "./boar
 import { ColumnStrip } from "./column-strip.tsx";
 import { HttpLive, run } from "./live.ts";
 import { useDayPhase } from "./use-day-phase.ts";
+import { dayPreviewAvailable, nextNightView, type NightView, showsNight } from "./night-mode.ts";
+import { night as nightStyle } from "./surface.ts";
 import { makeSaveQueue } from "./save-queue.ts";
 import { ColumnEditor } from "./column-editor.tsx";
 import { useWidgetHost } from "./widget-host.tsx";
@@ -119,10 +121,22 @@ export function App() {
 
   const schedule = state.is === "ready" ? state.layout.schedule : defaultSchedule;
   const phase = useDayPhase(schedule);
-  const night = phase === "night";
+  // Previewing daytime at night, to see and edit column colors. It lasts only
+  // while admin mode does, so admin mode always starts without it.
+  const [dayPreview, setDayPreview] = useState(false);
+  useEffect(() => {
+    if (!admin) setDayPreview(false);
+  }, [admin]);
+  const night = showsNight(phase, admin, dayPreview);
+  // Whether the last change between day and night was the user's, to show it quickly.
+  const [nightView, setNightView] = useState<NightView>({ night, phase, quick: false });
+  if (night !== nightView.night || phase !== nightView.phase) {
+    setNightView(nextNightView(nightView, { night, phase }));
+  }
+  const nightPace = nightView.quick ? nightStyle.quickTransition : nightStyle.transition;
   const board: Board = useMemo(
-    () => ({ admin, dispatch, edit: setEditing, schedule, night }),
-    [admin, dispatch, schedule, night],
+    () => ({ admin, dispatch, edit: setEditing, schedule, night, nightPace }),
+    [admin, dispatch, schedule, night, nightPace],
   );
 
   switch (state.is) {
@@ -153,6 +167,11 @@ export function App() {
             shown={admin}
             message={`Admin mode · press ${adminModeKey} to exit`}
             onExit={exitAdmin}
+            dayPreview={{
+              available: dayPreviewAvailable(phase),
+              on: admin && dayPreview,
+              onToggle: () => setDayPreview((on) => !on),
+            }}
           />
         }
       />

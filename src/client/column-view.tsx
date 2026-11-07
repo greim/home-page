@@ -100,7 +100,7 @@ function ColumnHeader(props: {
   editHeading: boolean;
   onHeadingEditEnd: () => void;
 }) {
-  const { admin, dispatch, night } = useBoard();
+  const { admin, dispatch, night, nightPace } = useBoard();
   const { column } = props;
   // Shares the heading's adaptive color.
   const icon = (
@@ -120,7 +120,7 @@ function ColumnHeader(props: {
       top="0"
       zIndex="1"
       bgColor={columnBackground(column.color, night)}
-      transition={columnBackgroundTransition}
+      transition={columnBackgroundTransition(nightPace)}
       {...columnHeadingBand}
       align="center"
       gap="2"
@@ -159,7 +159,7 @@ export function ColumnView(props: {
   editHeading: boolean;
   onHeadingEditEnd: () => void;
 }) {
-  const { admin, edit, night } = useBoard();
+  const { admin, edit, night, nightPace } = useBoard();
   const { column } = props;
   return (
     // Column text is always white: every column color shares one mid lightness,
@@ -168,7 +168,7 @@ export function ColumnView(props: {
       appearance="dark"
       hasBackground={false}
       bgColor={columnBackground(column.color, night)}
-      transition={`${columnBackgroundTransition}, ${columnCornersTransition}`}
+      transition={`${columnBackgroundTransition(nightPace)}, ${columnCornersTransition}`}
       color="white"
       textShadow={surface.columnTextShadow}
       h="full"

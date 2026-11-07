@@ -1,12 +1,13 @@
 import { Button, type ButtonProps, Flex, Text, Theme } from "@chakra-ui/react";
-import { LuX } from "react-icons/lu";
+import { LuSun, LuX } from "react-icons/lu";
 import { screenshotSkip } from "./screenshot.ts";
 import { smallCorners, surface } from "./surface.ts";
 
 const { gap, adminBarHeight } = surface;
 
 /**
- * The strip along the top of the viewport in admin mode, saying how to leave it.
+ * The strip along the top of the viewport in admin mode, saying how to leave it,
+ * with a toggle that previews daytime at night (to see the columns' colors).
  * It hangs from the top edge (no space above it), centered and only as
  * wide as its contents, with squircled bottom corners. It stays mounted, sliding
  * up off-screen (and inert) when hidden, so it can animate both in and out.
@@ -15,7 +16,14 @@ export function AdminBar(props: {
   shown: boolean;
   message: string;
   onExit: () => void;
+  dayPreview: {
+    /** Offered at night only. */
+    readonly available: boolean;
+    readonly on: boolean;
+    readonly onToggle: () => void;
+  };
 }) {
+  const { dayPreview } = props;
   return (
     <Theme appearance="light" hasBackground={false}>
       <Flex
@@ -58,6 +66,20 @@ export function AdminBar(props: {
         <Text alignSelf="center" ps="1" pe="4" fontSize="sm" color="fg.muted">
           {props.message}
         </Text>
+        <AdminBarButton
+          title={dayPreview.available
+            ? dayPreview.on ? "Back to night" : "Show daytime, to see column colors"
+            : "It's daytime already"}
+          aria-label="Show daytime"
+          aria-pressed={dayPreview.on}
+          disabled={!dayPreview.available}
+          bg={dayPreview.on ? "yellow.100" : undefined}
+          color={dayPreview.on ? "yellow.700" : undefined}
+          px="3"
+          onClick={dayPreview.onToggle}
+        >
+          <LuSun />
+        </AdminBarButton>
       </Flex>
     </Theme>
   );

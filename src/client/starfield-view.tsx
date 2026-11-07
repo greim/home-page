@@ -23,13 +23,25 @@ const starStyles = `
 const windowAspect = () =>
   globalThis.innerWidth > 0 ? globalThis.innerHeight / globalThis.innerWidth : 9 / 16;
 
-export function Starfield(props: { night: boolean }) {
+export function Starfield(props: {
+  night: boolean;
+  /** How quickly the field fades in or out (a CSS transition's duration and easing). */
+  pace: string;
+  /**
+   * Whether night is really falling, so a fresh field's stars come out one by one;
+   * otherwise (the user ending a daytime preview) the stars there were come back.
+   */
+  fresh: boolean;
+}) {
   // A fresh field each time night falls, so its stars come out anew.
   const [nightsFallen, setNightsFallen] = useState(0);
   const [wasNight, setWasNight] = useState(props.night);
+  // Stars stay once out, faded with the field by day, so they can come back as they were.
+  const [starsOut, setStarsOut] = useState(props.night);
   if (props.night !== wasNight) {
     setWasNight(props.night);
-    if (props.night) setNightsFallen((n) => n + 1);
+    if (props.night && props.fresh) setNightsFallen((n) => n + 1);
+    if (props.night) setStarsOut(true);
   }
   const height = useMemo(() => Math.round(fieldWidth * windowAspect()), [nightsFallen]);
   const stars = useMemo(
@@ -59,13 +71,13 @@ export function Starfield(props: { night: boolean }) {
       viewBox={`0 0 ${fieldWidth} ${height}`}
       preserveAspectRatio="xMidYMid slice"
       opacity={props.night ? nightStyle.starfieldOpacity : 0}
-      transition={`opacity ${nightStyle.transition}`}
+      transition={`opacity ${props.pace}`}
     >
       <style>{starStyles}</style>
       <defs>
         <path id={starId} d={starPath()} />
       </defs>
-      {props.night || nightsFallen > 0
+      {starsOut
         ? stars.map((s, i) => (
           <use
             key={i}

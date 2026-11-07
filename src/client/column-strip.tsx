@@ -64,7 +64,7 @@ export function ColumnStrip(props: {
    */
   adminBar: ReactNode;
 }) {
-  const { admin, dispatch, night } = useBoard();
+  const { admin, dispatch, night, nightPace } = useBoard();
   const slots = stripSlots(props.columns, admin);
   const [rawOffset, setOffset] = useState(() => offsetOfColumn(loadLeadingColumn(), slots));
   const view = carousel(rawOffset, slots);
@@ -102,7 +102,7 @@ export function ColumnStrip(props: {
       // Unlike hidden, clip doesn't contain the frame's top margin; flow-root does.
       display="flow-root"
       bgColor={surface.bg}
-      transition={`background-color ${nightStyle.transition}`}
+      transition={`background-color ${nightPace}`}
       isolation="isolate"
       css={{ ...surfaceColors(night), ...adminButtonStyles, ...pageTypography }}
     >
@@ -186,7 +186,7 @@ export function ColumnStrip(props: {
       >
         Press {adminModeKey} to {admin ? "exit" : "enter"} admin mode
       </Box>
-      <Starfield night={night} />
+      <Starfield night={night} pace={nightPace} fresh={nightPace === nightStyle.transition} />
     </Box>
   );
 }
