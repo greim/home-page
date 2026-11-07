@@ -26,11 +26,22 @@ function FieldForm(props: { field: FormField }) {
     >
       <Input
         name="q"
-        size="sm"
         // White whatever the column's color, so the text and placeholder are fixed dark too.
+        // Sunk into the column, and a little faded until focused.
         bg="white"
         color="gray.900"
-        _placeholder={{ color: "gray.500" }}
+        _placeholder={{ color: "gray.600" }}
+        fontSize="1rem"
+        lineHeight="1"
+        h="auto"
+        px="0.5em"
+        py="0.4em"
+        borderWidth="0"
+        borderRadius="0.2em"
+        boxShadow="-1px -1px 0 #000, 1px 1px 0 rgba(255, 255, 255, 0.25), 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.2) inset"
+        opacity={0.8}
+        _focus={{ opacity: 1 }}
+        textShadow="none"
         autoComplete="off"
         placeholder={props.field.label}
         aria-label={props.field.label}
@@ -45,10 +56,10 @@ function FieldForm(props: { field: FormField }) {
 export function FormGrid(props: WidgetProps<FormGridConfig>) {
   const { config } = props;
   if (config.fields.length === 0) {
-    return <Text fontSize="sm" color="fg.muted">No fields yet.</Text>;
+    return <Text opacity={0.7}>No fields yet.</Text>;
   }
   return (
-    <SimpleGrid columns={config.gridColumns} gap="3">
+    <SimpleGrid columns={config.gridColumns} gap="1rem">
       {config.fields.map((field) => <FieldForm key={field.id} field={field} />)}
     </SimpleGrid>
   );

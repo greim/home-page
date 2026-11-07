@@ -13,7 +13,7 @@ import {
 } from "./column-draft.ts";
 import { toDraft, withReport } from "./widget-draft.ts";
 
-const type = (id: string) => ({ id, title: id, defaultConfig: {} });
+const type = (id: string) => ({ id, defaultConfig: {} });
 
 const column: Column = {
   ...newColumn("c", "LuStar"),
@@ -41,10 +41,10 @@ Deno.test("selectWidget and selectedDraft track the selection", () => {
 
 Deno.test("updateWidget swaps in the edited draft by id", () => {
   const draft = toColumnDraft(column, null);
-  const edited = toDraft({ ...newWidget(type("form-grid"), "b"), subheading: "Edited" });
+  const edited = toDraft({ ...newWidget(type("form-grid"), "b"), config: { edited: true } });
   assertEquals(
-    updateWidget(draft, edited).widgets.map((w) => w.widget.subheading),
-    ["snippets", "Edited", "bookmarks"],
+    updateWidget(draft, edited).widgets.map((w) => w.widget.config),
+    [{}, { edited: true }, {}],
   );
 });
 

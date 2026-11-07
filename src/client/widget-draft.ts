@@ -1,5 +1,6 @@
 /** Pure editing logic behind a widget's pane in the column editor. */
-import type { Widget } from "../common/model.ts";
+import { type Widget, widgetHeading } from "../common/model.ts";
+import type { Registry } from "../common/widgets.ts";
 import type { DraftReport } from "./widget-kit/contract.ts";
 
 /**
@@ -27,3 +28,10 @@ export const finishDraft = (draft: Draft): Finished => {
   }
   return report.ok ? { ok: true, widget: { ...widget, config: report.config } } : report;
 };
+
+/**
+ * What to call a widget in admin mode: its own heading, else its type's title
+ * (or its type's id, while the registry loads or if the type is missing).
+ */
+export const widgetLabel = (widget: Widget, types: Registry["widgets"]): string =>
+  widgetHeading(widget) ?? types.find((t) => t.id === widget.is)?.title ?? widget.is;

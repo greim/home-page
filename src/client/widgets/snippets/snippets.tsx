@@ -1,7 +1,7 @@
 import { chakra, Stack, Text, Theme } from "@chakra-ui/react";
 import { Effect } from "effect";
 import { Fragment, useState } from "react";
-import { codeBox, hiddenScrollbar } from "../../surface.ts";
+import { codeBox, hiddenScrollbar, widgetHeading } from "../../surface.ts";
 import type { WidgetProps } from "../../widget-kit/views.tsx";
 import type { Snippet, SnippetsConfig } from "./config.ts";
 import { graphemeLines, isCopyableChar } from "./graphemes.ts";
@@ -37,7 +37,7 @@ function CommentLine(props: { label: string; flash: Flash }) {
   if (label === "" && flash === null) return null;
   return (
     <>
-      {label !== "" && <chakra.span opacity={0.5}># {label}</chakra.span>}
+      {label !== "" && <chakra.span fontSize="67%" opacity={0.5}># {label}</chakra.span>}
       {flash !== null && (
         <chakra.span color={flash.ok ? "fg.success" : "fg.error"}>
           {label !== "" && "  "}
@@ -105,18 +105,18 @@ function SnippetBox(props: {
           title: "Click to copy",
           outline: ownFlash?.ok ? "2px solid" : "none",
           outlineColor: "green.500",
-          _hover: { bg: "gray.700" },
+          _hover: { bgColor: "rgba(90, 90, 90, 0.6)" },
           onClick: () => props.copy(snippet.id, snippet.text),
         }
         : {})}
     >
       <chakra.pre
         m="0"
-        px="3"
-        py="2"
+        px="0.5em"
+        py="0.4em"
         fontFamily="mono"
-        fontSize="sm"
         color="fg"
+        textShadow="0.05em 0.05em 0.1em rgba(0, 0, 0, 0.7)"
         whiteSpace="pre"
       >
         <CommentLine label={snippet.label} flash={ownFlash} />
@@ -134,13 +134,17 @@ function SnippetBox(props: {
 
 export function Snippets(props: WidgetProps<SnippetsConfig>) {
   const { snippets } = props.config;
+  const heading = props.config.heading.trim();
   const { flash, copy } = useCopy();
   return (
-    <Stack gap="4">
-      {snippets.map((snippet) => (
-        <SnippetBox key={snippet.id} snippet={snippet} flash={flash} copy={copy} />
-      ))}
-      {snippets.length === 0 && <Text fontSize="sm" color="fg.muted">No snippets yet.</Text>}
-    </Stack>
+    <>
+      {heading !== "" && <chakra.h3 {...widgetHeading}>{heading}</chakra.h3>}
+      <Stack gap="0.7rem">
+        {snippets.map((snippet) => (
+          <SnippetBox key={snippet.id} snippet={snippet} flash={flash} copy={copy} />
+        ))}
+        {snippets.length === 0 && <Text opacity={0.7}>No snippets yet.</Text>}
+      </Stack>
+    </>
   );
 }

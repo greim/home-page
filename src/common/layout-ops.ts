@@ -24,7 +24,6 @@ export type LayoutAction =
    * that no longer exists stays in the edited column rather than being lost.
    */
   | { is: "edit-column"; column: Column; sent: ReadonlyArray<SentWidget> }
-  | { is: "toggle-widget"; columnId: string; widgetId: string }
   /** A widget saved a change to its own config, e.g. a bookmark folder opened. */
   | { is: "set-widget-config"; columnId: string; widgetId: string; config: unknown };
 
@@ -123,13 +122,6 @@ export const applyAction = (layout: Layout, action: LayoutAction): Layout => {
       }));
     case "edit-column":
       return editColumn(layout, action);
-    case "toggle-widget":
-      return updateWidget(
-        layout,
-        action.columnId,
-        action.widgetId,
-        (widget) => ({ ...widget, collapsed: !widget.collapsed }),
-      );
     case "set-widget-config":
       return updateWidget(
         layout,

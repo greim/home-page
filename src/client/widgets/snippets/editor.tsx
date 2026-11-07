@@ -1,9 +1,9 @@
-/** Edits the snippets: each one's label, text, and how it copies. */
+/** Edits the heading, and the snippets: each one's label, text, and how it copies. */
 import { Box, Button, HStack, Input, NativeSelect, Stack, Textarea } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { LuPlus } from "react-icons/lu";
 import { mapWhere, removeWhere } from "../../../common/arrays.ts";
-import { RowControls } from "../../widget-kit/form.tsx";
+import { Label, RowControls } from "../../widget-kit/form.tsx";
 import { nudge } from "../../widget-kit/rows.ts";
 import type { EditorProps } from "../../widget-kit/views.tsx";
 import type { Snippet, SnippetCopy, SnippetsConfig } from "./config.ts";
@@ -12,17 +12,32 @@ const newId = () => crypto.randomUUID();
 
 export function SnippetsEditor(props: EditorProps<SnippetsConfig>) {
   const { reportDraft } = props;
+  const [heading, setHeadingState] = useState(props.config.heading);
   const [snippets, setSnippetsState] = useState(props.config.snippets);
 
   useEffect(() => reportDraft({ ok: true, config: props.config }), []);
 
   const setSnippets = (next: ReadonlyArray<Snippet>) => {
     setSnippetsState(next);
-    reportDraft({ ok: true, config: { snippets: next } });
+    reportDraft({ ok: true, config: { heading, snippets: next } });
+  };
+
+  const setHeading = (next: string) => {
+    setHeadingState(next);
+    reportDraft({ ok: true, config: { heading: next, snippets } });
   };
 
   return (
     <Stack gap="4">
+      <Box>
+        <Label>Heading</Label>
+        <Input
+          size="sm"
+          value={heading}
+          placeholder="None"
+          onChange={(e) => setHeading(e.target.value)}
+        />
+      </Box>
       {snippets.map((s) => {
         const update = (patch: Partial<Snippet>) =>
           setSnippets(mapWhere(snippets, (x) => x.id === s.id, (x) => ({ ...x, ...patch })));

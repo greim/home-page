@@ -13,5 +13,9 @@ export const Snippet = Schema.Struct({
 });
 export type Snippet = typeof Snippet.Type;
 
-export const SnippetsConfig = Schema.Struct({ snippets: Schema.Array(Snippet) });
+export const SnippetsConfig = Schema.Struct({
+  /** Shown above the snippets. None when blank. */
+  heading: Schema.optionalWith(Schema.String, { default: () => "" }),
+  snippets: Schema.Array(Snippet),
+});
 export type SnippetsConfig = typeof SnippetsConfig.Type;

@@ -4,7 +4,7 @@
  * (via bin/check-layout.ts) on the agent's layout when a turn ends.
  */
 import { Effect, Either, Schema } from "effect";
-import type { Layout } from "../src/common/model.ts";
+import { type Layout, widgetHeading } from "../src/common/model.ts";
 import { decodeManifestModule, type WidgetManifest } from "../src/common/widgets.ts";
 import { type BuildIoError, WidgetBuildIo } from "./widget-build.ts";
 
@@ -54,8 +54,10 @@ export const configProblems = (
 ): ReadonlyArray<string> =>
   layout.columns.flatMap((column) =>
     column.widgets.flatMap((widget) => {
-      const where =
-        `Widget ${widget.id} ("${widget.subheading}") in column ${column.id} ("${column.heading}")`;
+      const heading = widgetHeading(widget);
+      const where = `Widget ${widget.id}${
+        heading === null ? "" : ` ("${heading}")`
+      } in column ${column.id} ("${column.heading}")`;
       const type = types.get(widget.is);
       if (type === undefined) {
         return [`${where}: there's no widget type "${widget.is}" in src/client/widgets/`];

@@ -21,8 +21,6 @@ const layoutWith = (...widgets: ReadonlyArray<{ is: string; config: unknown }>):
     heading: "Home",
     widgets: widgets.map((w, i) => ({
       id: `w${i + 1}`,
-      subheading: "Time",
-      collapsed: false,
       ...w,
     })),
   }],
@@ -35,7 +33,7 @@ Deno.test("widget configs are decoded with their types' schemas", () => {
   ]);
   const layout = layoutWith(
     { is: "clock", config: { timeZone: "UTC" } },
-    { is: "clock", config: { timeZone: 3 } },
+    { is: "clock", config: { heading: "Time", timeZone: 3 } },
     { is: "ticker", config: {} },
     { is: "broken", config: {} },
   );
@@ -43,7 +41,10 @@ Deno.test("widget configs are decoded with their types' schemas", () => {
   const problems = configProblems(layout, types);
   assertEquals(problems.length, 3);
   assertStringIncludes(problems[0] ?? "", `Widget w2 ("Time") in column c1 ("Home"): its config`);
-  assertStringIncludes(problems[1] ?? "", `no widget type "ticker"`);
+  assertStringIncludes(
+    problems[1] ?? "",
+    `Widget w3 in column c1 ("Home"): there's no widget type "ticker"`,
+  );
   assertStringIncludes(problems[2] ?? "", "title is missing");
 });
 

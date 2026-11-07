@@ -15,8 +15,6 @@ export const Widget = Schema.Struct({
   id: Schema.String,
   /** The widget type's ID. */
   is: WidgetId,
-  subheading: Schema.String,
-  collapsed: Schema.Boolean,
   /** The widget's settings, as JSON. Only the widget type knows its shape. */
   config: Schema.Unknown,
 });
@@ -30,6 +28,10 @@ const isRecord = (u: unknown): u is Readonly<Record<string, unknown>> =>
  * - Before widgets were MFEs, a widget's settings sat beside its id, e.g.
  *   `{ is: "bookmarks", id, subheading, collapsed, items }`. They move into `config`.
  * - Briefly, MFE widgets were `{ is: "mfe", mfe: "<type>", config, ... }`.
+ * - Until NEW_LAYOUT.md, the page gave every widget a heading (`subheading`)
+ *   that collapsed it (`collapsed`). Now a widget shows its own heading, if
+ *   any, so they move into `config` as `heading` and `collapsed` (unless it
+ *   already has them). Widget types that don't use them ignore them.
  * Anything else is left for the schema to judge.
  */
 export const migrateWidget = (stored: unknown): unknown => {
@@ -38,11 +40,19 @@ export const migrateWidget = (stored: unknown): unknown => {
   }
   if (stored.is === "mfe" && typeof stored.mfe === "string") {
     const { mfe, ...rest } = stored;
-    return { ...rest, is: mfe };
+    return migrateWidget({ ...rest, is: mfe });
   }
   if (!("config" in stored)) {
     const { id, is, subheading, collapsed, ...config } = stored;
-    return { id, is, subheading, collapsed, config };
+    return migrateWidget({ id, is, subheading, collapsed, config });
+  }
+  if ("subheading" in stored || "collapsed" in stored) {
+    const { subheading, collapsed, config, ...rest } = stored;
+    const moved = {
+      ...(typeof subheading === "string" ? { heading: subheading } : {}),
+      ...(typeof collapsed === "boolean" ? { collapsed } : {}),
+    };
+    return { ...rest, config: isRecord(config) ? { ...moved, ...config } : config };
   }
   return stored;
 };
@@ -115,12 +125,20 @@ export const isUntouchedColumn = (column: Column): boolean =>
 
 /** A new widget of a type the widget build found, with its default settings. */
 export const newWidget = (
-  type: { readonly id: string; readonly title: string; readonly defaultConfig: unknown },
+  type: { readonly id: string; readonly defaultConfig: unknown },
   id: string,
 ): Widget => ({
   id,
   is: type.id,
-  subheading: type.title,
-  collapsed: false,
   config: type.defaultConfig,
 });
+
+/**
+ * The widget's own heading, if its config has one (by convention, a non-empty
+ * `heading` string), for naming it in admin mode and error messages.
+ */
+export const widgetHeading = (widget: Widget): string | null =>
+  isRecord(widget.config) && typeof widget.config.heading === "string" &&
+    widget.config.heading.trim() !== ""
+    ? widget.config.heading
+    : null;

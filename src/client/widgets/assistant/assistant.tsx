@@ -236,8 +236,10 @@ function ChatComposer(props: {
         rows={2}
         resize="none"
         bg="white"
-        // Black on the white field, whatever color the column's own text is.
+        // Black on the white field, whatever color the column's own text is, and
+        // without the shadow that lifts white text off the column.
         color="black"
+        textShadow="none"
         _placeholder={{ color: "gray.500" }}
         boxShadow={surface.faintInsetShadow}
         // Twice as strong: the field's 50% opacity fades its border too, and

@@ -1,5 +1,5 @@
-/** One widget's pane in the column editor: its subheading, then its own editor view. */
-import { Box, Input, Stack, Text } from "@chakra-ui/react";
+/** One widget's pane in the column editor: its own editor view. */
+import { Stack, Text } from "@chakra-ui/react";
 import { useMemo, useRef } from "react";
 import { MfeView } from "./mfe/mfe-view.tsx";
 import { WidgetProblem } from "./widget-card.tsx";
@@ -33,7 +33,7 @@ function WidgetEditor(props: { draft: Draft; onChange: (draft: Draft) => void })
   );
 }
 
-/** Edits one widget's draft: its subheading and its type's own settings. */
+/** Edits one widget's draft: its type's own settings (a heading among them, if it has one). */
 export function WidgetForm(props: {
   draft: Draft;
   onChange: (draft: Draft) => void;
@@ -42,15 +42,6 @@ export function WidgetForm(props: {
   const { draft, onChange } = props;
   return (
     <Stack gap="4">
-      <Box>
-        <Label>Subheading</Label>
-        <Input
-          size="sm"
-          value={draft.widget.subheading}
-          onChange={(e) =>
-            onChange({ ...draft, widget: { ...draft.widget, subheading: e.target.value } })}
-        />
-      </Box>
       <WidgetEditor draft={draft} onChange={onChange} />
       {props.error !== null && <Text color="fg.error" fontSize="sm">{props.error}</Text>}
     </Stack>

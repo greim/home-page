@@ -34,7 +34,7 @@ import {
 } from "./column-draft.ts";
 import { IconPicker, NamedIcon } from "./icon-picker.tsx";
 import { Label, WidgetForm } from "./widget-editor.tsx";
-import type { Draft } from "./widget-draft.ts";
+import { type Draft, widgetLabel } from "./widget-draft.ts";
 import { registeredTypes, useWidgetHost } from "./widget-host.tsx";
 
 const newId = () => crypto.randomUUID();
@@ -105,7 +105,7 @@ function WidgetList(props: {
     <Stack gap="1">
       {draft.widgets.map((w, i) => {
         const id = w.widget.id;
-        const name = w.widget.subheading || "Untitled";
+        const name = widgetLabel(w.widget, types);
         const selected = draft.selectedId === id;
         const shadow = drag?.gap === i
           ? dropLine("top")

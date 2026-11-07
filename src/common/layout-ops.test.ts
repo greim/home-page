@@ -29,14 +29,12 @@ const widgetIds = (l: Layout, columnId: string) =>
   l.columns.find((c) => c.id === columnId)?.widgets.map((w) => w.id);
 
 /** A widget type, as the registry lists it. */
-const type = (id: string) => ({ id, title: id, defaultConfig: {} });
+const type = (id: string) => ({ id, defaultConfig: {} });
 
 const bookmarks: Widget = {
   is: "bookmarks",
   id: "w1",
-  subheading: "Links",
-  collapsed: false,
-  config: { items: [] },
+  config: { heading: "Links", items: [] },
 };
 
 Deno.test("replace-layout swaps in the new layout", () => {
@@ -148,15 +146,6 @@ Deno.test("edit-column is a no-op for an unknown column", () => {
   assertEquals(applyAction(l, { is: "edit-column", column: column("nope"), sent: [] }), l);
 });
 
-Deno.test("toggle-widget flips collapsed", () => {
-  const l = applyAction(layout(column("a", [bookmarks])), {
-    is: "toggle-widget",
-    columnId: "a",
-    widgetId: "w1",
-  });
-  assertEquals(l.columns.at(0)?.widgets.at(0)?.collapsed, true);
-});
-
 Deno.test("set-widget-config replaces only that widget's config", () => {
   const other = { ...bookmarks, id: "w2" };
   const l = applyAction(layout(column("a", [bookmarks, other])), {
@@ -165,9 +154,10 @@ Deno.test("set-widget-config replaces only that widget's config", () => {
     widgetId: "w1",
     config: { items: ["changed"] },
   });
-  assertEquals(l.columns.at(0)?.widgets.map((w) => w.config), [{ items: ["changed"] }, {
-    items: [],
-  }]);
+  assertEquals(l.columns.at(0)?.widgets.map((w) => w.config), [
+    { items: ["changed"] },
+    bookmarks.config,
+  ]);
 });
 
 Deno.test("discard-untouched-columns removes only listed columns left as created", () => {

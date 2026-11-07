@@ -1,4 +1,4 @@
-import { Box, Button, chakra, Flex, Heading, Input, Stack, Theme } from "@chakra-ui/react";
+import { Box, Button, chakra, Flex, Heading, Input, Theme } from "@chakra-ui/react";
 import { useRef, useState } from "react";
 import { LuPlus } from "react-icons/lu";
 import { columnColorCss } from "../common/column-color.ts";
@@ -189,11 +189,11 @@ export function ColumnView(props: {
         editHeading={props.editHeading}
         onHeadingEditEnd={props.onHeadingEditEnd}
       />
-      <Stack gap="4" px={surface.columnPaddingX} pb={surface.columnPaddingBottom}>
+      <Box px={surface.columnPaddingX} pb={surface.columnPaddingBottom}>
         {column.widgets.map((widget) => (
           <WidgetCard key={widget.id} columnId={column.id} widget={widget} />
         ))}
-      </Stack>
+      </Box>
     </Theme>
   );
 }

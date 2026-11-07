@@ -77,11 +77,15 @@ The layout schema no longer lists widget types. A widget in the layout is:
 {
   id: string; // this instance
   is: string; // the widget type's ID, e.g. "bookmarks"
-  subheading: string;
-  collapsed: boolean;
   config: unknown; // decoded by the widget itself
 }
 ```
+
+The shell draws no heading of its own (see [NEW_LAYOUT.md](./NEW_LAYOUT.md)): a widget that wants
+one draws it, from its config. By convention that's a `heading` string, which admin mode also names
+the widget by (`widgetHeading` in `src/common/model.ts`); bookmarks also has `collapsed`. Widgets
+saved with the shell's old `subheading` and `collapsed` get them moved into `config` as `heading`
+and `collapsed`; types that don't use them ignore them.
 
 The existing types keep their IDs (`bookmarks`, `snippets`, `form-grid`, `assistant`). A layout
 saved before widgets were MFEs is migrated as it's read: each widget's type-specific fields move
@@ -108,16 +112,18 @@ decodes it with the widget's schema and encodes it again before handing it back.
 - The look isn't passed as props. A widget's DOM sits inside its column, so it inherits the column's
   text color and fonts (monospace), and Chakra's light or dark tokens through CSS, as the built-in
   widgets did.
-- The add-widget menu lists widget types from the registry. A new widget gets the type's title as
-  its subheading, and its default config.
+- The add-widget menu lists widget types from the registry. A new widget gets its type's default
+  config.
+- Each widget sits in its own section of the column, divided from the one above it. Widgets that
+  have a heading style it with `widgetHeading` from `src/client/surface.ts`, so they match.
 - The shell shows an error in the widget's card when its type isn't in the registry, its bundle
   fails to load, its config doesn't decode, or it throws while rendering. If a developer deletes a
   widget type the layout still uses, that's the error they get.
 
 The assistant is only a widget: the page has no other way in to it. Its conversations, one per
 assistant widget, live in its bundle for the life of the page, so each widget keeps its own while
-collapsed. When it applies a layout, it sends it to the app on a `layout-applied` channel, for the
-page to show.
+its column is being edited. When it applies a layout, it sends it to the app on a `layout-applied`
+channel, for the page to show.
 
 ### Secrets
 

@@ -120,10 +120,30 @@ export const columnHeadingBand = {
   boxShadow: "0 1px 0 rgba(255, 255, 255, 0.25), 0 0 2rem rgba(255, 255, 255, 0.15)",
 } as const;
 
-/** Text style for widget headings. */
+/**
+ * Each widget in a column: a section, divided from the one above it by a groove
+ * (a light line over a dark one) that runs the column's full width. The first
+ * sits right below the column heading, which has its own edge.
+ */
+export const widgetSection = {
+  mx: `calc(-1 * ${surface.columnPaddingX})`,
+  px: surface.columnPaddingX,
+  mt: "1rem",
+  pt: "1rem",
+  borderTop: "1px solid rgba(255, 255, 255, 0.25)",
+  boxShadow: "0 -1px 0 rgba(0, 0, 0, 0.3)",
+  _first: { mt: "0", pt: "0", borderTop: "none", boxShadow: "none" },
+} as const;
+
+/** Text style for a widget's own heading (e.g. bookmarks'), for widgets that have one. */
 export const widgetHeading = {
+  display: "block",
+  fontSize: "1.17rem",
+  lineHeight: String(textSpacing),
+  fontFamily: "heading",
   fontWeight: "normal",
   color: "fg",
+  mb: "1rem",
 } as const;
 
 /**
@@ -150,16 +170,11 @@ export const smallCorners = { borderRadius: smallCornerRadius } as const;
  * below and right.
  */
 export const codeBox = {
-  bg: "rgba(69, 69, 69, 0.5)",
+  bgColor: "rgba(69, 69, 69, 0.5)",
+  /** Fine diagonal hatching. */
+  bgImage: "repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 5px)",
   lineHeight: String(codeTextSpacing),
   borderRadius: "0.25em",
   boxShadow:
     "-1px -1px 0 rgba(0, 0, 0, 0.7), 1px 1px 0 rgba(255, 255, 255, 0.25), 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.15) inset",
 } as const;
-
-/**
- * How far a widget heading's text sits from the widget's left edge: its 1em
- * expand/collapse chevron (headings are 1rem) plus the 0.25rem gap after it.
- * Widget content uses this to line its text up with the heading's.
- */
-export const widgetTextIndent = "1.25rem";
