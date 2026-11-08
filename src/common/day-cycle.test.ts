@@ -1,7 +1,9 @@
 import { assertEquals } from "@std/assert";
 import { Either, Schema } from "effect";
 import {
+  daysOfWeek,
   defaultSchedule,
+  defaultWeekend,
   nextChange,
   phaseAt,
   Schedule,
@@ -18,10 +20,24 @@ const decode = Schema.decodeUnknownEither(Schedule);
 
 Deno.test("Schedule accepts HH:MM times with the day starting first", () => {
   assertEquals(decode(defaultSchedule), Either.right(defaultSchedule));
+  const late = { startOfDay: "07:30", endOfDay: "23:59", weekend: { is: "none" } } as const;
+  assertEquals(decode(late), Either.right(late));
+});
+
+Deno.test("Schedules saved before the weekend was settable get Saturday and Sunday", () => {
   assertEquals(
-    decode({ startOfDay: "07:30", endOfDay: "23:59" }),
-    Either.right({ startOfDay: "07:30", endOfDay: "23:59" }),
+    decode({ startOfDay: "07:30", endOfDay: "15:30" }),
+    Either.right({ startOfDay: "07:30", endOfDay: "15:30", weekend: defaultWeekend }),
   );
+});
+
+Deno.test("Schedule rejects a weekend with no days, every day, a repeat or an unknown day", () => {
+  for (
+    const days of [[], [...daysOfWeek], ["saturday", "saturday"], ["sat"]]
+  ) {
+    const schedule = { ...defaultSchedule, weekend: { is: "days", days } };
+    assertEquals(Either.isLeft(decode(schedule)), true, JSON.stringify(days));
+  }
 });
 
 Deno.test("Schedule rejects malformed times and days that don't start before they end", () => {
@@ -105,11 +121,52 @@ Deno.test("workdayAt is the weekend from Friday's end of day until Monday's star
 });
 
 Deno.test("workdayAt follows the user's schedule", () => {
-  const schedule = { startOfDay: "07:30", endOfDay: "15:30" };
+  const schedule = { ...defaultSchedule, startOfDay: "07:30", endOfDay: "15:30" };
   assertEquals(workdayAt(at(6, 7, 29), schedule).is, "after-hours");
   assertEquals(
     summary(workdayAt(at(6, 11, 30), schedule)),
     expected("workday", at(6, 7, 30), at(6, 15, 30), 0.5),
+  );
+});
+
+Deno.test("workdayAt follows the user's weekend days", () => {
+  // Friday and Saturday off: Sunday is a workday, and Thursday's end starts the weekend.
+  const schedule = {
+    ...defaultSchedule,
+    weekend: { is: "days", days: ["friday", "saturday"] },
+  } as const;
+  assertEquals(
+    summary(workdayAt(at(8, 12), schedule)),
+    expected("workday", at(8, 9), at(8, 17), 0.375),
+  );
+  assertEquals(
+    summary(workdayAt(at(6, 12), schedule)),
+    expected("weekend", at(5, 17), at(8, 9), 0.297),
+  );
+  // Sunday night into Monday is after hours.
+  assertEquals(workdayAt(at(8, 20), schedule).is, "after-hours");
+});
+
+Deno.test("workdayAt splits the week around a single midweek day off", () => {
+  const schedule = { ...defaultSchedule, weekend: { is: "days", days: ["wednesday"] } } as const;
+  // Tuesday the 3rd's end until Thursday the 5th's start.
+  assertEquals(
+    summary(workdayAt(at(4, 12), schedule)),
+    expected("weekend", at(3, 17), at(5, 9), 0.475),
+  );
+  assertEquals(workdayAt(at(7, 12), schedule).is, "workday");
+});
+
+Deno.test("workdayAt is never the weekend without a set weekend", () => {
+  const schedule = { ...defaultSchedule, weekend: { is: "none" } } as const;
+  assertEquals(
+    summary(workdayAt(at(7, 13), schedule)),
+    expected("workday", at(7, 9), at(7, 17), 0.5),
+  );
+  // Friday night into Saturday is just after hours.
+  assertEquals(
+    summary(workdayAt(at(6, 17), schedule)),
+    expected("after-hours", at(6, 17), at(7, 9), 0),
   );
 });
 

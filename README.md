@@ -70,13 +70,13 @@ whenever something seems off.
     and to color it. Drag the hue and chroma sliders and the column changes as you go; OK closes
     them. Column colors share one lightness, so white text always reads on them.
 - The **admin bar** along the top says how to leave admin mode. At night, its sun button shows the
-  page in daytime, so you can see and edit column colors.
+  page in daytime, so you can see and edit column colors. Its gear opens the page's settings.
 - **Bookmarks** are edited as an outline: `Label | URL` per line. A line without a URL is a folder,
   and the indented lines below it are its links.
 - **Search field** URLs use `{query}` where what you type goes.
-- **Your day** (when night mode starts and ends, and what the workday bar follows) is 9 to 5 until
-  you change it. There's no control for it on the page yet: ask the assistant ("my day starts at
-  8"), or edit `schedule` in `data/layout.json` while the server is stopped.
+- **Your day and weekend** (when night mode starts and ends, and what the workday bar follows) are 9
+  to 5 with Saturday and Sunday off until you change them in settings (the admin bar's gear). If you
+  don't have a set weekend, say so there, and every day counts as a workday.
 
 ## The assistant
 

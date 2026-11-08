@@ -149,8 +149,8 @@ Build views with `src/client/widget-kit/`, not with bare components:
 ### The contract (`src/client/widget-kit/contract.ts`)
 
 - **`widget` view** props: `{ widgetId, config, saveConfig, schedule }`. Call `saveConfig` to save a
-  changed config (e.g. a bookmark folder opened). `schedule` is when the user's day starts and ends;
-  `src/common/day-cycle.ts` says what any moment is by it.
+  changed config (e.g. a bookmark folder opened). `schedule` is when the user's day starts and ends,
+  and their weekend; `src/common/day-cycle.ts` says what any moment is by it.
 - **`editor` view** props: `{ widgetId, config, reportDraft }`. `config` is where to start; the
   editor owns its state from then on. Call `reportDraft` with `{ ok: true, config }` or
   `{ ok: false, errorMessage }` when it opens and after each change. The column editor's Save

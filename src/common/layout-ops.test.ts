@@ -42,6 +42,12 @@ Deno.test("replace-layout swaps in the new layout", () => {
   assertEquals(applyAction(emptyLayout, { is: "replace-layout", layout }), layout);
 });
 
+Deno.test("set-schedule replaces the schedule and keeps the columns", () => {
+  const schedule = { startOfDay: "08:00", endOfDay: "16:00", weekend: { is: "none" } } as const;
+  const before = layout(column("a"));
+  assertEquals(applyAction(before, { is: "set-schedule", schedule }), { ...before, schedule });
+});
+
 Deno.test("add-column prepends, inserts, and appends", () => {
   let l = applyAction(emptyLayout, {
     is: "add-column",

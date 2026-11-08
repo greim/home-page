@@ -125,8 +125,8 @@ uses it, read `bookmarks/`.
 ## What a widget can use
 
 - **Props** (`WidgetProps`): `config` (decoded), `saveConfig(config)` to save a change made on the
-  page itself, `widgetId`, and `schedule` (when the user's day starts and ends; with `useNow` from
-  the kit and `src/common/day-cycle.ts`, for anything time-of-day).
+  page itself, `widgetId`, and `schedule` (when the user's day starts and ends, and their weekend;
+  with `useNow` from the kit and `src/common/day-cycle.ts`, for anything time-of-day).
 - **Chakra UI** components, set up as the page has it.
 - **Shared styles** in `src/client/surface.ts`: `widgetHeading` for headings, so they match other
   widgets; `codeBox` for monospace boxes; `hatching`.

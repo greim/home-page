@@ -165,8 +165,8 @@ function WorkdayEditor({ config, reportDraft }: EditorProps<WorkdayConfig>) {
   useEffect(() => reportDraft({ ok: true, config }), []);
   return (
     <Text fontSize="sm" color="fg.muted">
-      Shows how far through the workday, the hours after it, or the weekend it is. It follows when
-      your day starts and ends, a setting of the whole page.
+      Shows how far through the workday, the hours after it, or the weekend it is. It follows your
+      working hours and weekend, which you set in the page's settings (the gear in the admin bar).
     </Text>
   );
 }

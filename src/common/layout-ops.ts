@@ -4,11 +4,14 @@
  */
 import { insertAt, mapWhere, moveWhere, removeWhere } from "./arrays.ts";
 import type { ColumnColor } from "./column-color.ts";
+import type { Schedule } from "./day-cycle.ts";
 import { type Column, isUntouchedColumn, type Layout, type Widget } from "./model.ts";
 
 export type LayoutAction =
   /** Swaps in a whole new layout, e.g. one the admin assistant applied. */
   | { is: "replace-layout"; layout: Layout }
+  /** Sets when the user's day starts and ends, and their weekend (the page's settings). */
+  | { is: "set-schedule"; schedule: Schedule }
   | { is: "add-column"; index: number; column: Column }
   | { is: "rename-column"; columnId: string; heading: string }
   | { is: "remove-column"; columnId: string }
@@ -74,6 +77,8 @@ export const applyAction = (layout: Layout, action: LayoutAction): Layout => {
   switch (action.is) {
     case "replace-layout":
       return action.layout;
+    case "set-schedule":
+      return { ...layout, schedule: action.schedule };
     case "add-column":
       return {
         ...layout,

@@ -23,7 +23,7 @@ export type WidgetViewProps = {
   readonly config: unknown;
   /** Saves a changed config, e.g. a bookmark folder opened. */
   readonly saveConfig: (config: unknown) => void;
-  /** When the user's day starts and ends, for widgets that follow it (see day-cycle.ts). */
+  /** When the user's day starts and ends, and their weekend (see day-cycle.ts). */
   readonly schedule: Schedule;
 };
 

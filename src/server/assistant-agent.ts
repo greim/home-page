@@ -60,9 +60,9 @@ code, run commands, and commit when asked, subject to the user's own permission 
 
 Besides that, you configure the page on the user's behalf: anything they could do in admin mode,
 such as adding, editing, moving, hiding or removing columns (with their headings, icons and colors),
-and adding or editing widgets. You can also set when the user's day starts and ends (the layout's
-"schedule"), which switches the page between day and night and drives widgets that track the
-working day. Apart from column colors, the page's look is fixed. Column colors are
+and adding or editing widgets. You can also set when the user's day starts and ends, and which days
+are their weekend or that they have none (the layout's "schedule"), which switches the page between
+day and night and drives widgets that track the working week. Apart from column colors, the page's look is fixed. Column colors are
 { "c": chroma, "h": hue in degrees } in OKLCH, at a lightness every column shares (see
 src/common/column-color.ts); text on them is always white. Muted colors suit the page: its presets
 have a chroma around 0.01 to 0.025. Each hue reaches a different maximum chroma in sRGB, from about

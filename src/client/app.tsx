@@ -14,6 +14,7 @@ import { dayPreviewAvailable, nextNightView, type NightView, showsNight } from "
 import { night as nightStyle } from "./surface.ts";
 import { makeSaveQueue } from "./save-queue.ts";
 import { ColumnEditor } from "./column-editor.tsx";
+import { SettingsDialog } from "./settings-dialog.tsx";
 import { AssistantPanel } from "./assistant/assistant-panel.tsx";
 import {
   AssistantWindow,
@@ -134,6 +135,7 @@ export function App() {
     addedColumnIds.current = [];
   }, [admin, dispatch]);
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const assistantWindow = useAssistantWindow();
   const onApplied = useCallback(
     (layout: Layout) => dispatch({ is: "replace-layout", layout }),
@@ -193,6 +195,7 @@ export function App() {
               on: admin && dayPreview,
               onToggle: () => setDayPreview((on) => !on),
             }}
+            onSettings={() => setSettingsOpen(true)}
             onAssistant={assistantWindow.open}
           />
         }
@@ -206,6 +209,16 @@ export function App() {
           onSave={(action) => {
             dispatch(action);
             setEditing(null);
+          }}
+        />
+      )}
+      {settingsOpen && (
+        <SettingsDialog
+          schedule={schedule}
+          onClose={() => setSettingsOpen(false)}
+          onSave={(action) => {
+            dispatch(action);
+            setSettingsOpen(false);
           }}
         />
       )}

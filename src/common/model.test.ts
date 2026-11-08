@@ -44,7 +44,11 @@ Deno.test("Layouts saved before the schedule existed get 9 to 5", () => {
 });
 
 Deno.test("Layout keeps the user's schedule, and rejects an invalid one", () => {
-  const schedule = { startOfDay: "07:30", endOfDay: "15:30" };
+  const schedule = {
+    startOfDay: "07:30",
+    endOfDay: "15:30",
+    weekend: { is: "days", days: ["friday", "saturday"] },
+  } as const;
   assertEquals(
     Either.map(decode({ version: 1, schedule, columns: [] }), (l) => l.schedule),
     Either.right(schedule),

@@ -1,5 +1,5 @@
 import { Button, type ButtonProps, Flex, Text, Theme } from "@chakra-ui/react";
-import { LuBotMessageSquare, LuSun, LuX } from "react-icons/lu";
+import { LuBotMessageSquare, LuSettings, LuSun, LuX } from "react-icons/lu";
 import { screenshotSkip } from "./screenshot.ts";
 import { smallCorners, surface } from "./surface.ts";
 
@@ -7,8 +7,8 @@ const { gap, adminBarHeight } = surface;
 
 /**
  * The strip along the top of the viewport in admin mode, saying how to leave it,
- * with a toggle that previews daytime at night (to see the columns' colors), and
- * a button that opens the assistant.
+ * with a toggle that previews daytime at night (to see the columns' colors), a
+ * button that opens the page's settings, and one that opens the assistant.
  * It hangs from the top edge (no space above it), centered and only as
  * wide as its contents, with squircled bottom corners. It stays mounted, sliding
  * up off-screen (and inert) when hidden, so it can animate both in and out.
@@ -23,6 +23,8 @@ export function AdminBar(props: {
     readonly on: boolean;
     readonly onToggle: () => void;
   };
+  /** Opens the settings dialog. */
+  onSettings: () => void;
   /** Opens the assistant's window (or brings it back, if it's open). */
   onAssistant: () => void;
 }) {
@@ -82,6 +84,14 @@ export function AdminBar(props: {
           onClick={dayPreview.onToggle}
         >
           <LuSun />
+        </AdminBarButton>
+        <AdminBarButton
+          title="Settings"
+          aria-label="Open settings"
+          px="3"
+          onClick={props.onSettings}
+        >
+          <LuSettings />
         </AdminBarButton>
         <AdminBarButton
           title="Assistant"
