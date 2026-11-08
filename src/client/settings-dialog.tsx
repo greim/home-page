@@ -55,18 +55,18 @@ export function SettingsDialog(props: {
         <Dialog.Positioner>
           <Dialog.Content>
             <Dialog.Header>
-              <Dialog.Title>Settings</Dialog.Title>
+              <Dialog.Title>Time Settings</Dialog.Title>
             </Dialog.Header>
             <Dialog.Body>
               <Stack gap="6">
                 <Text fontSize="sm" color="fg.muted">
-                  Your working hours and weekend. The workday bar uses them to show how far through
-                  your workday, evening or weekend you are, and the page turns to night outside your
-                  hours.
+                  Set your working hours and weekend. The workday widget uses them
+                  to show progress through your workday, evening, and weekend.
+                  These also control when the app switches into night mode.
                 </Text>
                 <HStack gap="4" align="start">
                   <Box flex="1">
-                    <Label>Day starts</Label>
+                    <Label>Your day typically starts</Label>
                     <Input
                       type="time"
                       size="sm"
@@ -75,7 +75,7 @@ export function SettingsDialog(props: {
                     />
                   </Box>
                   <Box flex="1">
-                    <Label>Day ends</Label>
+                    <Label>Your day typically ends</Label>
                     <Input
                       type="time"
                       size="sm"
@@ -85,7 +85,7 @@ export function SettingsDialog(props: {
                   </Box>
                 </HStack>
                 <Box>
-                  <Label>Weekend</Label>
+                  <Label>Your weekend days</Label>
                   <Group attached w="full" role="group" aria-label="Weekend days">
                     {dialogWeek.map((day) => {
                       const on = draft.hasWeekend && draft.weekendDays.includes(day);
