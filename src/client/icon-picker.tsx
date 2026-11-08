@@ -16,7 +16,7 @@ export function NamedIcon(props: { name: string; boxSize: string }) {
 /**
  * Opens a searchable grid of every available icon when `children` (the trigger,
  * a single element that accepts a ref and click handler) is clicked. Picking one
- * closes the grid.
+ * closes the grid, as do Escape and a click outside it (which does nothing else).
  */
 export function IconPicker(props: {
   /** False inside a dialog, which the grid must render within to appear above it. */
@@ -37,6 +37,9 @@ export function IconPicker(props: {
         setQuery("");
       }}
       positioning={{ placement: "bottom-start" }}
+      // Blocks pointer events outside the grid, so a click off it only closes it
+      // rather than also activating whatever link or button was under the pointer.
+      modal
       lazyMount
       unmountOnExit
       initialFocusEl={() => document.getElementById("icon-picker-search")}
