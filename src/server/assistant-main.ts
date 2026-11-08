@@ -27,6 +27,11 @@ const serverIo = ServerIo.of({
   ),
   readWidgetFile: () =>
     Effect.fail(new IoError({ cause: "The assistant service serves no widgets" })),
+  geocodeBatch: () => Effect.fail(new IoError({ cause: "The assistant service doesn't geocode" })),
+  geocodeOneLine: () =>
+    Effect.fail(new IoError({ cause: "The assistant service doesn't geocode" })),
+  geocodeNominatim: () =>
+    Effect.fail(new IoError({ cause: "The assistant service doesn't geocode" })),
 });
 
 const toHttpRequest = (request: Request): HttpRequest => ({

@@ -12,6 +12,16 @@ import { handle } from "./routes.ts";
 const attempt = <A>(fn: () => Promise<A>) =>
   Effect.tryPromise({ try: fn, catch: (cause) => new IoError({ cause }) });
 
+const censusUrl = "https://geocoding.geo.census.gov/geocoder/locations";
+
+/** A geocoder's answer as text; a failure status becomes an error, so it isn't read as no match. */
+const responseText = (response: Response): Promise<string> => {
+  if (!response.ok) {
+    return Promise.reject(new Error(`The geocoder answered ${response.status}`));
+  }
+  return response.text();
+};
+
 const io = ServerIo.of({
   readLayoutFile: Effect.tryPromise({
     try: () => Deno.readTextFile(config.layoutFile),
@@ -27,6 +37,40 @@ const io = ServerIo.of({
     catch: (cause) => new IoError({ cause }),
   }),
   readWidgetFile: (path) => attempt(() => Deno.readFile(`${config.widgetsOutDir}/${path}`)),
+  geocodeBatch: (csv) =>
+    attempt(async () => {
+      const form = new FormData();
+      form.append("addressFile", new Blob([csv], { type: "text/csv" }), "addresses.csv");
+      form.append("benchmark", "Public_AR_Current");
+      const response = await fetch(`${censusUrl}/addressbatch`, { method: "POST", body: form });
+      return responseText(response);
+    }),
+  geocodeOneLine: (query) =>
+    attempt(async () =>
+      responseText(
+        await fetch(
+          `${censusUrl}/onelineaddress?${new URLSearchParams({
+            address: query,
+            benchmark: "Public_AR_Current",
+            format: "json",
+          })}`,
+        ),
+      )
+    ),
+  geocodeNominatim: (query) =>
+    attempt(async () =>
+      responseText(
+        await fetch(
+          `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
+            q: query,
+            format: "json",
+            limit: "1",
+            countrycodes: "us",
+          })}`,
+          { headers: { "user-agent": "home-page-radius-map (personal, localhost)" } },
+        ),
+      )
+    ),
 });
 
 const toHttpRequest = (request: Request): HttpRequest => ({
