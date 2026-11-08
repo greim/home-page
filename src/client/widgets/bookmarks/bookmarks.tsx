@@ -61,18 +61,25 @@ export function Bookmarks(props: WidgetProps<BookmarksConfig>) {
   return (
     <>
       {heading !== "" && (
-        <chakra.button
+        // A heading holding the button that opens and closes the list, so it's a heading to
+        // screen readers and when copied, as well as a control.
+        <chakra.h3
           {...widgetHeading}
           // Closed, the heading is all there is: no space below it.
           mb={open ? widgetHeading.mb : "0"}
-          cursor="pointer"
-          textAlign="start"
-          _before={{ content: open ? `"⏷ "` : `"⏵ "`, whiteSpace: "pre" }}
-          aria-expanded={open}
-          onClick={() => saveConfig(toggleCollapsed(config))}
         >
-          {heading}
-        </chakra.button>
+          <chakra.button
+            font="inherit"
+            color="inherit"
+            cursor="pointer"
+            textAlign="start"
+            _before={{ content: open ? `"⏷ "` : `"⏵ "`, whiteSpace: "pre" }}
+            aria-expanded={open}
+            onClick={() => saveConfig(toggleCollapsed(config))}
+          >
+            {heading}
+          </chakra.button>
+        </chakra.h3>
       )}
       {open && (
         <chakra.ul {...list}>
