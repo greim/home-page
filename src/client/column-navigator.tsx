@@ -95,7 +95,10 @@ function AddThumbnail(props: {
       aria-label={props.label}
       cursor="pointer"
       onClick={props.onClick}
-      flex={`0 0 ${thumbWidth}`}
+      // An explicit width, not just a flex-basis: Firefox leaves the flex-basis out when
+      // sizing Place (a shrink-to-fit flex container) to its content, so it would shrink.
+      flex="none"
+      w={thumbWidth}
       h={thumbHeight}
       {...thumbCorners}
       display="flex"
@@ -255,7 +258,10 @@ function ColumnThumbnail(props: {
       appearance="dark"
       hasBackground={false}
       position="relative"
-      flex={`0 0 ${thumbWidth}`}
+      // An explicit width, not just a flex-basis: Firefox leaves the flex-basis out when
+      // sizing Place (a shrink-to-fit flex container) to its content, so it would shrink.
+      flex="none"
+      w={thumbWidth}
       h={thumbHeight}
       {...thumbCorners}
       bgColor={columnBackground(column.color, night)}

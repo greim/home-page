@@ -33,7 +33,7 @@ It runs on your Mac, on localhost over HTTPS, and your layout never leaves your 
 | **[Claude Code](https://code.claude.com/)**, signed in | The assistant runs Claude Code (bundled with the Agent SDK) and signs in with your Claude Code login.                                                      | Install it, then run `claude` once to sign in                     |
 | **git**                                                | Getting the code, and for the assistant to commit when you ask it to.                                                                                      | Comes with the Xcode command line tools: `xcode-select --install` |
 | **openssl** and **security**                           | Making and trusting the certificate.                                                                                                                       | Built into macOS                                                  |
-| **A current browser**                                  | The page uses recent CSS (e.g. OKLCH colors). Current Chrome and Safari work.                                                                              | —                                                                 |
+| **A current browser**                                  | The page uses recent CSS (e.g. OKLCH colors). Current Chrome, Firefox and Safari work.                                                                     | —                                                                 |
 | **Ports 8443 and 9443** free                           | The server and the assistant service listen on them, on 127.0.0.1 only.                                                                                    | —                                                                 |
 
 **Linux and Windows** aren't supported yet, only because I don't run them, not because they're
@@ -87,8 +87,8 @@ whenever something seems off.
 ## The assistant
 
 The **assistant** button in the admin bar opens Claude Code in a window of its own, floating above
-your other windows (in Chrome or Edge; elsewhere, a panel at the side of the page). It's another way
-of using Claude Code in this repo, as if you'd typed into it in a terminal:
+your other windows (in Chrome, Edge or Firefox; elsewhere, a panel at the side of the page). It's
+another way of using Claude Code in this repo, as if you'd typed into it in a terminal:
 
 - It uses your own Claude Code login, settings, permission rules, hooks, MCP servers and skills.
 - It can change any code, run commands, and commit when you ask.
@@ -153,7 +153,10 @@ Start with `deno task doctor`. Beyond what it reports:
   is there.
 - **The assistant doesn't answer.** Look in `logs/assistant.log`, and check `claude` works and is
   signed in from a terminal.
-- **The browser warns the connection isn't private.** Re-run `deno task setup-certs` and approve the
+- **The browser warns the connection isn't private.** Firefox reads trusted certificates from the
+  keychain only when it starts, so if it was open when you ran `setup-certs`, quit and reopen it.
+  Don't click through the warning: that only covers the page's port, and the assistant (on port
+  9443) will still fail to connect. Otherwise, re-run `deno task setup-certs` and approve the
   keychain prompt, then restart the services and the browser.
 - **Port 8443 or 9443 is taken.** `lsof -nP -iTCP:8443 -sTCP:LISTEN` shows by what. For development,
   run second servers beside the services on other ports (see [Development](#development)).
