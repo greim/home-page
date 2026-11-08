@@ -102,6 +102,12 @@ time, too. With everything already working, it says so and offers to restart the
 after pulling new code). If something's wrong, it says what and offers to fix it. It also offers to
 renew the certificate when it's about to expire.
 
+**It all belongs to one Mac account.** Setup installs everything for the account you run it in. The
+services run as that account, out of its copy of the repo, with its Claude Code login, and only that
+account's keychain trusts the certificate. The services run whenever that account is logged in, even
+in the background while another account is in use. To run setup again or work on the repo, log in to
+that account. Other accounts on the same Mac get a certificate warning if they open the page.
+
 ## High Level Feature Overview
 
 - **Columns of widgets.** Each column has a heading, an icon and a color. The page fills the width

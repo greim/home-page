@@ -364,8 +364,9 @@ const ensureServices = (p: Probes, s: SetupSettings, certChanged: boolean) =>
               `Something else is using port ${port}, which the ${
                 serviceTitles[state.name]
               } needs.\n` +
-              `See what with: lsof -nP -iTCP:${port} -sTCP:LISTEN (a deno task dev, perhaps?)\n` +
-              "Stop it.",
+              `See what with: lsof -nP -iTCP:${port} -sTCP:LISTEN\n` +
+              "It may be a deno task dev, or this app set up in another Mac account.\n" +
+              "Stop it (for another account, log in there and run deno task uninstall-service).",
           }),
         );
       }
