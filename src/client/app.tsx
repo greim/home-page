@@ -201,7 +201,13 @@ export function App() {
           width: "full",
           fullHeight: true,
           content: (
-            <Box flex="1" minH="0" overflow="auto">
+            <Box
+              flex="1"
+              minH="0"
+              overflow="auto"
+              // The view's embedding elements fill the area, so the view can too (h="full").
+              css={{ "& > div, & > div > div": { height: "100%" } }}
+            >
               <WidgetFullScreen columnId={column.id} widget={widget} />
             </Box>
           ),

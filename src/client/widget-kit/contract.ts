@@ -22,8 +22,6 @@ export const editorViewName = "editor";
  * `openFullScreen`.
  */
 export const fullScreenViewName = "full-screen";
-/** A widget's own full page, if it has one: opened in a tab of its own, with no props. */
-export const pageViewName = "page";
 
 /** What a full-screen view is given: the widget view's props, less the way to open it. */
 export type FullScreenViewProps = {

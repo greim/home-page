@@ -199,6 +199,9 @@ the assistant, the settings and the column editor.
   modal is open. Opening the same view from the page does the same.
 - **State survives the move.** The view's DOM moves between the modal and the window; it isn't
   remounted, so drafts and scroll position survive. The kit restyles it for the window's document.
+- **Filling it.** The view is given the whole area under the frame's title bar: give its root
+  `h="full"` (not `100vh`, which is the page's height, not the modal's) and let its own parts
+  scroll. The frame shows the widget's name as its title, so the view needn't repeat it.
 - **Sizing.** The modal is the page's: 1rem is 1vw. In a PiP window, 1rem is the browser's default
   16px, and the view reflows as the window is resized. So lay a full-screen view out to reflow
   (flex, grid, wrapping), not to fixed widths.
