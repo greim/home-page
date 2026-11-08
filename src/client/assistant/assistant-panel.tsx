@@ -30,7 +30,6 @@ import {
   LuSend,
   LuSquarePen,
   LuTriangleAlert,
-  LuX,
 } from "react-icons/lu";
 import type {
   AttachedImage,
@@ -162,7 +161,6 @@ function Header(
   props: {
     assistant: Assistant;
     models: ReadonlyArray<ModelChoice>;
-    onClose: (() => void) | null;
   },
 ) {
   const { chat } = props.assistant;
@@ -196,17 +194,6 @@ function Header(
         </NativeSelect.Field>
         <NativeSelect.Indicator />
       </NativeSelect.Root>
-      {props.onClose !== null && (
-        <IconButton
-          aria-label="Close the assistant"
-          title="Close (the conversation carries on)"
-          size="sm"
-          variant="ghost"
-          onClick={props.onClose}
-        >
-          <LuX />
-        </IconButton>
-      )}
     </HStack>
   );
 }
@@ -509,8 +496,8 @@ function Composer(props: { assistant: Assistant; commands: ReadonlyArray<Command
 
 const noCapabilities: Capabilities = { commands: [], models: [] };
 
-/** `onClose` draws a close button; null where the window has its own (a PiP window's). */
-export function AssistantPanel(props: { assistant: Assistant; onClose: (() => void) | null }) {
+/** The assistant's chat, shown as a full-screen view (closing it doesn't stop a turn). */
+export function AssistantPanel(props: { assistant: Assistant }) {
   // What Claude Code offers in the repo: read when the window opens (skills may have changed).
   const [capabilities, setCapabilities] = useState(noCapabilities);
   useEffect(() => {
@@ -520,11 +507,7 @@ export function AssistantPanel(props: { assistant: Assistant; onClose: (() => vo
   }, []);
   return (
     <Flex direction="column" h="100%" bg="bg" color="fg">
-      <Header
-        assistant={props.assistant}
-        models={capabilities.models}
-        onClose={props.onClose}
-      />
+      <Header assistant={props.assistant} models={capabilities.models} />
       {props.assistant.chat.usage !== null && (
         <Text fontSize="xs" color="fg.muted" px="3" py="1" borderBottomWidth="1px" truncate>
           {usageText(props.assistant.chat.usage)}

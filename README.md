@@ -118,8 +118,9 @@ that account. Other accounts on the same Mac get a certificate warning if they o
   - **Copyable snippets**, such as shell commands or special characters.
   - **A clock**.
   - **A workday bar** showing how far you are through your working week.
-- **The assistant.** Claude Code, in a window beside the page. It can rearrange the page for you,
-  write new kinds of widget, or work on any other part of the code, as it would in a terminal.
+- **The assistant.** Claude Code, over the page or in a floating window of its own. It can rearrange
+  the page for you, write new kinds of widget, or work on any other part of the code, as it would in
+  a terminal.
 - **Night mode.** After your day ends, the page fades to gray and a starfield comes out.
 
 ## Using it
@@ -145,12 +146,16 @@ that account. Other accounts on the same Mac get a certificate warning if they o
 - **Your day and weekend** (when night mode starts and ends, and what the workday bar follows) are 9
   to 5 with Saturday and Sunday off until you change them in settings (the admin bar's gear). If you
   don't have a set weekend, say so there, and every day counts as a workday.
+- **The assistant, the settings and the column editor open over the page**, with the page dimmed
+  behind them. Click the dimmed part, press Esc, or ✕ to close one (unsaved changes are discarded).
+  Widgets that need more room open the same way. In Chrome, Edge and Firefox, the button beside the
+  ✕ moves it into a small window of its own, floating above your other windows, so you can keep it
+  open while you use the page. That window's button brings it back over the page.
 
 ## The assistant
 
-The **assistant** button in the admin bar opens Claude Code in a window of its own, floating above
-your other windows (in Chrome, Edge or Firefox; elsewhere, a panel at the side of the page). It's
-another way of using Claude Code in this repo, as if you'd typed into it in a terminal:
+The **assistant** button in the admin bar opens Claude Code over the page. It's another way of using
+Claude Code in this repo, as if you'd typed into it in a terminal:
 
 - It uses your own Claude Code login, settings, permission rules, hooks, MCP servers and skills.
 - It can change any code, run commands, and commit when you ask.

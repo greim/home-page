@@ -16,8 +16,15 @@ export const columnBackgroundVar = "--column-background";
 export const widgetViewName = "widget";
 /** The settings form shown in the column editor. */
 export const editorViewName = "editor";
+/**
+ * Optional: the widget with room to spread out, shown over the page as a modal (and
+ * from there, in a picture-in-picture window of its own) when the widget view calls
+ * `openFullScreen`.
+ */
+export const fullScreenViewName = "full-screen";
 
-export type WidgetViewProps = {
+/** What a full-screen view is given: the widget view's props, less the way to open it. */
+export type FullScreenViewProps = {
   readonly widgetId: string;
   /** The widget's config as saved: JSON, for the widget to decode. */
   readonly config: unknown;
@@ -25,6 +32,14 @@ export type WidgetViewProps = {
   readonly saveConfig: (config: unknown) => void;
   /** When the user's day starts and ends, and their weekend (see day-cycle.ts). */
   readonly schedule: Schedule;
+};
+
+export type WidgetViewProps = FullScreenViewProps & {
+  /**
+   * Opens the widget's full-screen view as a modal over the page. Call it only from
+   * a user action, and only if the widget provides a "full-screen" view.
+   */
+  readonly openFullScreen: () => void;
 };
 
 /** An editor's verdict on its current draft. */

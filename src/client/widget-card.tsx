@@ -5,7 +5,12 @@ import { adminButton } from "./admin-button.ts";
 import { useBoard } from "./board-context.ts";
 import { MfeView } from "./mfe/mfe-view.tsx";
 import { widgetSection } from "./surface.ts";
-import { widgetViewName, type WidgetViewProps } from "./widget-kit/contract.ts";
+import {
+  fullScreenViewName,
+  type FullScreenViewProps,
+  widgetViewName,
+  type WidgetViewProps,
+} from "./widget-kit/contract.ts";
 import { widgetLabel } from "./widget-draft.ts";
 import { registeredTypes, useWidgetHost } from "./widget-host.tsx";
 
@@ -16,10 +21,34 @@ export const WidgetProblem = (props: { message: string }) => (
 
 /** The widget's own view, rendered by its MFE bundle. */
 function WidgetBody(props: { columnId: string; widget: Widget }) {
-  const { dispatch, schedule } = useBoard();
+  const { dispatch, schedule, open } = useBoard();
   const { manager } = useWidgetHost();
   const { columnId, widget } = props;
   const viewProps: WidgetViewProps = useMemo(() => ({
+    widgetId: widget.id,
+    config: widget.config,
+    saveConfig: (config: unknown) =>
+      dispatch({ is: "set-widget-config", columnId, widgetId: widget.id, config }),
+    schedule,
+    openFullScreen: () => open({ is: "widget", widgetId: widget.id }),
+  }), [columnId, widget.id, widget.config, dispatch, schedule, open]);
+  return (
+    <MfeView
+      manager={manager}
+      mfe={widget.is}
+      view={widgetViewName}
+      props={viewProps}
+      fallback={(message) => <WidgetProblem message={message} />}
+    />
+  );
+}
+
+/** The widget's full-screen view (rendered by its MFE bundle), for its modal or PiP window. */
+export function WidgetFullScreen(props: { columnId: string; widget: Widget }) {
+  const { dispatch, schedule } = useBoard();
+  const { manager } = useWidgetHost();
+  const { columnId, widget } = props;
+  const viewProps: FullScreenViewProps = useMemo(() => ({
     widgetId: widget.id,
     config: widget.config,
     saveConfig: (config: unknown) =>
@@ -30,7 +59,7 @@ function WidgetBody(props: { columnId: string; widget: Widget }) {
     <MfeView
       manager={manager}
       mfe={widget.is}
-      view={widgetViewName}
+      view={fullScreenViewName}
       props={viewProps}
       fallback={(message) => <WidgetProblem message={message} />}
     />
@@ -45,7 +74,7 @@ function WidgetBody(props: { columnId: string; widget: Widget }) {
  * so the layout is the same in both modes.
  */
 export function WidgetCard(props: { columnId: string; widget: Widget }) {
-  const { admin, edit } = useBoard();
+  const { admin, open } = useBoard();
   const { columnId, widget } = props;
   const name = widgetLabel(widget, registeredTypes(useWidgetHost().registry));
 
@@ -57,7 +86,7 @@ export function WidgetCard(props: { columnId: string; widget: Widget }) {
         ? (e) => {
           // Don't also open the column itself.
           e.stopPropagation();
-          edit({ columnId, widgetId: widget.id });
+          open({ is: "column-editor", columnId, widgetId: widget.id });
         }
         : undefined}
     >

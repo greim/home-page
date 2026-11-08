@@ -1,20 +1,19 @@
 import { createContext, useContext } from "react";
 import type { Schedule } from "../common/day-cycle.ts";
 import type { LayoutAction } from "../common/layout-ops.ts";
+import type { FullScreenView } from "./full-screen/full-screen.ts";
 
 /** The key that toggles admin mode. F2 has no browser default (F1 opens help in some). */
 export const adminModeKey = "F2";
 
-/** A request to open the column content editor, optionally with a widget selected. */
-export type EditRequest = {
-  readonly columnId: string;
-  readonly widgetId: string | null;
-};
-
 export type Board = {
   readonly admin: boolean;
   readonly dispatch: (action: LayoutAction) => void;
-  readonly edit: (request: EditRequest) => void;
+  /**
+   * Opens a full-screen view as a modal: the column editor, a widget's full-screen
+   * view, and so on. Only the page opens them (see full-screen.ts).
+   */
+  readonly open: (view: FullScreenView) => void;
   /** When the user's day starts and ends, as the layout has it. */
   readonly schedule: Schedule;
   /**

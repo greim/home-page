@@ -1,23 +1,24 @@
 /**
  * Wraps a widget's components as MFE views: decodes their props, and renders
- * them with Chakra set up as the shell has it. Colors and fonts are inherited
- * from where the shell embeds them.
+ * them with Chakra set up as the shell has it, in whichever document (the page's,
+ * or a picture-in-picture window's) the view is shown in. Colors and fonts are
+ * inherited from where the shell embeds them.
  */
-import { ChakraProvider, Text } from "@chakra-ui/react";
+import { Text } from "@chakra-ui/react";
 import { Either, type Schema } from "effect";
 import type { ComponentType, JSX } from "react";
-import { makeSystem } from "../chakra-system.ts";
+import { DocumentStyles } from "../document-styles.tsx";
 import type { View, ViewProps } from "../mfe/register-live.tsx";
 import {
   decodeEditorProps,
+  decodeFullScreenProps,
   decodeWidgetProps,
   type EditorProps,
+  type FullScreenProps,
   type WidgetProps,
 } from "./decode.ts";
 
-export type { Draft, EditorProps, WidgetProps } from "./decode.ts";
-
-const system = makeSystem();
+export type { Draft, EditorProps, FullScreenProps, WidgetProps } from "./decode.ts";
 
 const Problem = (props: { message: string }) => (
   <Text fontSize="sm" color="fg.error">{props.message}</Text>
@@ -31,14 +32,14 @@ export const customView = <P,>(
   decode: (props: unknown) => Either.Either<P, string>,
   Component: ComponentType<P>,
 ): View =>
-({ props }: ViewProps) => {
+({ props, document }: ViewProps) => {
   const decoded = decode(props);
   return (
-    <ChakraProvider value={system}>
+    <DocumentStyles document={document}>
       {Either.isLeft(decoded)
         ? <Problem message={decoded.left} />
         : <Component {...(decoded.right as P & JSX.IntrinsicAttributes)} />}
-    </ChakraProvider>
+    </DocumentStyles>
   );
 };
 
@@ -47,6 +48,16 @@ export const widgetView = <A, I>(
   schema: Schema.Schema<A, I>,
   Component: ComponentType<WidgetProps<A>>,
 ): View => customView((props) => decodeWidgetProps(schema, props), Component);
+
+/**
+ * The widget with room to spread out, given its config decoded with `schema`: shown
+ * over the page as a modal (or in a picture-in-picture window) when the widget view
+ * calls `openFullScreen`. Register it as the "full-screen" view.
+ */
+export const fullScreenView = <A, I>(
+  schema: Schema.Schema<A, I>,
+  Component: ComponentType<FullScreenProps<A>>,
+): View => customView((props) => decodeFullScreenProps(schema, props), Component);
 
 /** The settings form shown in the column editor. */
 export const editorView = <A, I>(

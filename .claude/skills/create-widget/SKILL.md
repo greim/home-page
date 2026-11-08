@@ -20,7 +20,9 @@ page on demand. The `micro-frontends` skill explains how that works. This skill 
    deciding) belongs here, not in components. Shape the input as plain data (e.g. a tree, not a DOM
    `Node`) so tests need no browser.
 5. **Write the view** in `<id>.tsx` (or similar): the component the column shows.
-6. **Write `main.tsx`**: the editor, and the `registerMfe` call.
+6. **Write `main.tsx`**: the editor, and the `registerMfe` call. If the widget needs more room than
+   a column gives, add a `full-screen` view too (see "Full-screen views" in the `micro-frontends`
+   skill).
 7. **Run `deno task build`**: check, lint, test (90% coverage), then the widget build. Fix anything
    it reports. The widget build alone is `deno task build-widgets`.
 8. **Add it to the layout.** Developers do it in admin mode (the column editor's "Add widget"). The
@@ -126,7 +128,8 @@ uses it, read `bookmarks/`.
 
 - **Props** (`WidgetProps`): `config` (decoded), `saveConfig(config)` to save a change made on the
   page itself, `widgetId`, and `schedule` (when the user's day starts and ends, and their weekend;
-  with `useNow` from the kit and `src/common/day-cycle.ts`, for anything time-of-day).
+  with `useNow` from the kit and `src/common/day-cycle.ts`, for anything time-of-day). And
+  `openFullScreen()`, to open the widget's `full-screen` view from a click, if it has one.
 - **Chakra UI** components, set up as the page has it.
 - **Shared styles** in `src/client/surface.ts`: `widgetHeading` for headings, so they match other
   widgets; `codeBox` for monospace boxes; `hatching`.

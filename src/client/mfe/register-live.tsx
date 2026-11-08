@@ -9,8 +9,11 @@ import { type MfeSideIo, registerMfe as registerWith, type Shell } from "./regis
 
 export type { Shell };
 
-/** What a view is given: the props its embedder passed, to decode with Effect Schema. */
-export type ViewProps = { readonly props: unknown };
+/**
+ * What a view is given: the props its embedder passed, to decode with Effect Schema,
+ * and the document it's shown in (the page's, or another window's), to style it there.
+ */
+export type ViewProps = { readonly props: unknown; readonly document: Document };
 
 export type View = ComponentType<ViewProps>;
 
@@ -41,7 +44,8 @@ const io: MfeSideIo<View> = {
       render: (props) =>
         root.render(
           <ReportErrors onError={onError}>
-            <View props={props} />
+            {/* Read on each render: the embedder may have moved the node to another window. */}
+            <View props={props} document={node.ownerDocument} />
           </ReportErrors>,
         ),
       unmount: () => root.unmount(),

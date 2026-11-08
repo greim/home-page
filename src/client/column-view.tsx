@@ -160,7 +160,7 @@ export function ColumnView(props: {
   editHeading: boolean;
   onHeadingEditEnd: () => void;
 }) {
-  const { admin, edit, night, nightPace } = useBoard();
+  const { admin, open, night, nightPace } = useBoard();
   const { column } = props;
   return (
     // Column text is always white: every column color shares one mid lightness,
@@ -189,7 +189,7 @@ export function ColumnView(props: {
           // React bubbles clicks from portals (e.g. the icon picker) through here
           // too; only clicks on the column itself count.
           if (e.currentTarget.contains(e.target as Node)) {
-            edit({ columnId: column.id, widgetId: null });
+            open({ is: "column-editor", columnId: column.id, widgetId: null });
           }
         }
         : undefined}

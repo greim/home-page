@@ -21,6 +21,13 @@ The rules `src/client/mfe/` implements, and how it's built. The overview is in [
 - When the embedder unmounts, it tells the MFE to unmount that root, and removes the node.
 - An error thrown while a view renders is caught by an error boundary on the MFE side, reported to
   the embedder, and shown in place of the view.
+- A view is given `{ props, document }`: `document` is its mount node's `ownerDocument`, read on
+  every render. It's the page's, unless the shell moved the view into another window (a
+  picture-in-picture window, say), where the view must put its styles and overlays instead.
+- A shell that moves embedded views to another document wraps them in `MfeDocument` (from
+  `mfe-view.tsx`) with the document they're now in. `MfeView` re-renders its view when that changes,
+  so the view sees its new `document` and restyles itself there. The view keeps its state: it's
+  moved, not remounted.
 
 ## Messages
 

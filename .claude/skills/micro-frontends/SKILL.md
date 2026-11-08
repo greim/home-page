@@ -130,6 +130,8 @@ letters, digits and single hyphens). It contains:
   - `widget`: the widget's body, as shown in its column.
   - `editor`: its settings form, shown in the column editor in admin mode.
 
+  - `full-screen` (optional): the widget with room to spread out. See "Full-screen views" below.
+
   It may provide more views for the page to embed elsewhere.
 - `manifest.ts`: exports `manifest`, declared with `defineManifest` from `src/common/widgets.ts`: a
   title, a description, an Effect Schema for its config, and the config a new widget starts with.
@@ -153,6 +155,9 @@ Build views with `src/client/widget-kit/`, not with bare components:
 - **`widget` view** props: `{ widgetId, config, saveConfig, schedule }`. Call `saveConfig` to save a
   changed config (e.g. a bookmark folder opened). `schedule` is when the user's day starts and ends,
   and their weekend; `src/common/day-cycle.ts` says what any moment is by it.
+- **`widget` view** also gets `openFullScreen()`, which opens its `full-screen` view (if it has one)
+  as a modal. Call it only from a user action, such as a button's click.
+- **`full-screen` view** props: the `widget` view's, less `openFullScreen`.
 - **`editor` view** props: `{ widgetId, config, reportDraft }`. `config` is where to start; the
   editor owns its state from then on. Call `reportDraft` with `{ ok: true, config }` or
   `{ ok: false, errorMessage }` when it opens and after each change. The column editor's Save
@@ -170,6 +175,39 @@ Build views with `src/client/widget-kit/`, not with bare components:
 - The page draws no heading. A widget that wants one draws it from its config, conventionally a
   `heading` string (which admin mode also names the widget by), styled with `widgetHeading` from
   `src/client/surface.ts` so headings match.
+
+### Full-screen views
+
+A column is narrow. When a widget needs room (a big table, a chart, a reader, a form with many
+fields), give it a `full-screen` view as well, and a button in its `widget` view that calls
+`openFullScreen`. Build it with `fullScreenView(schema, Component)` from the kit, and register it as
+`"full-screen"`. It gets the same props as the widget view (less `openFullScreen`), so it can read
+and save the same config.
+
+The page shows every full-screen view the same way (`src/client/full-screen/`), its own included:
+the assistant, the settings and the column editor.
+
+- **It opens as a modal** over the page, centered, with the page dimmed behind it. Clicking the dim
+  part, pressing Escape, or the ✕ closes it, discarding anything unsaved.
+- **One modal at a time.** The page behind it can't be clicked, so nothing else opens one. Views
+  don't open other full-screen views.
+- **Tearing off.** Where the browser has Document Picture-in-Picture (Chrome, Edge, Firefox), the
+  modal has a button that moves its view into a picture-in-picture (PiP) window of its own, floating
+  over other windows. That frees the page for another modal, so at most two views are open at once.
+  There's one PiP window at most: tearing off another view replaces it.
+- **Pulling back.** The PiP window has a button to bring its view back as a modal, shown while no
+  modal is open. Opening the same view from the page does the same.
+- **State survives the move.** The view's DOM moves between the modal and the window; it isn't
+  remounted, so drafts and scroll position survive. The kit restyles it for the window's document.
+- **Sizing.** The modal is the page's: 1rem is 1vw. In a PiP window, 1rem is the browser's default
+  16px, and the view reflows as the window is resized. So lay a full-screen view out to reflow
+  (flex, grid, wrapping), not to fixed widths.
+
+Things that don't work in a full-screen view:
+
+- Opening a new browser tab for it. Hosting a widget in a separate tab isn't supported.
+- Anything relying on being inside a column: `--column-background` and the column's text color
+  aren't there. It's drawn in the page's normal light or dark colors.
 
 ### In the layout
 

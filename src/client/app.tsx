@@ -6,52 +6,25 @@ import { defaultSchedule } from "../common/day-cycle.ts";
 import type { Layout } from "../common/model.ts";
 import { AdminBar } from "./admin-bar.tsx";
 import { Http, loadLayout, saveLayout } from "./api.ts";
-import { adminModeKey, type Board, BoardContext, type EditRequest } from "./board-context.ts";
+import { adminModeKey, type Board, BoardContext } from "./board-context.ts";
 import { ColumnStrip } from "./column-strip.tsx";
 import { HttpLive, run } from "./live.ts";
 import { useDayPhase } from "./use-day-phase.ts";
 import { dayPreviewAvailable, nextNightView, type NightView, showsNight } from "./night-mode.ts";
 import { night as nightStyle } from "./surface.ts";
 import { makeSaveQueue } from "./save-queue.ts";
-import { ColumnEditor } from "./column-editor.tsx";
-import { SettingsDialog } from "./settings-dialog.tsx";
-import { AssistantPanel } from "./assistant/assistant-panel.tsx";
+import { ColumnEditor, columnEditorTitle } from "./column-editor.tsx";
+import { SettingsDialog, settingsTitle } from "./settings-dialog.tsx";
+import { AssistantProvider, ConnectedAssistantPanel } from "./assistant/assistant-context.tsx";
 import {
-  AssistantWindow,
-  ReopenAssistant,
-  useAssistantWindow,
-  type WindowState,
-} from "./assistant/assistant-window.tsx";
-import { makeConversations } from "./assistant/conversations.ts";
-import { browserChatStorage, makeUseAssistant } from "./assistant/use-assistant.ts";
-
-/** The assistant window's conversation, kept as long as the page. */
-const windowConversations = makeConversations(browserChatStorage);
-const windowConversationId = "window";
-
-/**
- * The assistant window's conversation and, while it's open, the window. Always
- * mounted, so a turn carries on (and applies its layout) while the window is closed.
- * Its own component, so streamed text re-renders it rather than the whole page.
- */
-function AssistantHost(props: {
-  window: WindowState;
-  onClose: () => void;
-  onApplied: (layout: Layout) => void;
-}) {
-  const { onApplied } = props;
-  const useAssistant = useMemo(() => makeUseAssistant(windowConversations, onApplied), [onApplied]);
-  const assistant = useAssistant(windowConversationId);
-  return (
-    <AssistantWindow state={props.window}>
-      <AssistantPanel
-        assistant={assistant}
-        // A PiP window has the browser's own close button; the in-page panel doesn't.
-        onClose={props.window.is === "panel" ? props.onClose : null}
-      />
-    </AssistantWindow>
-  );
-}
+  FullScreenHost,
+  type FullScreenView,
+  useFullScreen,
+  type ViewContent,
+} from "./full-screen/full-screen-host.tsx";
+import { WidgetFullScreen } from "./widget-card.tsx";
+import { widgetLabel } from "./widget-draft.ts";
+import { registeredTypes, useWidgetHost } from "./widget-host.tsx";
 
 type LoadState =
   | { is: "loading" }
@@ -79,12 +52,10 @@ function useAdminMode(suspended: boolean): [admin: boolean, exit: () => void] {
 export function App() {
   const [state, setState] = useState<LoadState>({ is: "loading" });
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [editing, setEditing] = useState<EditRequest | null>(null);
-  // The column being edited, while it still exists (the assistant may remove it).
-  const editingColumn = state.is === "ready" && editing !== null
-    ? state.layout.columns.find((c) => c.id === editing.columnId)
-    : undefined;
-  const [admin, exitAdmin] = useAdminMode(editingColumn !== undefined);
+  const fullScreen = useFullScreen(state.is === "ready" ? state.layout : null);
+  // While a modal is open, the page beneath it is out of reach, admin mode included.
+  const [admin, exitAdmin] = useAdminMode(fullScreen.state.modal !== null);
+  const { registry } = useWidgetHost();
 
   useEffect(() => {
     run(loadLayout).then((result) =>
@@ -135,8 +106,6 @@ export function App() {
     addedColumnIds.current = [];
   }, [admin, dispatch]);
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const assistantWindow = useAssistantWindow();
   const onApplied = useCallback(
     (layout: Layout) => dispatch({ is: "replace-layout", layout }),
     [dispatch],
@@ -158,8 +127,8 @@ export function App() {
   }
   const nightPace = nightView.quick ? nightStyle.quickTransition : nightStyle.transition;
   const board: Board = useMemo(
-    () => ({ admin, dispatch, edit: setEditing, schedule, night, nightPace }),
-    [admin, dispatch, schedule, night, nightPace],
+    () => ({ admin, dispatch, open: fullScreen.open, schedule, night, nightPace }),
+    [admin, dispatch, fullScreen.open, schedule, night, nightPace],
   );
 
   switch (state.is) {
@@ -181,58 +150,90 @@ export function App() {
       return state satisfies never;
   }
 
+  const { layout } = state;
+
+  /** What each full-screen view shows; null for one whose column or widget is gone. */
+  const renderView = (view: FullScreenView): ViewContent | null => {
+    const close = () => fullScreen.close(view);
+    const saveAndClose = (action: LayoutAction) => {
+      dispatch(action);
+      close();
+    };
+    switch (view.is) {
+      case "assistant":
+        return {
+          title: "Assistant",
+          width: "36rem",
+          fullHeight: true,
+          content: <ConnectedAssistantPanel />,
+        };
+      case "settings":
+        return {
+          title: settingsTitle,
+          width: "28rem",
+          fullHeight: false,
+          content: <SettingsDialog schedule={schedule} onClose={close} onSave={saveAndClose} />,
+        };
+      case "column-editor": {
+        const column = layout.columns.find((c) => c.id === view.columnId);
+        if (column === undefined) return null;
+        return {
+          title: columnEditorTitle,
+          width: "72rem",
+          fullHeight: true,
+          content: (
+            <ColumnEditor
+              column={column}
+              columns={layout.columns}
+              widgetId={view.widgetId}
+              onClose={close}
+              onSave={saveAndClose}
+            />
+          ),
+        };
+      }
+      case "widget": {
+        const column = layout.columns.find((c) => c.widgets.some((w) => w.id === view.widgetId));
+        const widget = column?.widgets.find((w) => w.id === view.widgetId);
+        if (column === undefined || widget === undefined) return null;
+        return {
+          title: widgetLabel(widget, registeredTypes(registry)),
+          width: "full",
+          fullHeight: true,
+          content: (
+            <Box flex="1" minH="0" overflow="auto">
+              <WidgetFullScreen columnId={column.id} widget={widget} />
+            </Box>
+          ),
+        };
+      }
+      default:
+        return view satisfies never;
+    }
+  };
+
   return (
     <BoardContext.Provider value={board}>
-      <ColumnStrip
-        columns={state.layout.columns}
-        adminBar={
-          <AdminBar
-            shown={admin}
-            message={`Admin mode · press ${adminModeKey} to exit`}
-            onExit={exitAdmin}
-            dayPreview={{
-              available: dayPreviewAvailable(phase),
-              on: admin && dayPreview,
-              onToggle: () => setDayPreview((on) => !on),
-            }}
-            onSettings={() => setSettingsOpen(true)}
-            onAssistant={assistantWindow.open}
-          />
-        }
-      />
-      {editing !== null && editingColumn !== undefined && (
-        <ColumnEditor
-          column={editingColumn}
-          columns={state.layout.columns}
-          widgetId={editing.widgetId}
-          onClose={() => setEditing(null)}
-          onSave={(action) => {
-            dispatch(action);
-            setEditing(null);
-          }}
+      <AssistantProvider onApplied={onApplied}>
+        <ColumnStrip
+          columns={layout.columns}
+          adminBar={
+            <AdminBar
+              shown={admin}
+              message={`Admin mode · press ${adminModeKey} to exit`}
+              onExit={exitAdmin}
+              dayPreview={{
+                available: dayPreviewAvailable(phase),
+                on: admin && dayPreview,
+                onToggle: () => setDayPreview((on) => !on),
+              }}
+              onSettings={() => fullScreen.open({ is: "settings" })}
+              onAssistant={() => fullScreen.open({ is: "assistant" })}
+            />
+          }
         />
-      )}
-      {settingsOpen && (
-        <SettingsDialog
-          schedule={schedule}
-          onClose={() => setSettingsOpen(false)}
-          onSave={(action) => {
-            dispatch(action);
-            setSettingsOpen(false);
-          }}
-        />
-      )}
-      <AssistantHost
-        window={assistantWindow.state}
-        onClose={assistantWindow.close}
-        onApplied={onApplied}
-      />
-      {assistantWindow.reopen && (
-        <ReopenAssistant
-          onOpen={assistantWindow.open}
-          onDismiss={assistantWindow.dismissReopen}
-        />
-      )}
+        <FullScreenHost fullScreen={fullScreen} render={renderView} />
+      </AssistantProvider>
       {saveError !== null && (
         <Box position="fixed" bottom="3" left="50%" transform="translateX(-50%)" zIndex="3">
           <Badge colorPalette="red" size="lg" title={saveError}>Couldn't save changes</Badge>

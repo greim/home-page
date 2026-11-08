@@ -3,13 +3,10 @@ import {
   Button,
   Center,
   chakra,
-  CloseButton,
-  Dialog,
   Grid,
   HStack,
   IconButton,
   Input,
-  Portal,
   Stack,
   Text,
 } from "@chakra-ui/react";
@@ -31,6 +28,7 @@ import {
   toColumnDraft,
   updateWidget,
 } from "./column-draft.ts";
+import { FullScreenBody, FullScreenFooter } from "./full-screen/full-screen-host.tsx";
 import { IconPicker, NamedIcon } from "./icon-picker.tsx";
 import { Label, WidgetForm } from "./widget-editor.tsx";
 import { type Draft, widgetLabel } from "./widget-draft.ts";
@@ -212,8 +210,11 @@ function WidgetList(props: {
   );
 }
 
+/** The view's title, shown in its frame. */
+export const columnEditorTitle = "Edit column";
+
 /**
- * A dialog for editing one column: its attributes across the top, its widgets
+ * A full-screen view for editing one column: its attributes across the top, its widgets
  * listed on the left, and the selected widget's editor on the right. Changes are
  * drafted, and applied together on Save.
  */
@@ -242,60 +243,42 @@ export function ColumnEditor(props: {
   };
 
   return (
-    <Dialog.Root
-      open
-      size="cover"
-      closeOnInteractOutside={false}
-      onOpenChange={(e) => !e.open && props.onClose()}
-    >
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content maxW="6xl">
-            <Dialog.Header>
-              <Dialog.Title>Edit column</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body display="flex" flexDirection="column" gap="5" minH="0">
-              <ColumnFields draft={draft} onChange={setDraft} />
-              <Grid templateColumns="18rem 1fr" gap="5" flex="1" minH="0">
-                <Box borderWidth="1px" rounded="md" p="2" overflowY="auto">
-                  <WidgetList
-                    draft={draft}
-                    otherColumns={props.columns.filter((c) => c.id !== column.id)}
-                    onChange={setDraft}
-                  />
-                </Box>
-                <Box borderWidth="1px" rounded="md" p="4" overflowY="auto">
-                  {selected === undefined
-                    ? (
-                      <Center h="full">
-                        <Text color="fg.muted">Select a widget to edit</Text>
-                      </Center>
-                    )
-                    : (
-                      <WidgetForm
-                        key={selected.widget.id}
-                        draft={selected}
-                        onChange={(w) => setDraft(updateWidget(draft, w))}
-                        error={error?.widgetId === selected.widget.id ? error.message : null}
-                      />
-                    )}
-                </Box>
-              </Grid>
-            </Dialog.Body>
-            <Dialog.Footer>
-              {error !== null && error.widgetId !== selected?.widget.id && (
-                <Text color="fg.error" fontSize="sm" me="auto">{error.message}</Text>
+    <>
+      <FullScreenBody gap="5">
+        <ColumnFields draft={draft} onChange={setDraft} />
+        <Grid templateColumns="18rem 1fr" gap="5" flex="1" minH="0">
+          <Box borderWidth="1px" rounded="md" p="2" overflowY="auto">
+            <WidgetList
+              draft={draft}
+              otherColumns={props.columns.filter((c) => c.id !== column.id)}
+              onChange={setDraft}
+            />
+          </Box>
+          <Box borderWidth="1px" rounded="md" p="4" overflowY="auto">
+            {selected === undefined
+              ? (
+                <Center h="full">
+                  <Text color="fg.muted">Select a widget to edit</Text>
+                </Center>
+              )
+              : (
+                <WidgetForm
+                  key={selected.widget.id}
+                  draft={selected}
+                  onChange={(w) => setDraft(updateWidget(draft, w))}
+                  error={error?.widgetId === selected.widget.id ? error.message : null}
+                />
               )}
-              <Button variant="outline" onClick={props.onClose}>Cancel</Button>
-              <Button onClick={save}>Save</Button>
-            </Dialog.Footer>
-            <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" />
-            </Dialog.CloseTrigger>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+          </Box>
+        </Grid>
+      </FullScreenBody>
+      <FullScreenFooter>
+        {error !== null && error.widgetId !== selected?.widget.id && (
+          <Text color="fg.error" fontSize="sm" me="auto">{error.message}</Text>
+        )}
+        <Button variant="outline" onClick={props.onClose}>Cancel</Button>
+        <Button onClick={save}>Save</Button>
+      </FullScreenFooter>
+    </>
   );
 }

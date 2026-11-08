@@ -9,6 +9,12 @@ import { columnBackgroundVar } from "./widget-kit/contract.ts";
  */
 export const rootFontSize = "1vw";
 
+/**
+ * The root font size in a picture-in-picture window: the browser's default. A window
+ * that small reflows rather than scales, or its text would be tiny.
+ */
+export const windowRootFontSize = "16px";
+
 /** Line height of all text on the page, as a multiple of the font size. */
 export const textSpacing = 1.6;
 
