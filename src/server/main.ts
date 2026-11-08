@@ -58,7 +58,7 @@ await new Deno.Command(Deno.execPath(), {
 }).output();
 
 const bundle = await Effect.runPromise(
-  bundleClient(config.clientEntry).pipe(
+  bundleClient(config.clientEntry, config.sharedEntries).pipe(
     Effect.provideService(BundlerIo, BundlerIoLive),
   ),
 );

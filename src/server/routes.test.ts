@@ -67,6 +67,11 @@ Deno.test("/web/app serves the page", async () => {
     assertEquals(res.body, page("abc", 9443));
   }
   assertStringIncludes(page("abc", 9443), `src="/web/assets/main.js?v=abc"`);
+  // Widgets import the shared packages by name; the import map points them at the page's copies.
+  assertStringIncludes(
+    page("abc", 9443),
+    `<script type="importmap">{"imports":{"react":"/web/assets/shared/react.js",`,
+  );
   // The page tells the client where the assistant service is.
   assertStringIncludes(page("abc", 9443), `<meta name="assistant-port" content="9443">`);
 });

@@ -162,7 +162,10 @@ The config is saved in `data/layout.json`, which the assistant reads. Never put 
 
 - It runs in the browser only. It can call APIs that allow cross-origin requests, and nothing else:
   there's no proxy for the rest yet.
-- One bundle per widget, with its own copies of React, Chakra and Effect. Size doesn't matter on
-  localhost, but don't pass Effect values to or from the page.
+- One bundle per widget. React, Chakra and Effect come from the page, shared by every widget, so
+  import them only as `react`, `react/jsx-runtime`, `react-dom`, `react-dom/client`, `effect`,
+  `@chakra-ui/react` and `@emotion/react`, never a subpath like `effect/Schema`: the build fails if
+  a widget bundles its own copy (see "Shared packages" in the `micro-frontends` skill). Still don't
+  pass Effect values to or from the page: messages stay plain values.
 - Add any npm package it needs to `deno.json`'s imports, pinned to an exact version like the rest.
 - The build fails on any widget's errors, and the page keeps loading the last good build.

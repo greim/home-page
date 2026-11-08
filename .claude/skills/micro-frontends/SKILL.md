@@ -30,7 +30,8 @@ views or provide other services inside the host. That's what makes MFEs flexible
 **Risks:**
 
 - More moving parts and operational overhead.
-- Payload bloat from each MFE bundling its own copies of shared dependencies.
+- Payload bloat from each MFE bundling its own copies of shared dependencies. (The home page avoids
+  this by sharing them: see "Shared packages" below.)
 - Keeping the user experience consistent across independent MFEs takes deliberate effort.
 - **The contract is the hard part.** The API between the shell and MFEs must be right _early_, since
   changing it can break every MFE that depends on it. Keep it minimal, and choose its opinions
@@ -47,9 +48,10 @@ Two halves: one imported by the shell, and one imported by each MFE and bundled 
 - **The shell** is what loads into the browser at the URL. It knows nothing at load time about which
   MFEs exist and has no static dependency on any of them. It loads an MFE's bundle only when
   something wants to render it or message it.
-- **An MFE** is a whole separate app: an ES module bundle with its own copies of React and its other
-  dependencies. React context and props don't cross the boundary; anything an MFE needs from the
-  shell (props, data) arrives as messages.
+- **An MFE** is a whole separate app: an ES module bundle. It may carry its own copies of React and
+  its other dependencies, or import ones the shell provides (the home page's widgets do). Either
+  way, React context and props don't cross the boundary; anything an MFE needs from the shell
+  (props, data) arrives as messages.
 
 The framework provides:
 
@@ -185,6 +187,42 @@ leaving the last good output in place, if a folder's name isn't a valid ID, it l
 `manifest.ts`, its manifest doesn't decode, its default config doesn't fit its schema, or it doesn't
 bundle.
 
+### Shared packages
+
+The page bundles one copy of React, React DOM, Effect, Chakra UI and Emotion, and every widget
+imports those instead of carrying its own. Without this each widget bundle was about 900 KB, nearly
+all of it the same libraries; now each is under 20 KB, and the widget build is several times faster.
+
+- **The list** is `sharedModules` in `src/common/shared-modules.ts`: exactly these names, and no
+  other part of these packages, are shared: `react`, `react/jsx-runtime`, `react-dom`,
+  `react-dom/client`, `effect`, `@chakra-ui/react` and `@emotion/react`.
+- **The widget build** marks those names external, so a widget's bundle keeps
+  `import … from
+  "react"` as it is. Everything else a widget imports (e.g. `react-icons/lu`) is
+  still bundled into it, tree-shaken to what it uses.
+- **The page** bundles `src/client/main.tsx` together with one module per shared name,
+  `src/client/shared/<entry>.ts`, with code splitting on. So the page and the shared modules use the
+  same chunks, and so the same single copy of each package. They're served at
+  `/web/assets/shared/<entry>.js`, and the page's import map (in `src/server/routes.ts`) points each
+  name there, so `import("react")` in a widget gets the page's React.
+- **Shared modules are whole packages.** Nothing knows in advance what widgets will use, so they
+  can't be tree-shaken: the page's JavaScript grew by about 1.2 MB, which already pays for itself
+  with two widgets.
+- **CommonJS packages** (React and React DOM) can't be re-exported with `export *`: the bundled
+  module would export nothing. Their shared modules list every export instead, and a test in
+  `tooling/bundle-client.test.ts` checks each shared module exports exactly what its package does.
+  After upgrading React, if that test fails, update the lists from its diff.
+- **The build enforces the rules.** It fails a widget whose bundle carries its own copy of a shared
+  package (e.g. it imported `effect/Schema` or `react-dom/server`, which aren't shared), found from
+  its source map, or that has CommonJS code `require()`ing a shared package, which would throw in
+  the browser.
+- **Versions always match**, the usual problem with sharing between MFEs: the page and the widgets
+  are built from the same `deno.json` and lockfile. After changing a shared package's version,
+  restart the server (so the page is rebundled) as well as rebuilding the widgets.
+
+To share another package, add it to `sharedModules`, add its module in `src/client/shared/`, and
+check the test still passes. Share a package only when most widgets use it.
+
 `dist/widgets/` is served under `/web/assets/widgets/`, read from disk on each request, so a rebuild
 needs only a page reload, not a server restart. The page fetches the registry when it loads; its
 resolver (`src/client/widget-resolver.ts`) maps an ID to `…/<id>/main.js?v=<hash>`. The add-widget
@@ -205,5 +243,6 @@ still uses gives exactly that error; the rest of the page keeps working.
   cross-origin requests work.
 - Keep secrets such as API keys in `localStorage`, prompting for them when missing, and never in
   their config. See the `code-vs-data` skill.
-- Each widget bundles its own React, Chakra and Effect. That's fine: the page is served from
-  localhost, so bundle size doesn't matter.
+- Use React, Chakra and Effect freely: they're the page's shared copies, so they cost a widget
+  nothing. Import them only by the shared names (see "Shared packages"); the build rejects anything
+  else from those packages.

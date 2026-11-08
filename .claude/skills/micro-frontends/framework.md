@@ -14,8 +14,8 @@ The rules `src/client/mfe/` implements, and how it's built. The overview is in [
 ## Views
 
 - Views are React components, but the shell never renders them. The MFE's half renders them with the
-  MFE's own React, using `createRoot` from its own `react-dom`, into a mount node the embedder
-  provides.
+  React the MFE imports, using `createRoot` from that `react-dom`, into a mount node the embedder
+  provides. Each view is a separate React root either way, so React context doesn't cross.
 - Each time the embedder mounts, it creates a fresh mount node inside its own element. A node (and
   so a channel) is never reused, even when StrictMode mounts twice.
 - When the embedder unmounts, it tells the MFE to unmount that root, and removes the node.
@@ -136,12 +136,14 @@ bundles a small test MFE (`tooling/fixtures/widgets/echo/`) into a temporary dir
 with a real `import()`, and exchanges messages with it. Rendering needs a browser, so `MfeView` and
 the MFE-side render wrapper stay thin plain React, covered by the app's browser tests.
 
-### Two copies of Effect
+### Copies of Effect and React
 
-The shell and each MFE bundle their own Effect, just as they do React. Effect keeps global state per
-copy, so an Effect value, fiber or schema made by one copy must never be run by another. Everything
-crossing between the halves is plain: functions, promises, `AbortSignal`s and values
-(`protocol.ts`). Each half uses Effect inside and converts at its edge.
+The framework doesn't care whether an MFE bundles its own Effect and React or imports the shell's
+through the page's import map. The home page shares them (see the skill's "Shared packages"), but
+the framework must keep working for an MFE that doesn't. Effect keeps global state per copy, so an
+Effect value, fiber or schema made by one copy must never be run by another. So everything crossing
+between the halves stays plain: functions, promises, `AbortSignal`s and values (`protocol.ts`). Each
+half uses Effect inside and converts at its edge.
 
 ### What isn't Effect
 

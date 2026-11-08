@@ -36,7 +36,12 @@ export type AssistantSettings = AgentSettings & CheckSettings & {
   /** Where code changes could be, relative to the repo: folders, and single files. */
   readonly watched: ReadonlyArray<string>;
   /** Each process's entry point, relative to the repo, for its module graph. */
-  readonly entries: { readonly app: string; readonly page: string; readonly assistant: string };
+  readonly entries: {
+    readonly app: string;
+    /** The page's entry point and the shared modules bundled with it. */
+    readonly page: ReadonlyArray<string>;
+    readonly assistant: string;
+  };
   /** The main server's launchd job (gui/<uid>/<label>) and port. */
   readonly appJob: string;
   readonly appPort: number;
@@ -193,7 +198,10 @@ export const assistantIoLive = (settings: AssistantSettings): AssistantIo["Type"
     }),
     moduleGraphs: attempt(async () => ({
       app: await moduleGraph(settings.repoDir, settings.entries.app),
-      page: await moduleGraph(settings.repoDir, settings.entries.page),
+      page: new Set(
+        (await Promise.all(settings.entries.page.map((e) => moduleGraph(settings.repoDir, e))))
+          .flatMap((graph) => [...graph]),
+      ),
       assistant: await moduleGraph(settings.repoDir, settings.entries.assistant),
     })),
     restartApp: attempt(() =>

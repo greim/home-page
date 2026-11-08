@@ -12,7 +12,10 @@ export type Fingerprint = ReadonlyMap<string, string>;
 export type ModuleGraphs = {
   /** The main server (src/server/main.ts). */
   readonly app: ReadonlySet<string>;
-  /** The page's own bundle (src/client/main.tsx), which the main server builds at startup. */
+  /**
+   * The page's own bundle (src/client/main.tsx and the shared modules bundled with it),
+   * which the main server builds at startup.
+   */
   readonly page: ReadonlySet<string>;
   /** The assistant service (src/server/assistant-main.ts). */
   readonly assistant: ReadonlySet<string>;

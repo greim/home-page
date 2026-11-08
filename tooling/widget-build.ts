@@ -11,6 +11,11 @@ import {
   registryFile,
   WidgetId,
 } from "../src/common/widgets.ts";
+import {
+  bundledSharedPackages,
+  dynamicRequireMarker,
+  sharedSpecifiers,
+} from "../src/common/shared-modules.ts";
 import { type BundleError, type BundleOutput, BundlerIo } from "./bundle-client.ts";
 
 export class BuildIoError extends Data.TaggedError("BuildIoError")<{ cause: unknown }> {}
@@ -73,6 +78,36 @@ const widgetFolders = (sourceDir: string) =>
 const bundled = (output: BundleOutput, name: string) =>
   output.files.find((f) => baseName(f.path) === name);
 
+/** The `sources` a bundle's source map lists, or none if it has no readable map. */
+const mapSources = (map: Bytes | undefined): ReadonlyArray<string> => {
+  if (map === undefined) return [];
+  const parsed = Either.try(() => JSON.parse(new TextDecoder().decode(map)) as unknown);
+  if (Either.isLeft(parsed)) return [];
+  const value = parsed.right;
+  const sources = typeof value === "object" && value !== null && "sources" in value
+    ? value.sources
+    : [];
+  return Array.isArray(sources) ? sources.filter((s): s is string => typeof s === "string") : [];
+};
+
+/**
+ * Why a widget's bundle can't use the page's shared packages, if it can't: it
+ * carries its own copy of one (a part not shared, like `effect/Schema`), or has
+ * CommonJS code that `require()`s one, which throws in the browser.
+ */
+const sharingProblem = (script: Bytes, map: Bytes | undefined): string | null => {
+  const copies = bundledSharedPackages(mapSources(map));
+  if (copies.length > 0) {
+    return `it bundles its own copy of ${copies.join(", ")}, which the page shares. ` +
+      `Import only these names from them: ${sharedSpecifiers.join(", ")}`;
+  }
+  if (new TextDecoder().decode(script).includes(dynamicRequireMarker)) {
+    return `it bundles CommonJS code that require()s a package the page shares ` +
+      `(${sharedSpecifiers.join(", ")}). Use a version of that dependency with ES modules`;
+  }
+  return null;
+};
+
 const buildOne = (
   sourceDir: string,
   id: string,
@@ -108,7 +143,12 @@ const buildOne = (
       Schema.encodeEither(manifest.right.config)(manifest.right.defaultConfig),
       (e) => `its defaultConfig doesn't fit its config schema: ${e.message}`,
     );
-    const output = yield* bundler.bundle(`${dir}/main.tsx`).pipe(
+    // The page supplies the shared packages (see src/common/shared-modules.ts).
+    const output = yield* bundler.bundle({
+      entrypoints: [`${dir}/main.tsx`],
+      external: sharedSpecifiers,
+      codeSplitting: false,
+    }).pipe(
       Effect.mapError((e: BundleError) => `it failed to bundle: ${e.message}`),
     );
     if (!output.success) {
@@ -121,6 +161,10 @@ const buildOne = (
       return yield* Effect.fail(`bundling it produced no main.js`);
     }
     const map = bundled(output, "main.js.map");
+    const problem = sharingProblem(script.contents, map?.contents);
+    if (problem !== null) {
+      return yield* Effect.fail(problem);
+    }
     const bundle = bundleFile(id);
     return {
       entry: {

@@ -1,7 +1,14 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Effect, Either, Schema } from "effect";
 import { defineManifest } from "../src/common/widgets.ts";
-import { BundleError, type BundleOutput, BundlerIo, BundlerIoLive } from "./bundle-client.ts";
+import {
+  BundleError,
+  type BundleOutput,
+  type BundleRequest,
+  BundlerIo,
+  BundlerIoLive,
+} from "./bundle-client.ts";
+import { sharedSpecifiers } from "../src/common/shared-modules.ts";
 import {
   BuildIoError,
   buildWidgets,
@@ -40,8 +47,8 @@ const okBundle = (hash: string): BundleOutput => ({
   success: true,
   errors: [],
   files: [
-    { path: "/out/main.js", hash, contents: encode(`js ${hash}`) },
-    { path: "/out/main.js.map", hash: "m", contents: encode("map") },
+    { path: "main.js", hash, contents: encode(`js ${hash}`) },
+    { path: "main.js.map", hash: "m", contents: encode(`{"sources":["../src/main.tsx"]}`) },
   ],
 });
 
@@ -56,6 +63,7 @@ const worldWith = (ids: ReadonlyArray<string>, top: ReadonlyArray<DirEntry> = []
 });
 
 const run = (world: World) => {
+  const requests: Array<BundleRequest> = [];
   const disk = new Map<string, string>();
   const log: Array<string> = [];
   const io = WidgetBuildIo.of({
@@ -79,8 +87,9 @@ const run = (world: World) => {
     rename: (from, to) => Effect.sync(() => log.push(`rename ${from} ${to}`)),
   });
   const bundler = BundlerIo.of({
-    bundle: (entry) => {
-      const output = world.bundles.get(entry);
+    bundle: (request) => {
+      requests.push(request);
+      const output = world.bundles.get(request.entrypoints.join());
       return output instanceof BundleError || output === undefined
         ? Effect.fail(output ?? new BundleError({ message: "no such entry" }))
         : Effect.succeed(output);
@@ -92,7 +101,7 @@ const run = (world: World) => {
       Effect.provideService(BundlerIo, bundler),
     ),
   );
-  return { result, disk, log };
+  return { result, disk, log, requests };
 };
 
 const problems = (world: World) => {
@@ -194,6 +203,64 @@ Deno.test("buildWidgets reports a bundle with no main.js", () => {
   const world = worldWith(["clock"]);
   world.bundles.set("/src/clock/main.tsx", { success: true, errors: [], files: [] });
   assertStringIncludes(problems(world).join(), "bundling it produced no main.js");
+});
+
+Deno.test("buildWidgets leaves the shared packages out of each bundle", () => {
+  const { requests } = run(worldWith(["clock"]));
+  assertEquals(requests, [{
+    entrypoints: ["/src/clock/main.tsx"],
+    external: sharedSpecifiers,
+    codeSplitting: false,
+  }]);
+});
+
+/** A bundle of `script`, whose source map lists `sources`. */
+const bundleOf = (script: string, sources: ReadonlyArray<string>): BundleOutput => ({
+  success: true,
+  errors: [],
+  files: [
+    { path: "main.js", hash: "h", contents: encode(script) },
+    { path: "main.js.map", hash: "m", contents: encode(JSON.stringify({ sources })) },
+  ],
+});
+
+Deno.test("buildWidgets rejects a widget carrying its own copy of a shared package", () => {
+  const world = worldWith(["clock"]);
+  world.bundles.set(
+    "/src/clock/main.tsx",
+    bundleOf("js", [
+      "../src/main.tsx",
+      "../node_modules/.deno/effect@3.22.4/node_modules/effect/dist/esm/Schema.js",
+    ]),
+  );
+  assertStringIncludes(problems(world).join(), "it bundles its own copy of effect");
+});
+
+Deno.test("buildWidgets rejects CommonJS code that requires a shared package", () => {
+  const world = worldWith(["clock"]);
+  world.bundles.set(
+    "/src/clock/main.tsx",
+    bundleOf(`throw Error('Dynamic require of "'+x+'" is not supported')`, []),
+  );
+  assertStringIncludes(problems(world).join(), "require()s a package the page shares");
+});
+
+Deno.test("buildWidgets checks sharing even without a readable source map", () => {
+  const world = worldWith(["clock", "notes"]);
+  world.bundles.set("/src/clock/main.tsx", {
+    success: true,
+    errors: [],
+    files: [{ path: "main.js", hash: "h", contents: encode("js") }],
+  });
+  world.bundles.set("/src/notes/main.tsx", {
+    success: true,
+    errors: [],
+    files: [
+      { path: "main.js", hash: "h", contents: encode("js") },
+      { path: "main.js.map", hash: "m", contents: encode("not json") },
+    ],
+  });
+  assertEquals(problems(world), []);
 });
 
 Deno.test("buildWidgets reports a widget folder it can't read", () => {

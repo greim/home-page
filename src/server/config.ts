@@ -1,5 +1,6 @@
 /** Static configuration shared by the server and the scripts in bin/. */
 import { serviceLabels } from "../../tooling/service-plan.ts";
+import { sharedDir, sharedModules } from "../common/shared-modules.ts";
 
 const root = new URL("../../", import.meta.url);
 const path = (relative: string): string => new URL(relative, root).pathname;
@@ -26,6 +27,8 @@ export const config = {
   /** Origins the page is served from: the only ones the assistant service answers. */
   appOrigins: new Set([`https://localhost:${port}`, `https://${hostname}:${port}`]),
   clientEntry: path("src/client/main.tsx"),
+  /** The modules widgets share with the page, bundled beside it (see shared-modules.ts). */
+  sharedEntries: sharedModules.map((m) => path(`src/client/${sharedDir}/${m.entry}.ts`)),
   serverEntry: path("src/server/main.ts"),
   /** One folder per widget type. */
   widgetsSourceDir: path("src/client/widgets"),
@@ -59,7 +62,10 @@ export const config = {
     watched: ["src", "tooling", "deno.json", "deno.lock"],
     entries: {
       app: "src/server/main.ts",
-      page: "src/client/main.tsx",
+      page: [
+        "src/client/main.tsx",
+        ...sharedModules.map((m) => `src/client/${sharedDir}/${m.entry}.ts`),
+      ],
       assistant: "src/server/assistant-main.ts",
     },
     appPort: port,

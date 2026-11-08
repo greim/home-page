@@ -26,7 +26,11 @@ const settingsIn = (dir: string, appPort = 1): AssistantSettings => ({
   registryFile: `${dir}/dist/registry.json`,
   stepTimeoutMs: 60_000,
   watched: ["src", "deno.json"],
-  entries: { app: "src/app.ts", page: "src/page.ts", assistant: "src/assistant.ts" },
+  entries: {
+    app: "src/app.ts",
+    page: ["src/page.ts", "src/shared.ts"],
+    assistant: "src/assistant.ts",
+  },
   appJob: "gui/0/test.unused",
   appPort,
 });
@@ -100,7 +104,8 @@ Deno.test("module graphs list each entry point's local modules, relative to the 
   await Deno.writeTextFile(`${dir}/src/assistant.ts`, 'import { x } from "./shared.ts"; x;');
   const graphs = await Effect.runPromise(assistantIoLive(settingsIn(dir)).moduleGraphs);
   assertEquals([...graphs.app].sort(), ["src/app.ts", "src/shared.ts"]);
-  assertEquals([...graphs.page], ["src/page.ts"]);
+  // The page has several entry points (its own, and the shared modules): its graph covers them all.
+  assertEquals([...graphs.page].sort(), ["src/page.ts", "src/shared.ts"]);
   assertEquals([...graphs.assistant].sort(), ["src/assistant.ts", "src/shared.ts"]);
   await Deno.remove(dir, { recursive: true });
 });

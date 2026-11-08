@@ -47,8 +47,8 @@ The app runs as two processes, each a launchd job (`deno task install-service`):
 | The assistant service (Claude Code through the Agent SDK) | `src/server/assistant-main.ts` | 9443 | `logs/assistant.log` |
 
 - `deno task restart-service [app|assistant]` restarts them (both by default) and waits until they
-  take connections again. The main server takes 30–40 s: it bundles the page and builds the widgets
-  first.
+  take connections again. The main server takes a few seconds longer than the assistant: it bundles
+  the page and builds the widgets first.
 - To run them by hand beside the installed ones, use other ports:
   `PORT=8444 ASSISTANT_PORT=9444 deno task dev` and the same with `deno task start-assistant`.
 - `deno task doctor` checks the machine and both services.

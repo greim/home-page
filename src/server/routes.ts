@@ -17,10 +17,14 @@ import {
 import { decodeLayoutJson, readLayout, writeLayout } from "./layout-store.ts";
 import { assistantPortMetaName } from "../common/assistant.ts";
 import { widgetAssetsPath } from "../common/widgets.ts";
+import { importMap } from "../common/shared-modules.ts";
 import { serveWidgetFile } from "./widget-files.ts";
 
 /** File name the bundler gives the client entry point (src/client/main.tsx). */
 export const clientScript = "main.js";
+
+/** Where the page's bundle is served: the page's script, its chunks and the shared modules. */
+export const assetsPath = "/web/assets/";
 
 export const page = (buildId: string, assistantPort: number): string =>
   `<!doctype html>
@@ -32,10 +36,11 @@ export const page = (buildId: string, assistantPort: number): string =>
     <title>Home</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏠</text></svg>">
     <style>html, body, #root { height: 100%; margin: 0; overflow: hidden; }</style>
+    <script type="importmap">${JSON.stringify(importMap(assetsPath))}</script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/web/assets/${clientScript}?v=${buildId}"></script>
+    <script type="module" src="${assetsPath}${clientScript}?v=${buildId}"></script>
   </body>
 </html>
 `;
@@ -83,8 +88,8 @@ const route = (
       request.url.searchParams.has("v"),
     );
   }
-  if (pathname.startsWith("/web/assets/") && isRead) {
-    const asset = site.assets.get(pathname.slice("/web/assets/".length));
+  if (pathname.startsWith(assetsPath) && isRead) {
+    const asset = site.assets.get(pathname.slice(assetsPath.length));
     if (asset === undefined) {
       return Effect.succeed(text(404, "Not found"));
     }
