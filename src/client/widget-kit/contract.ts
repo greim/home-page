@@ -4,6 +4,14 @@
  */
 import type { Schedule } from "../../common/day-cycle.ts";
 
+/**
+ * A CSS variable every column sets to its current background color: its own
+ * color by day, the night gray at night, fading between them with the column.
+ * Widgets inherit it, for tinting things to match the column they're in, e.g.
+ * `oklch(from var(--column-background) calc(l + 0.1) c h)`.
+ */
+export const columnBackgroundVar = "--column-background";
+
 /** The view shown in a column. */
 export const widgetViewName = "widget";
 /** The settings form shown in the column editor. */

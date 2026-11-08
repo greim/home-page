@@ -9,8 +9,10 @@ import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "re
 import { LuBed, LuHardHat, LuPartyPopper } from "react-icons/lu";
 import type { Workday as WorkdayState } from "../../../common/day-cycle.ts";
 import { workdayAt } from "../../../common/day-cycle.ts";
+import { columnColorCss, defaultColumnColor } from "../../../common/column-color.ts";
 import { registerMfe } from "../../mfe/register-live.tsx";
 import { hatching, widgetHeading } from "../../surface.ts";
+import { columnBackgroundVar } from "../../widget-kit/contract.ts";
 import { useNow } from "../../widget-kit/now.ts";
 import {
   type EditorProps,
@@ -37,6 +39,15 @@ const workdayIcon = (is: WorkdayState["is"]): ReactNode => {
 
 /** How long the bar takes to grow, or to slide back to empty when the part of the week changes. */
 const fillTransition = "2s ease-in-out";
+
+/**
+ * The bar's fill: the column's own color, lighter and more vivid so it stands
+ * out from the column. A gray column (e.g. at night) gives a gray fill. Before
+ * the column sets its color, the default column color stands in.
+ */
+const fillColor = `oklch(from var(${columnBackgroundVar}, ${
+  columnColorCss(defaultColumnColor)
+}) calc(l + 0.085) min(calc(c * 6), calc(c + 0.08)) h)`;
 
 /** Diagonal stripes, one tile of which repeats; the animation rolls them one tile along. */
 const stripeTile = "2rem";
@@ -116,7 +127,7 @@ function Workday({ schedule }: WidgetProps<WorkdayConfig>) {
           right="auto"
           w={`${done}%`}
           transition={`width ${fillTransition}`}
-          bgColor="oklch(0.72 0.13 105)"
+          bgColor={fillColor}
           bgImage="linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(0, 0, 0, 0.1) 100%)"
           boxShadow="-1px 0 rgba(0, 0, 0, 0.5) inset, 0.03em 0.03em 0.1em rgba(0, 0, 0, 0.3)"
           _after={{

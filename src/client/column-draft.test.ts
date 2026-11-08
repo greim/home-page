@@ -75,7 +75,7 @@ Deno.test("sendWidget moves the widget out to the sent list", () => {
 
 Deno.test("finishColumnDraft builds an edit-column action", () => {
   const draft = sendWidget(
-    { ...toColumnDraft(column, null), heading: "H", icon: "LuHouse", color: { c: 0.1, h: 25 } },
+    { ...toColumnDraft(column, null), heading: "H", icon: "LuHouse" },
     "x",
     "other",
   );
@@ -88,7 +88,6 @@ Deno.test("finishColumnDraft builds an edit-column action", () => {
         ...column,
         heading: "H",
         icon: "LuHouse",
-        color: { c: 0.1, h: 25 },
         widgets: [a!, b!],
       },
       sent: [{ toColumnId: "other", widget: x! }],

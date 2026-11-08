@@ -1,22 +1,12 @@
-import { chakra, HStack, Slider, Stack, Text } from "@chakra-ui/react";
+import { HStack, Slider, Stack, Text } from "@chakra-ui/react";
 import {
   chromaGradient,
   type ColumnColor,
-  columnColorCss,
-  columnColorPresets,
   hueGradient,
   maxChroma,
-  sameColumnColor,
   withChroma,
   withHue,
 } from "../common/column-color.ts";
-
-const swatch = {
-  borderWidth: "1px",
-  borderColor: "border.emphasized",
-  rounded: "full",
-  cursor: "pointer",
-} as const;
 
 /** One slider, its track painted with the colors it ranges over. */
 function ColorSlider(props: {
@@ -54,8 +44,8 @@ function ColorSlider(props: {
 }
 
 /**
- * Picks a column color: a preset, or any hue and chroma at the column
- * lightness. Chroma stops at the most the hue can show, and changing the hue
+ * Picks a column color: any hue and chroma at the column lightness, reported
+ * as the sliders move. Chroma stops at the most the hue can show, and changing the hue
  * lowers it if the new hue can't reach it.
  */
 export function ColorPicker(props: {
@@ -66,31 +56,6 @@ export function ColorPicker(props: {
   const { value, onChange } = props;
   return (
     <Stack gap="3" w="64" role="group" aria-label={props.label}>
-      <HStack gap="2">
-        {columnColorPresets.map((color, i) => (
-          <chakra.button
-            key={i}
-            {...swatch}
-            boxSize="7"
-            bg={columnColorCss(color)}
-            aria-label={`Preset ${i + 1}`}
-            title={columnColorCss(color)}
-            aria-pressed={sameColumnColor(color, value)}
-            outline={sameColumnColor(color, value) ? "2px solid" : "none"}
-            outlineColor="colorPalette.solid"
-            outlineOffset="2px"
-            onClick={() => onChange(color)}
-          />
-        ))}
-        <chakra.div
-          ms="auto"
-          boxSize="7"
-          rounded="sm"
-          bg={columnColorCss(value)}
-          title={columnColorCss(value)}
-          aria-hidden
-        />
-      </HStack>
       <ColorSlider
         label="Hue"
         value={value.h}

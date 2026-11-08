@@ -1,4 +1,5 @@
 import { type ColumnColor, columnColorCss } from "../common/column-color.ts";
+import { columnBackgroundVar } from "./widget-kit/contract.ts";
 
 /**
  * The root font size, which every rem on the page is relative to. Tying it to
@@ -217,4 +218,17 @@ export const columnBackground = (color: ColumnColor, isNight: boolean): string =
   isNight ? night.columnColor : columnColorCss(color);
 
 /** How a column's background changes between day and night, at the given pace. */
-export const columnBackgroundTransition = (pace: string) => `background-color ${pace}`;
+export const columnBackgroundTransition = (pace: string) =>
+  `background-color ${pace}, ${columnBackgroundVar} ${pace}`;
+
+/**
+ * Registers the column background variable as a color, so it fades between day
+ * and night along with the column, instead of jumping. Call it once, at startup.
+ */
+export const registerColumnBackground = (): void =>
+  CSS.registerProperty({
+    name: columnBackgroundVar,
+    syntax: "<color>",
+    inherits: true,
+    initialValue: night.columnColor,
+  });

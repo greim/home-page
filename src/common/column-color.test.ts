@@ -9,7 +9,6 @@ import {
   fromHex,
   hueGradient,
   maxChroma,
-  sameColumnColor,
   StoredColumnColor,
   toHex,
   withChroma,
@@ -97,9 +96,4 @@ Deno.test("chromaGradient runs from gray to the hue's most chroma", () => {
     chromaGradient(30),
     `linear-gradient(to right, oklch(0.63553 0 30), oklch(0.63553 ${maxChroma(30)} 30))`,
   );
-});
-
-Deno.test("sameColumnColor compares chroma and hue", () => {
-  assert(sameColumnColor({ c: 0.02, h: 30 }, { c: 0.02, h: 30 }));
-  assertEquals(sameColumnColor({ c: 0.02, h: 30 }, { c: 0.02, h: 31 }), false);
 });

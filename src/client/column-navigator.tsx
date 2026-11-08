@@ -1,5 +1,5 @@
 import type { ColumnColor } from "../common/column-color.ts";
-import { Box, chakra, HStack, Popover, Portal, Theme } from "@chakra-ui/react";
+import { Box, Button, chakra, HStack, Popover, Portal, Theme } from "@chakra-ui/react";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { LuEye, LuEyeOff, LuMove, LuPalette, LuPlus, LuTrash2 } from "react-icons/lu";
 import { gapToIndex } from "../common/arrays.ts";
@@ -194,8 +194,10 @@ function ThumbIcon(props: ComponentProps<typeof chakra.button> & { label: string
 }
 
 /**
- * A thumbnail's palette icon, which opens the column color swatches just above
- * the navigator. Picks apply at once, so the column itself is the preview.
+ * A thumbnail's palette icon, which opens the column color sliders just above
+ * the navigator. Changes apply as the sliders move, so the column itself is the
+ * preview. OK closes it, so there's no need to click outside it (which would
+ * land on the column and open its editor).
  */
 function ColorButton(props: {
   label: string;
@@ -221,6 +223,11 @@ function ColorButton(props: {
                 value={props.value}
                 onChange={props.onChange}
               />
+              <HStack justify="end" mt="4">
+                <Popover.CloseTrigger asChild>
+                  <Button size="xs">OK</Button>
+                </Popover.CloseTrigger>
+              </HStack>
             </Popover.Body>
           </Popover.Content>
         </Popover.Positioner>

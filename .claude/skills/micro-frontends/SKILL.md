@@ -161,6 +161,10 @@ Build views with `src/client/widget-kit/`, not with bare components:
 - The look isn't passed. A widget's DOM sits inside its column, so it inherits the column's text
   color and fonts, and Chakra's light or dark tokens through CSS. Don't hardcode colors that fight
   the column. Size everything per the `viewport-relative-design` skill.
+- To tint something to match its column, derive it from the `--column-background` CSS variable
+  (`columnBackgroundVar` in the contract), which the column sets to its current background and fades
+  between day and night, e.g. `oklch(from var(--column-background) calc(l + 0.1) c h)`. The workday
+  bar's fill does this.
 - The page draws no heading. A widget that wants one draws it from its config, conventionally a
   `heading` string (which admin mode also names the widget by), styled with `widgetHeading` from
   `src/client/surface.ts` so headings match.

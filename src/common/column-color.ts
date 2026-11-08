@@ -152,6 +152,3 @@ export const chromaGradient = (h: number): string =>
   `linear-gradient(to right, ${columnColorCss({ c: 0, h })}, ${
     columnColorCss({ c: maxChroma(h), h })
   })`;
-
-export const sameColumnColor = (a: ColumnColor, b: ColumnColor): boolean =>
-  a.c === b.c && a.h === b.h;

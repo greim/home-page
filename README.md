@@ -61,13 +61,14 @@ whenever something seems off.
   - Click a column's heading to rename it (Enter saves, Esc cancels).
   - Click its icon to pick another.
   - Click a widget or the column's background to open the **column editor**.
-- The **column editor** edits a column's heading, icon and color, and lists its widgets. Drag them
-  to reorder, send them to another column, delete them, add new ones, or select one to edit its
-  settings. Changes apply when you click Save. Column colors share one lightness, so white text
-  always reads on them: pick a preset, or a hue and chroma.
+- The **column editor** edits a column's heading and icon, and lists its widgets. Drag them to
+  reorder, send them to another column, delete them, add new ones, or select one to edit its
+  settings. Changes apply when you click Save.
 - The **column navigator** along the bottom is always shown in admin mode:
   - Add columns with the dashed boxes at either end, or the "+" markers between thumbnails.
-  - Each thumbnail has icons to move (drag it, or use the arrow keys), delete, and hide its column.
+  - Each thumbnail has icons to move (drag it, or use the arrow keys), delete, and hide its column,
+    and to color it. Drag the hue and chroma sliders and the column changes as you go; OK closes
+    them. Column colors share one lightness, so white text always reads on them.
 - The **admin bar** along the top says how to leave admin mode. At night, its sun button shows the
   page in daytime, so you can see and edit column colors.
 - **Bookmarks** are edited as an outline: `Label | URL` per line. A line without a URL is a folder,

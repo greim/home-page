@@ -1,9 +1,10 @@
 /**
  * Pure editing logic behind the column content editor: a draft of one column's
  * attributes and widgets, edited freely and committed (or discarded) as a whole.
+ * Its color isn't in the draft: that's changed live from its thumbnail, so
+ * saving keeps whatever the column has by then.
  */
 import { moveWhere, removeWhere } from "../common/arrays.ts";
-import type { ColumnColor } from "../common/column-color.ts";
 import type { LayoutAction, SentWidget } from "../common/layout-ops.ts";
 import type { Column, Widget } from "../common/model.ts";
 import { type Draft, finishDraft, toDraft } from "./widget-draft.ts";
@@ -11,7 +12,6 @@ import { type Draft, finishDraft, toDraft } from "./widget-draft.ts";
 export type ColumnDraft = {
   readonly heading: string;
   readonly icon: string;
-  readonly color: ColumnColor;
   /** The column's widgets, in order. */
   readonly widgets: ReadonlyArray<Draft>;
   /** Widgets sent to other columns, removed from this one. */
@@ -27,7 +27,6 @@ const hasId = (id: string) => (draft: Draft): boolean => idOf(draft) === id;
 export const toColumnDraft = (column: Column, selectedId: string | null): ColumnDraft => ({
   heading: column.heading,
   icon: column.icon,
-  color: column.color,
   widgets: column.widgets.map(toDraft),
   sent: [],
   selectedId: column.widgets.some((w) => w.id === selectedId) ? selectedId : null,
@@ -114,7 +113,6 @@ export const finishColumnDraft = (column: Column, draft: ColumnDraft): FinishedC
         ...column,
         heading: draft.heading,
         icon: draft.icon,
-        color: draft.color,
         widgets: widgets.widgets,
       },
       sent: sent.widgets.map((widget, i): SentWidget => ({

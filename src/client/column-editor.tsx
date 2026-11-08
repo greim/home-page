@@ -19,7 +19,6 @@ import { gapToIndex } from "../common/arrays.ts";
 import type { LayoutAction } from "../common/layout-ops.ts";
 import { type Column, newWidget } from "../common/model.ts";
 import { action, ActionMenu } from "./admin-menu.tsx";
-import { ColorPicker } from "./color-picker.tsx";
 import {
   addWidget,
   type ColumnDraft,
@@ -47,7 +46,7 @@ const typeName = (types: ReturnType<typeof registeredTypes>, draft: Draft): stri
 const dropLine = (side: "top" | "bottom") =>
   `0 ${side === "top" ? "-2px" : "2px"} 0 0 {colors.colorPalette.solid}`;
 
-/** The heading, icon and background color across the top of the editor. */
+/** The heading and icon across the top of the editor. */
 function ColumnFields(props: { draft: ColumnDraft; onChange: (draft: ColumnDraft) => void }) {
   const { draft, onChange } = props;
   return (
@@ -70,14 +69,6 @@ function ColumnFields(props: { draft: ColumnDraft; onChange: (draft: ColumnDraft
           size="sm"
           value={draft.heading}
           onChange={(e) => onChange({ ...draft, heading: e.target.value })}
-        />
-      </Box>
-      <Box>
-        <Label>Background</Label>
-        <ColorPicker
-          label="Column background color"
-          value={draft.color}
-          onChange={(color) => onChange({ ...draft, color })}
         />
       </Box>
     </HStack>

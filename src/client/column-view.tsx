@@ -18,6 +18,7 @@ import {
   surface,
 } from "./surface.ts";
 import { WidgetCard } from "./widget-card.tsx";
+import { columnBackgroundVar } from "./widget-kit/contract.ts";
 
 /**
  * The column heading, which in admin mode turns into a text field when clicked:
@@ -172,7 +173,12 @@ export function ColumnView(props: {
       color="white"
       textShadow={surface.columnTextShadow}
       h="full"
-      css={{ ...columnCorners(admin), ...hiddenScrollbar }}
+      css={{
+        ...columnCorners(admin),
+        ...hiddenScrollbar,
+        // For widgets to tint things to match (see the widget kit's contract).
+        [columnBackgroundVar]: columnBackground(column.color, night),
+      }}
       boxShadow={surface.columnInsetShadow}
       overflowY="auto"
       overflowX="hidden"

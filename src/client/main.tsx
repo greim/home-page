@@ -10,8 +10,10 @@ import { createManager } from "./mfe/manager-live.ts";
 import { WidgetHostProvider } from "./widget-host.tsx";
 import { registryResolver } from "./widget-resolver.ts";
 import { makeSystem } from "./chakra-system.ts";
+import { registerColumnBackground } from "./surface.ts";
 
 const system = makeSystem();
+registerColumnBackground();
 
 // Follow the OS light/dark setting (Chakra keys dark tokens off this class).
 const dark = matchMedia("(prefers-color-scheme: dark)");
