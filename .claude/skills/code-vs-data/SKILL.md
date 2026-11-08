@@ -54,11 +54,16 @@ service, a location to a weather API. What's sent is the user's data, so:
   https links to its privacy policy and terms of service. Be specific and complete: this is what the
   user agrees to. A widget that sends nothing anywhere leaves `permissions` out.
 - **The page asks the user, not the widget.** Until the user has read the services and agreed, the
-  page loads none of the widget's code: its card shows a notice and a Review button, which opens the
-  permission screen. The answer is kept in the browser's `localStorage`, once per widget type, and
-  the column editor shows it with a way to change it. If the manifest's services change, the user is
-  asked again. Don't build a consent screen into a widget; the page's is the one.
+  page shows neither the widget nor its full-screen view: its card shows a notice and a Review
+  button, which opens the consent form, a modal of its own. Its settings form (the `editor` view)
+  does load, so its config can be set up first. That's the only place consent is given: the column
+  editor just notes that the widget needs it (and, once given, offers to withdraw it). The answer is
+  kept in the browser's `localStorage`, once per widget type. If the manifest's services change, the
+  user is asked again. Don't build a consent screen into a widget; the page's is the one.
   (`src/client/permissions.ts` and `permissions-view.tsx`.)
+- **Only the widget and full-screen views may call a service**, never the editor or code that runs
+  when the bundle loads (the `registerMfe` factory, module top level). Those run before consent,
+  whenever the column editor shows the widget's settings.
 - **Send only what the service needs**, and say so in `sends`. If names aren't needed to look up an
   address, don't send them.
 - **Change `permissions` whenever what's sent changes**: a new service, or more data to one. Sending

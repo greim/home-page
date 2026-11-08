@@ -250,10 +250,10 @@ widgets were MFEs are migrated as they're read (`migrateWidget` in `src/common/m
 bundles every `src/client/widgets/*/main.tsx` into `dist/widgets/<id>/main.js` and writes
 `dist/widgets/registry.json`: each widget's ID, title, description, a hash of its bundle, its config
 schema as JSON Schema, its default config, and the outside services it sends data to (`permissions`,
-or null). The page reads `permissions` from the registry, so it can ask the user before loading any
-of the widget's code. It fails, reporting every broken widget at once and leaving the last good
-output in place, if a folder's name isn't a valid ID, it lacks `main.tsx` or `manifest.ts`, its
-manifest doesn't decode, its default config doesn't fit its schema, or it doesn't bundle.
+or null). The page reads `permissions` from the registry, so it can ask the user before showing the
+widget. It fails, reporting every broken widget at once and leaving the last good output in place,
+if a folder's name isn't a valid ID, it lacks `main.tsx` or `manifest.ts`, its manifest doesn't
+decode, its default config doesn't fit its schema, or it doesn't bundle.
 
 ### Shared packages
 
@@ -310,8 +310,9 @@ still uses gives exactly that error; the rest of the page keeps working.
 - Call APIs straight from the browser. There's no server-side proxy yet, so only APIs that allow
   cross-origin requests work.
 - Send the user's data to an outside service only if the manifest declares it under `permissions`.
-  The page then loads none of the widget's views (`widget`, `editor`, `full-screen`) until the user
-  agrees. See "Sending data to outside services" in the `code-vs-data` skill.
+  The page then shows neither its `widget` nor its `full-screen` view until the user agrees. Its
+  `editor` does load before that, so the editor, and anything that runs when the bundle loads, must
+  never call a service. See "Sending data to outside services" in the `code-vs-data` skill.
 - Keep secrets such as API keys in `localStorage`, prompting for them when missing, and never in
   their config. See the `code-vs-data` skill.
 - Use React, Chakra and Effect freely: they're the page's shared copies, so they cost a widget

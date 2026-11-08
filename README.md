@@ -26,8 +26,8 @@ browser's local storage. It never leaves your machine, with two exceptions:
   layout when you ask it to change the page), which goes to Anthropic as in any Claude Code session.
 - What a widget sends to an outside service (to look up addresses, say). Such a widget has to ask
   you first. It shows what it sends, to whom, and links to their privacy policy and terms of
-  service, and stays off until you agree. Your answer is kept in this browser, and you can change it
-  in the column editor.
+  service, and stays off until you agree. Your answer is kept in this browser, and you can withdraw
+  it in the column editor.
 
 ## Screenshots
 

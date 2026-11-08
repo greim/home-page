@@ -1,7 +1,8 @@
 /**
  * Whether the user has let a widget type send data to the outside services its
- * manifest declares (its `permissions`). The page loads none of such a widget's
- * views until they have. The answer is kept in this browser, once per widget type,
+ * manifest declares (its `permissions`). Until they have, the page shows neither
+ * the widget nor its full-screen view (its settings form, which only edits the
+ * config, does load). The answer is kept in this browser, once per widget type,
  * along with what it was an answer to: if the widget later declares different
  * services, the user is asked again. This is the functional core: the decisions,
  * and the stored text. Reading and writing it is in permissions-live.ts.

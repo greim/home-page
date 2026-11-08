@@ -1,10 +1,10 @@
 /**
- * What the user sees of a widget's permissions (see permissions.ts): the screen
- * that asks them, the notice a widget's card shows until they've agreed, and the
- * summary in the column editor, where they can change their answer.
+ * What the user sees of a widget's permissions (see permissions.ts): the consent
+ * form (its own modal, opened from the card), the notice a widget's card shows
+ * until they've agreed, and the note in the column editor.
  */
 import { Box, Button, chakra, HStack, Link, Stack, Text } from "@chakra-ui/react";
-import { LuExternalLink, LuShieldAlert } from "react-icons/lu";
+import { LuExternalLink, LuMessageCircleWarning, LuShieldAlert } from "react-icons/lu";
 import type { OutsideService, Permissions } from "../common/widgets.ts";
 import { FullScreenBody, FullScreenFooter } from "./full-screen/full-screen-host.tsx";
 import type { PermissionState } from "./permissions.ts";
@@ -26,7 +26,7 @@ function ServiceList(props: { services: ReadonlyArray<OutsideService> }) {
         <chakra.li key={s.name} borderWidth="1px" rounded="md" p="4">
           <Text fontWeight="semibold">{s.name}</Text>
           <Text mt="1">
-            <chakra.span color="fg.muted">Sent to it:</chakra.span> {s.sends}
+            <chakra.span color="fg.muted">It sees:</chakra.span> {s.sends}
           </Text>
           <HStack gap="4" mt="2" fontSize="sm" wrap="wrap">
             <OutsideLink href={s.privacyPolicy}>Privacy policy</OutsideLink>
@@ -100,44 +100,51 @@ export function PermissionNotice(props: {
         </Box>
         <Text fontSize="0.9rem">{text}</Text>
       </HStack>
-      <Button size="sm" variant="outline" color="inherit" onClick={props.onReview}>
+      <Button
+        size="sm"
+        variant="outline"
+        color="inherit"
+        onClick={(e) => {
+          // The card around it opens the column editor when clicked in admin mode.
+          e.stopPropagation();
+          props.onReview();
+        }}
+      >
         Review
       </Button>
     </Stack>
   );
 }
 
-/** The column editor's summary of a widget's permissions, with a way to change the answer. */
-export function PermissionsSummary(props: {
-  permissions: Permissions;
+/**
+ * The column editor's note on a widget that sends data to outside services. The
+ * consent form isn't here: it opens from the Review button in the widget's card.
+ * Once given, consent can be withdrawn here.
+ */
+export function PermissionNote(props: {
   state: PermissionState;
-  onAnswer: (yes: boolean) => void;
+  onWithdraw: () => void;
 }) {
   const granted = props.state.is === "granted";
   return (
-    <Stack gap="3" borderWidth="1px" rounded="md" p="4">
-      <Text fontWeight="semibold">Sends data to outside services</Text>
-      <ServiceList services={props.permissions.services} />
-      <HStack justify="space-between" gap="3" wrap="wrap">
-        <Text fontSize="sm" color="fg.muted">
+    <HStack gap="3" align="start" borderWidth="1px" rounded="md" p="4">
+      <Box color="fg.warning" fontSize="xl" flexShrink="0">
+        <LuMessageCircleWarning />
+      </Box>
+      <Stack gap="2" align="start">
+        <Text fontSize="sm">
           {granted
-            ? "You've allowed this, so the widget is on."
+            ? "You've given consent for this widget to send data to outside services."
             : props.state.is === "declined"
-            ? "You chose not to allow this, so the widget is off."
-            : "You haven't answered yet, so the widget is off."}
+            ? "You declined to let this widget send data to outside services, so it's off. To use it, close the column editor, then click Review in its card."
+            : "You'll need to give consent before using this widget: it sends data to outside services. Close the column editor, then click Review in its card."}
         </Text>
-        {granted
-          ? (
-            <Button size="sm" variant="outline" onClick={() => props.onAnswer(false)}>
-              Withdraw permission
-            </Button>
-          )
-          : (
-            <Button size="sm" onClick={() => props.onAnswer(true)}>
-              Yes, I'm okay with that
-            </Button>
-          )}
-      </HStack>
-    </Stack>
+        {granted && (
+          <Button size="xs" variant="outline" onClick={props.onWithdraw}>
+            Withdraw consent
+          </Button>
+        )}
+      </Stack>
+    </HStack>
   );
 }

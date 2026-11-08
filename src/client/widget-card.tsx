@@ -101,8 +101,11 @@ export function WidgetCard(props: { columnId: string; widget: Widget }) {
         }
         : undefined}
     >
-      {/* Inert content can't be hit, so clicks on it land on the box above. */}
-      <Box inert={admin}>
+      {
+        /* Inert content can't be hit, so clicks on it land on the box above. The permission
+          notice is the page's own, not the widget's, so its Review button works in admin mode too. */
+      }
+      <Box inert={admin && permission !== null && allowed(permission)}>
         {permission === null
           ? null
           : allowed(permission)
