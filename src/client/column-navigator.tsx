@@ -118,12 +118,14 @@ const discRadius = `(3 / 8 * ${gap})`;
  * A dashed line in the space before a thumbnail, with a "+" disc at its middle,
  * that inserts a column there. The line spans the thumbnails' height.
  * `space` is the width of the space it's centered in, which grows where the
- * outline runs through it.
+ * outline runs through it. There the outline already divides the thumbnails, so
+ * the line is left out (`onOutline`) unless a dragged column is over it.
  */
 function InsertMarker(props: {
   label: string;
   gap: number;
   space: string;
+  onOutline: boolean;
   targeted: boolean;
   onClick: () => void;
 }) {
@@ -145,7 +147,9 @@ function InsertMarker(props: {
       display="flex"
       justifyContent="center"
     >
-      <Box borderLeftWidth="2px" borderStyle="dashed" borderColor={color} />
+      {(!props.onOutline || props.targeted) && (
+        <Box borderLeftWidth="2px" borderStyle="dashed" borderColor={color} />
+      )}
       <Box
         position="absolute"
         top="50%"
@@ -422,6 +426,7 @@ export function ColumnNavigator(props: {
                   space={`(${thumbGap} + ${
                     sideShift(side) - sideShift(sideOf(offset, i - 1))
                   } * ${outsideShift})`}
+                  onOutline={side !== sideOf(offset, i - 1)}
                   targeted={targeted(slot.index)}
                   onClick={() => props.onAdd(slot.index)}
                 />
