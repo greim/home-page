@@ -2,7 +2,7 @@
 node_modules/
 coverage/
 
-# TLS key material (see bin/setup-certs.ts)
+# TLS key material (see tooling/cert-plan.ts)
 .secrets/
 
 # Persisted home page layout (see src/server/main.ts)
@@ -11,7 +11,7 @@ data/
 # Widget build output (see bin/build-widgets.ts)
 dist/
 
-# launchd service logs (see bin/install-service.ts)
+# launchd service logs (see tooling/service-plan.ts)
 logs/
 
 scratch-docs/

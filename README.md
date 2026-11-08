@@ -1,34 +1,40 @@
-# Your Home Page
+# Your Home Page — An App That Builds Itself
 
-A browser home page that you change by talking to [Claude Code](https://code.claude.com/). Ask for a
-column of news links and it adds one. Ask for a stock ticker, a feed reader or a map, and if no
-widget does that yet, it writes one: new code, in this repo, that you can keep, change and commit.
+_Your Home Page_ is an app that can add features to itself and fix its own bugs, via a
+Claude-powered assistant that launches from within the app. Ask it for a column of news links, a
+stock ticker, a feed reader, or a map, and if it can't do that yet, it writes the code for you.
+Think of it as just another way of using [Claude Code](https://code.claude.com/) — the assistant can
+do anything Claude can do. If you're more of a power user type, you can use Claude directly to do
+all the same things.
 
-It runs on your Mac, on localhost over HTTPS, and your layout never leaves your machine.
+## How Does It Work?
 
-![Four colored columns of widgets: a clock, a workday progress bar, search fields, bookmarks, copyable commands and characters](.github/readme-day.png)
+The app isn't deployed to a remote server. Instead, it runs on localhost, directly out of a git repo
+on your machine that you fork from [this GitHub repo](https://github.com/greim/home-page). The app
+is open source. If you agree with the [LICENSE](./LICENSE), sharing your bug fixes and feature
+improvements with the world is as simple as committing them and making a pull request. Don't know
+how to do that? That's also something the assistant can help you with.
 
-## What it does
+## How Does It Protect My Personal Data?
 
-- **Columns of widgets.** Each column has a heading, an icon and a color. The page fills the width
-  of the window and scales with it.
-- **Widgets that come with it:**
-  - **Bookmarks**, with folders.
-  - **Search fields** that open a site's search with what you typed.
-  - **Copyable snippets**, such as shell commands or special characters.
-  - **A clock**.
-  - **A workday bar** showing how far you are through your working week.
-- **The assistant.** Claude Code, in a window beside the page. It can rearrange the page for you,
-  write new kinds of widget, or work on any other part of the code, as it would in a terminal.
-- **Night mode.** After your day ends, the page fades to gray and a starfield comes out.
+The assistant makes a sharp distinction between source code and personal data. Source code never
+contains secrets or private data, and can thus be committed to the repo. Personal data is never
+committed. It's stored in a [git-ignored](https://git-scm.com/docs/gitignore) folder, or in your
+browser's local storage. It never leaves your machine, except what the assistant reads to do what
+you ask (a screenshot of the page with each message, and your layout when you ask it to change the
+page), which goes to Anthropic as in any Claude Code session.
 
-![The same page at night: gray columns under a field of stars](.github/readme-night.png)
+## Screenshots
 
-## Getting started
+| Day Mode                                                                                                                                                | Night Mode                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| ![Four colored columns of widgets: a clock, a workday progress bar, search fields, bookmarks, copyable commands and characters](.github/readme-day.png) | ![The same page at night: gray columns under a field of stars](.github/readme-night.png) |
 
-You need a Mac and a current browser (Chrome, Firefox or Safari). These first steps get you to the
-point where one command can take over. They all happen in the **Terminal** app: press ⌘-Space, type
-`Terminal` and press Return.
+## Getting Started
+
+To launch the app, you need a Mac and a current browser (Chrome, Firefox or Safari). Open the
+[Terminal app](https://www.google.com/search?q=how+to+launch+the+terminal+app+in+macos) on your Mac
+and follow these steps.
 
 **1. Check for git.** Type this and press Return:
 
@@ -46,12 +52,10 @@ install the command line developer tools, click **Install** and wait for it to f
 deno --version
 ```
 
-- If it prints `deno 2.` something, you're set.
-- If it prints `deno 1.` something, run `deno upgrade`.
-- If it says `command not found`, install it with `curl -fsSL https://deno.land/install.sh | sh` (or
-  `brew install deno`, if you use [Homebrew](https://brew.sh/)). Then close the Terminal window and
-  open a new one, so it finds `deno`.
-  [Deno's install guide](https://docs.deno.com/runtime/getting_started/installation/) has more ways.
+- If it prints `deno 2.x`, you're set.
+- If it prints `deno 1.x`, run `deno upgrade`.
+- If it says `command not found`, go to the [Deno website](https://deno.com/) and follow
+  instructions to install.
 
 **3. Get the code.** This puts it in a `home-page` folder in your home folder:
 
@@ -69,11 +73,11 @@ deno task setup
 
 From here, setup takes over.
 
-**Linux and Windows** aren't supported yet, only because I don't run them, not because they're
-unwelcome. The macOS-specific parts are running the services (launchd) and trusting the certificate
-(the login keychain): the setup and service scripts in `bin/` and `tooling/`, plus the assistant
-service restarting the server (`src/server/assistant-live.ts`). If you'd like it on your OS, pull
-requests are welcome.
+> **Note about Linux and Windows**: These platforms aren't supported yet, only because I don't run
+> them, not because they're unwelcome. The macOS-specific parts are running the services (launchd)
+> and trusting the certificate (the login keychain): the setup and service scripts in `bin/` and
+> `tooling/`, plus the assistant service restarting the server (`src/server/assistant-live.ts`). If
+> you'd like it on your OS, pull requests are welcome.
 
 ## Setup
 
@@ -97,6 +101,20 @@ You can stop setup at any point, and run it again to pick up where you left off.
 time, too. With everything already working, it says so and offers to restart the services (say,
 after pulling new code). If something's wrong, it says what and offers to fix it. It also offers to
 renew the certificate when it's about to expire.
+
+## High Level Feature Overview
+
+- **Columns of widgets.** Each column has a heading, an icon and a color. The page fills the width
+  of the window and scales with it.
+- **Widgets that come with it:**
+  - **Bookmarks**, with folders.
+  - **Search fields** that open a site's search with what you typed.
+  - **Copyable snippets**, such as shell commands or special characters.
+  - **A clock**.
+  - **A workday bar** showing how far you are through your working week.
+- **The assistant.** Claude Code, in a window beside the page. It can rearrange the page for you,
+  write new kinds of widget, or work on any other part of the code, as it would in a terminal.
+- **Night mode.** After your day ends, the page fades to gray and a starfield comes out.
 
 ## Using it
 
