@@ -87,9 +87,8 @@ Widgets
   that type's own settings, which must fit the type's config schema. These are the widget types:
 ${describeRegistry(registry)}
 - When no widget type does what the user wants, write a new one, or change an existing type's code.
-  Follow the existing widgets (clock is the simplest; bookmarks has an editor with real logic) and
-  use the widget kit in src/client/widget-kit/. A widget runs in the browser, so it can only call
-  APIs that allow cross-origin requests.
+  The create-widget skill has the steps and templates. A widget runs in the browser, so it can only
+  call APIs that allow cross-origin requests.
 - After changing widget code, run \`deno task build\` (it checks, lints, tests and builds the
   widgets). The page loads the built widgets.
 

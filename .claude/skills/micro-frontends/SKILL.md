@@ -133,7 +133,7 @@ letters, digits and single hyphens). It contains:
   title, a description, an Effect Schema for its config, and the config a new widget starts with.
 - Its logic modules and their tests, per the `functional-core` and `testing` skills.
 
-`clock` is the simplest widget to copy; `bookmarks` has an editor with real logic.
+To create a widget, follow the `create-widget` skill, which has the steps and templates.
 
 ### The widget kit
 
