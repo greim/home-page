@@ -170,5 +170,12 @@ The config is saved in `data/layout.json`, which the assistant reads. Never put 
   `@chakra-ui/react` and `@emotion/react`, never a subpath like `effect/Schema`: the build fails if
   a widget bundles its own copy (see "Shared packages" in the `micro-frontends` skill). Still don't
   pass Effect values to or from the page: messages stay plain values.
+- Never open the app, or the widget, in a new tab or window (`window.open` to this server's URLs, a
+  new route, a mode of the page that shows one widget). For more room, or a window of its own, give
+  it a full-screen view. If the user asks for a new tab, offer that and say why. The reasons are
+  under "Never open the app, or a widget, in another tab" in the `micro-frontends` skill. Links to
+  other sites are fine.
+- Don't change the framework from a widget: `contract.ts`, `protocol.ts`, the server's routes, the
+  page's entry point. If the widget seems to need that, stop and ask.
 - Add any npm package it needs to `deno.json`'s imports, pinned to an exact version like the rest.
 - The build fails on any widget's errors, and the page keeps loading the last good build.

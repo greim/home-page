@@ -37,6 +37,11 @@ views or provide other services inside the host. That's what makes MFEs flexible
   changing it can break every MFE that depends on it. Keep it minimal, and choose its opinions
   carefully. Treat any change to `src/client/mfe/protocol.ts` or `src/client/widget-kit/contract.ts`
   as a breaking change for every widget.
+  - **So a widget task doesn't change the framework.** Building or changing a widget never touches
+    `protocol.ts`, `contract.ts`, the server's routes (`src/server/routes.ts`) or the page's entry
+    point (`src/client/main.tsx`), and never adds a view name the page doesn't already show. If a
+    widget seems to need one of those, stop and ask the developer: it's a change to the framework
+    every widget shares, to design on its own, not a detail of one widget.
 
 Here, the payoff is that the page can grow widget types nobody planned for: the assistant (or the
 developer) writes a new widget folder, and the page loads it without the page's code changing.
@@ -203,11 +208,35 @@ the assistant, the settings and the column editor.
   16px, and the view reflows as the window is resized. So lay a full-screen view out to reflow
   (flex, grid, wrapping), not to fixed widths.
 
-Things that don't work in a full-screen view:
+Anything relying on being inside a column doesn't work in a full-screen view: `--column-background`
+and the column's text color aren't there. It's drawn in the page's normal light or dark colors.
 
-- Opening a new browser tab for it. Hosting a widget in a separate tab isn't supported.
-- Anything relying on being inside a column: `--column-background` and the column's text color
-  aren't there. It's drawn in the page's normal light or dark colors.
+#### Never open the app, or a widget, in another tab
+
+When a widget needs more room, or a window of its own, give it a full-screen view. Don't open the
+app's own pages in a new tab or window: no `window.open` (or `target="_blank"` link) to a URL this
+server serves, no new route serving the page, no second mode of the page's entry point that shows
+one widget. Why:
+
+- **It's a second copy of the app,** with its own copy of the layout. The page saves the whole
+  layout at once and the last save wins, so two copies silently undo each other's changes.
+- **A widget gets everything from the page,** as props: its config, `saveConfig`, its `widgetId`,
+  the schedule. A tab of its own has no page to give it those, so the widget has to invent its own
+  storage and identity (one shared `localStorage` key, say), which two tabs then overwrite without
+  either knowing, and which every widget of that type shares.
+- **It changes the framework** (a route, an entry point, a view name), which belongs to every
+  widget, from inside one widget's task (see "The contract is the hard part").
+- **A full-screen view already does what the tab was for.** It has the whole screen, and torn off,
+  it's a window of its own that floats over other windows, while sharing the page's live state:
+  saving from it saves the layout the page shows.
+
+If the user asks for a widget "in a new tab" or "on its own page", build a full-screen view, and say
+why in a sentence or two: it opens over the page, and its button moves it into a window of its own.
+If they still want a separate tab, stop and ask before building anything: hosting widgets in
+separate tabs needs the layout to be safe to save from several at once, which is framework work.
+
+This is only about the app's own pages. Links to other sites open in new tabs as usual (bookmarks
+do).
 
 ### In the layout
 
