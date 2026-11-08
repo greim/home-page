@@ -26,15 +26,21 @@ It runs on your Mac, on localhost over HTTPS, and your layout never leaves your 
 
 ## Requirements
 
-| What                                                   | Why                                                                                                                                         | Get it                                                            |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| **macOS**                                              | The server runs as a launchd service, and its HTTPS certificate is trusted through the login keychain. There's no Linux or Windows support. | —                                                                 |
-| **[Deno](https://deno.com/) 2**                        | Runs everything. The server bundles the page at startup with Deno's built-in bundler, so older versions won't do. Known to work with 2.9.   | `brew install deno`, or `deno upgrade`                            |
-| **[Claude Code](https://code.claude.com/)**, signed in | The assistant runs Claude Code (bundled with the Agent SDK) and signs in with your Claude Code login.                                       | Install it, then run `claude` once to sign in                     |
-| **git**                                                | Getting the code, and for the assistant to commit when you ask it to.                                                                       | Comes with the Xcode command line tools: `xcode-select --install` |
-| **openssl** and **security**                           | Making and trusting the certificate.                                                                                                        | Built into macOS                                                  |
-| **A current browser**                                  | The page uses recent CSS (e.g. OKLCH colors). Current Chrome and Safari work.                                                               | —                                                                 |
-| **Ports 8443 and 9443** free                           | The server and the assistant service listen on them, on 127.0.0.1 only.                                                                     | —                                                                 |
+| What                                                   | Why                                                                                                                                                        | Get it                                                            |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **macOS**                                              | The server runs as a launchd service, and its HTTPS certificate is trusted through the login keychain. Linux and Windows aren't supported yet (see below). | —                                                                 |
+| **[Deno](https://deno.com/) 2**                        | Runs everything. The server bundles the page at startup with Deno's built-in bundler, so older versions won't do. Known to work with 2.9.                  | `brew install deno`, or `deno upgrade`                            |
+| **[Claude Code](https://code.claude.com/)**, signed in | The assistant runs Claude Code (bundled with the Agent SDK) and signs in with your Claude Code login.                                                      | Install it, then run `claude` once to sign in                     |
+| **git**                                                | Getting the code, and for the assistant to commit when you ask it to.                                                                                      | Comes with the Xcode command line tools: `xcode-select --install` |
+| **openssl** and **security**                           | Making and trusting the certificate.                                                                                                                       | Built into macOS                                                  |
+| **A current browser**                                  | The page uses recent CSS (e.g. OKLCH colors). Current Chrome and Safari work.                                                                              | —                                                                 |
+| **Ports 8443 and 9443** free                           | The server and the assistant service listen on them, on 127.0.0.1 only.                                                                                    | —                                                                 |
+
+**Linux and Windows** aren't supported yet, only because I don't run them, not because they're
+unwelcome. The macOS-specific parts are running the services (launchd) and trusting the certificate
+(the login keychain): the service and certificate scripts in `bin/` and `tooling/`, plus the
+assistant service restarting the server (`src/server/assistant-live.ts`). If you'd like it on your
+OS, pull requests are welcome.
 
 ## Setup
 
