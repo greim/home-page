@@ -43,7 +43,11 @@ function AssistantHost(props: {
   const assistant = useAssistant(windowConversationId);
   return (
     <AssistantWindow state={props.window}>
-      <AssistantPanel assistant={assistant} onClose={props.onClose} />
+      <AssistantPanel
+        assistant={assistant}
+        // A PiP window has the browser's own close button; the in-page panel doesn't.
+        onClose={props.window.is === "panel" ? props.onClose : null}
+      />
     </AssistantWindow>
   );
 }

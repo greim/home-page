@@ -159,7 +159,11 @@ function ModelPicker(props: { assistant: Assistant; models: ReadonlyArray<ModelC
 }
 
 function Header(
-  props: { assistant: Assistant; models: ReadonlyArray<ModelChoice>; onClose: () => void },
+  props: {
+    assistant: Assistant;
+    models: ReadonlyArray<ModelChoice>;
+    onClose: (() => void) | null;
+  },
 ) {
   const { chat } = props.assistant;
   const mode = modes.some((m) => m.value === chat.mode) ? chat.mode : "default";
@@ -192,15 +196,17 @@ function Header(
         </NativeSelect.Field>
         <NativeSelect.Indicator />
       </NativeSelect.Root>
-      <IconButton
-        aria-label="Close the assistant"
-        title="Close (the conversation carries on)"
-        size="sm"
-        variant="ghost"
-        onClick={props.onClose}
-      >
-        <LuX />
-      </IconButton>
+      {props.onClose !== null && (
+        <IconButton
+          aria-label="Close the assistant"
+          title="Close (the conversation carries on)"
+          size="sm"
+          variant="ghost"
+          onClick={props.onClose}
+        >
+          <LuX />
+        </IconButton>
+      )}
     </HStack>
   );
 }
@@ -503,7 +509,8 @@ function Composer(props: { assistant: Assistant; commands: ReadonlyArray<Command
 
 const noCapabilities: Capabilities = { commands: [], models: [] };
 
-export function AssistantPanel(props: { assistant: Assistant; onClose: () => void }) {
+/** `onClose` draws a close button; null where the window has its own (a PiP window's). */
+export function AssistantPanel(props: { assistant: Assistant; onClose: (() => void) | null }) {
   // What Claude Code offers in the repo: read when the window opens (skills may have changed).
   const [capabilities, setCapabilities] = useState(noCapabilities);
   useEffect(() => {
