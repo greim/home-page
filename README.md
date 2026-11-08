@@ -177,3 +177,7 @@ The coding standards, and how the app is put together, are in
 [the skills in `.claude/skills/`](./.claude/skills/), which Claude Code (the assistant included)
 loads by itself. Start with `repo-layout`, and `micro-frontends` for how widgets work. VS Code with
 the Deno extension picks up the repo's settings (`.vscode/settings.json`).
+
+## License
+
+[MIT](./LICENSE)
