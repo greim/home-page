@@ -2,7 +2,7 @@
  * Column colors. Every column shares one OKLCH lightness, and the user chooses
  * only chroma (c) and hue (h): OKLCH is perceptually uniform, so columns of any
  * hue look equally light, keep white text equally legible, and desaturate
- * evenly toward the same gray (see NEW_LAYOUT.md).
+ * evenly toward the same gray.
  */
 import { Schema } from "effect";
 

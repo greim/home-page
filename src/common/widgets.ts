@@ -1,6 +1,6 @@
 /**
  * Widget types: the manifest each widget folder provides, and the registry the
- * widget build collects them into. See SELF_BUILDING.md.
+ * widget build collects them into.
  */
 import { Either, Schema } from "effect";
 

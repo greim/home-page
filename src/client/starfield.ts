@@ -1,6 +1,6 @@
 /**
- * The night sky laid over the page in night mode (see NEW_LAYOUT.md): randomly
- * placed, sized, turned and tinted stars, each fading in after its own delay.
+ * The night sky laid over the page in night mode: randomly placed, sized,
+ * turned and tinted stars, each fading in after its own delay.
  */
 
 export type Star = {

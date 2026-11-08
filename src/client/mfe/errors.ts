@@ -1,6 +1,6 @@
 /**
  * The ways a message can fail, as tagged errors inside the framework and as a
- * plain {@link SendResult} at its public API. See MFE_FRAMEWORK.md, "Results".
+ * plain {@link SendResult} at its public API. See the micro-frontends skill, "Results".
  */
 import { Data, Effect } from "effect";
 import type { ChannelKey } from "./protocol.ts";

@@ -9,7 +9,7 @@ import { WidgetId } from "./widgets.ts";
 
 /**
  * A widget in a column. Its type is an MFE, built from
- * src/client/widgets/<is>/, which decodes `config` itself (see SELF_BUILDING.md).
+ * src/client/widgets/<is>/, which decodes `config` itself.
  */
 export const Widget = Schema.Struct({
   id: Schema.String,
@@ -25,13 +25,14 @@ const isRecord = (u: unknown): u is Readonly<Record<string, unknown>> =>
 
 /**
  * Brings a widget saved in an older shape up to date:
- * - Before widgets were MFEs, a widget's settings sat beside its id, e.g.
- *   `{ is: "bookmarks", id, subheading, collapsed, items }`. They move into `config`.
+ * - Before widgets were MFEs, a widget's settings sat beside its id, e.g. `{
+ *   is: "bookmarks", id, subheading, collapsed, items }`. They move into
+ *   `config`.
  * - Briefly, MFE widgets were `{ is: "mfe", mfe: "<type>", config, ... }`.
- * - Until NEW_LAYOUT.md, the page gave every widget a heading (`subheading`)
- *   that collapsed it (`collapsed`). Now a widget shows its own heading, if
- *   any, so they move into `config` as `heading` and `collapsed` (unless it
- *   already has them). Widget types that don't use them ignore them.
+ * - Until a recent redesign, the page gave every widget a heading
+ *   (`subheading`) that collapsed it (`collapsed`). Now a widget shows its own
+ *   heading, if any, so they move into `config` as `heading` and `collapsed`
+ *   (unless it already has them). Widget types that don't use them ignore them.
  * Anything else is left for the schema to judge.
  */
 export const migrateWidget = (stored: unknown): unknown => {

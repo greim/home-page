@@ -1,6 +1,6 @@
 /**
  * The widget build: bundles every widget folder's main.tsx, and collects their
- * manifests into registry.json. See SELF_BUILDING.md, "The Widget Build".
+ * manifests into registry.json.
  */
 import { Context, Data, Effect, Either, JSONSchema, Schema } from "effect";
 import {

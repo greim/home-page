@@ -27,7 +27,7 @@ export const config = {
   appOrigins: new Set([`https://localhost:${port}`, `https://${hostname}:${port}`]),
   clientEntry: path("src/client/main.tsx"),
   serverEntry: path("src/server/main.ts"),
-  /** One folder per widget type. See SELF_BUILDING.md. */
+  /** One folder per widget type. */
   widgetsSourceDir: path("src/client/widgets"),
   /** Build output that isn't kept in git. */
   distDir: path("dist"),

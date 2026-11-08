@@ -61,7 +61,10 @@ const withWidget = (widget: unknown) => ({
 const decodedWidget = (widget: unknown) =>
   Either.map(decode(withWidget(widget)), (l) => l.columns.at(0)?.widgets.at(0));
 
-/** How widgets were saved until NEW_LAYOUT.md: with a heading and collapse state of the page's. */
+/**
+ * How widgets were saved until a recent redesign: with a heading and collapse
+ * state of the page's.
+ */
 const old = { id: "w", subheading: "Links", collapsed: true };
 /** The same, as a widget's own config holds them now. */
 const moved = { heading: "Links", collapsed: true };

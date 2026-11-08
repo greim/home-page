@@ -21,8 +21,8 @@ const cornerRadius = "0.5rem";
 const smallCornerRadius = "0.25rem";
 
 /**
- * The page's look, which is fixed (see NEW_LAYOUT.md); only column colors are
- * the user's to choose (see src/common/column-color.ts).
+ * The page's look; only column colors are the user's to choose (see
+ * src/common/column-color.ts).
  */
 export const surface = {
   /**
@@ -74,8 +74,8 @@ export const surfaceColors = (night: boolean) => ({
 });
 
 /**
- * Night mode (see NEW_LAYOUT.md): between the end of the user's day and the
- * start of the next, the page dims and stars come out.
+ * Night mode: between the end of the user's day and the start of the next, the
+ * page dims and stars come out.
  */
 export const night = {
   /** How long the page takes to change between day and night, as the day ends or begins. */
@@ -189,8 +189,7 @@ export const smallCorners = { borderRadius: smallCornerRadius } as const;
 
 /**
  * Fine diagonal hatching, over the dark wells set into columns (code boxes, the
- * workday bar): the reference design's 8×8 texture (look-at-this-layout.css,
- * stripped of its metadata), tiled at its native size, not scaled with the page.
+ * workday bar), tiled at its native size, not scaled with the page.
  */
 export const hatching = {
   bgImage:

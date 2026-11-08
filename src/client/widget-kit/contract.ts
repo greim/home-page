@@ -1,6 +1,6 @@
 /**
  * What the shell passes a widget's views, and what they pass back. Props cross
- * between bundles as they are, functions included. See SELF_BUILDING.md.
+ * between bundles as they are, functions included.
  */
 import type { Schedule } from "../../common/day-cycle.ts";
 

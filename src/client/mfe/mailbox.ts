@@ -1,6 +1,6 @@
 /**
  * One side's channels: their handlers, the messages waiting for a handler, and
- * which channels have closed. See MFE_FRAMEWORK.md, "Delivery".
+ * which channels have closed. See the micro-frontends skill, "Delivery".
  */
 import { Deferred, Duration, Effect, Either } from "effect";
 import {
