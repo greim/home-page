@@ -87,6 +87,7 @@ Deno.test("views are told apart by what they show", () => {
   assertEquals(viewKey(settings), "settings");
   assertEquals(viewKey(editor), "column-editor:c1");
   assertEquals(viewKey(widget), "widget:w1");
+  assertEquals(viewKey({ is: "permissions", widgetType: "map" }), "permissions:map");
 });
 
 Deno.test("views about a column or widget that's gone are closed", () => {
@@ -103,6 +104,11 @@ Deno.test("views about a column or widget that's gone are closed", () => {
   assertStrictEquals(
     prune({ modal: settings, pip: null }, { ...layout, columns: [] }).modal,
     settings,
+  );
+  const permissions: FullScreenView = { is: "permissions", widgetType: "map" };
+  assertStrictEquals(
+    prune({ modal: permissions, pip: null }, { ...layout, columns: [] }).modal,
+    permissions,
   );
   assertEquals(prune(open, { ...layout, columns: [] }), { modal: null, pip: null });
   assertEquals(

@@ -111,6 +111,22 @@ const problems = (world: World) => {
     : [];
 };
 
+Deno.test("the registry carries the outside services a widget's manifest declares", () => {
+  const permissions = {
+    services: [{
+      name: "Geocoder",
+      sends: "Street addresses",
+      privacyPolicy: "https://example.com/privacy",
+      terms: "https://example.com/terms",
+    }],
+  };
+  const world = worldWith(["clock"]);
+  world.modules.set("/src/clock/manifest.ts", { manifest: { ...manifest, permissions } });
+  const { disk } = run(world);
+  const registry = JSON.parse(disk.get("/dist/widgets.next/registry.json") ?? "");
+  assertEquals(registry.widgets[0].permissions, permissions);
+});
+
 Deno.test("buildWidgets writes each bundle and a registry, then swaps them in", () => {
   const { result, disk, log } = run(worldWith(["clock", "news-feed"]));
   assertEquals(Either.isRight(result), true);
@@ -128,6 +144,8 @@ Deno.test("buildWidgets writes each bundle and a registry, then swaps them in", 
   assertEquals(registry.widgets[0].version, "h-clock");
   assertEquals(registry.widgets[0].configSchema.properties.zone, { type: "string" });
   assertEquals(registry.widgets[0].defaultConfig, { zone: "UTC" });
+  // It sends nothing anywhere, so there's nothing for the user to agree to.
+  assertEquals(registry.widgets[0].permissions, null);
   assertEquals(log, [
     "remove /dist/widgets.next",
     "remove /dist/widgets",

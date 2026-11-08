@@ -11,6 +11,7 @@ const registry: Registry = {
     version: "v1",
     configSchema: {},
     defaultConfig: {},
+    permissions: null,
   }],
 };
 

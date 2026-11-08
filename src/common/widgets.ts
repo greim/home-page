@@ -7,6 +7,29 @@ import { Either, Schema } from "effect";
 /** A widget type's ID: its folder's name under src/client/widgets/. */
 export const WidgetId = Schema.String.pipe(Schema.pattern(/^[a-z0-9]+(-[a-z0-9]+)*$/));
 
+/** A web address that must be https. */
+const HttpsUrl = Schema.String.pipe(
+  Schema.pattern(/^https:\/\/\S+$/, { message: () => "must be an https:// URL" }),
+);
+
+/** An outside service a widget sends data to. */
+export const OutsideService = Schema.Struct({
+  /** Who it is, e.g. "US Census Geocoder". */
+  name: Schema.NonEmptyTrimmedString,
+  /** What the widget sends it, in plain words, e.g. "The street addresses in your CSV". */
+  sends: Schema.NonEmptyTrimmedString,
+  privacyPolicy: HttpsUrl,
+  terms: HttpsUrl,
+});
+export type OutsideService = typeof OutsideService.Type;
+
+/**
+ * The outside services a widget sends data to. The page doesn't load such a widget
+ * until the user has read these and agreed (see src/client/permissions.ts).
+ */
+export const Permissions = Schema.Struct({ services: Schema.NonEmptyArray(OutsideService) });
+export type Permissions = typeof Permissions.Type;
+
 /** What a widget's `manifest.ts` exports as `manifest`. */
 export type WidgetManifest<A, I> = {
   readonly title: string;
@@ -15,6 +38,11 @@ export type WidgetManifest<A, I> = {
   readonly config: Schema.Schema<A, I>;
   /** The config a new widget of this type starts with. */
   readonly defaultConfig: A;
+  /**
+   * The outside services it sends data to, if any: the user is asked to agree before
+   * the widget is used. Leave it out for a widget that sends nothing anywhere.
+   */
+  readonly permissions?: Permissions;
 };
 
 /** Declares a manifest, checking its shape. */
@@ -33,6 +61,7 @@ const ManifestModule = Schema.Struct({
     description: Schema.NonEmptyTrimmedString,
     config: AnySchema,
     defaultConfig: Schema.Unknown,
+    permissions: Schema.optionalWith(Permissions, { exact: true }),
   }),
 });
 
@@ -54,6 +83,8 @@ export const RegistryEntry = Schema.Struct({
   configSchema: Schema.Unknown,
   /** A new widget's config, as it's saved in the layout. */
   defaultConfig: Schema.Unknown,
+  /** The outside services it sends data to; null when it sends nothing anywhere. */
+  permissions: Schema.optionalWith(Schema.NullOr(Permissions), { default: () => null }),
 });
 export type RegistryEntry = typeof RegistryEntry.Type;
 

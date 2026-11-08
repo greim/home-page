@@ -6,7 +6,10 @@ import { WidgetProblem } from "./widget-card.tsx";
 import { type DraftReport, editorViewName, type EditorViewProps } from "./widget-kit/contract.ts";
 import { Label } from "./widget-kit/form.tsx";
 import { type Draft, draftConfig, withReport } from "./widget-draft.ts";
-import { useWidgetHost } from "./widget-host.tsx";
+import { registeredTypes, useWidgetHost } from "./widget-host.tsx";
+import { allowed } from "./permissions.ts";
+import { answer, usePermissions } from "./permissions-live.ts";
+import { PermissionsSummary } from "./permissions-view.tsx";
 
 /** The widget type's editor view, started from the draft's latest valid config. */
 function WidgetEditor(props: { draft: Draft; onChange: (draft: Draft) => void }) {
@@ -40,9 +43,30 @@ export function WidgetForm(props: {
   error: string | null;
 }) {
   const { draft, onChange } = props;
+  const { registry } = useWidgetHost();
+  const permissionOf = usePermissions();
+  const type = registeredTypes(registry).find((t) => t.id === draft.widget.is);
+  const permissions = type?.permissions ?? null;
+  const state = permissionOf(draft.widget.is, permissions);
   return (
     <Stack gap="4">
-      <WidgetEditor draft={draft} onChange={onChange} />
+      {permissions !== null && (
+        <PermissionsSummary
+          permissions={permissions}
+          state={state}
+          onAnswer={(yes) => answer(draft.widget.is, permissions, yes)}
+        />
+      )}
+      {
+        // Its editor is the widget's code too, so it loads only once the widget may.
+        allowed(state)
+          ? <WidgetEditor draft={draft} onChange={onChange} />
+          : (
+            <Text fontSize="sm" color="fg.muted">
+              Its settings can be changed once it's allowed to send data.
+            </Text>
+          )
+      }
       {props.error !== null && <Text color="fg.error" fontSize="sm">{props.error}</Text>}
     </Stack>
   );

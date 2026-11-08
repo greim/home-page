@@ -11,6 +11,9 @@ import {
   widgetViewName,
   type WidgetViewProps,
 } from "./widget-kit/contract.ts";
+import { allowed } from "./permissions.ts";
+import { usePermissions } from "./permissions-live.ts";
+import { PermissionNotice } from "./permissions-view.tsx";
 import { widgetLabel } from "./widget-draft.ts";
 import { registeredTypes, useWidgetHost } from "./widget-host.tsx";
 
@@ -75,8 +78,16 @@ export function WidgetFullScreen(props: { columnId: string; widget: Widget }) {
  */
 export function WidgetCard(props: { columnId: string; widget: Widget }) {
   const { admin, open } = useBoard();
+  const { registry } = useWidgetHost();
+  const permissionOf = usePermissions();
   const { columnId, widget } = props;
-  const name = widgetLabel(widget, registeredTypes(useWidgetHost().registry));
+  const types = registeredTypes(registry);
+  const name = widgetLabel(widget, types);
+  const type = types.find((t) => t.id === widget.is);
+  // Until the registry says what a widget sends, none of its code loads.
+  const permission = type === undefined
+    ? (registry.is === "loading" ? null : { is: "not-needed" } as const)
+    : permissionOf(type.id, type.permissions);
 
   return (
     <Box
@@ -92,7 +103,17 @@ export function WidgetCard(props: { columnId: string; widget: Widget }) {
     >
       {/* Inert content can't be hit, so clicks on it land on the box above. */}
       <Box inert={admin}>
-        <WidgetBody columnId={columnId} widget={widget} />
+        {permission === null
+          ? null
+          : allowed(permission)
+          ? <WidgetBody columnId={columnId} widget={widget} />
+          : (
+            <PermissionNotice
+              title={type?.title ?? name}
+              state={permission}
+              onReview={() => open({ is: "permissions", widgetType: widget.is })}
+            />
+          )}
       </Box>
     </Box>
   );

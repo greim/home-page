@@ -42,6 +42,34 @@ Secrets in `localStorage` stay in the browser. The widget prompts for the key an
 Never send it to the server, write it into `layout.json` or a widget's config, put it in a log, or
 put it in the assistant's prompt. Neither git nor the agent should ever see it.
 
+## Sending data to outside services
+
+Useful widgets often send something to an outside API: addresses to a geocoder, a search to a
+service, a location to a weather API. What's sent is the user's data, so:
+
+- **Never commit it.** Not the data a widget sent or received, and not samples of it (fixtures,
+  examples, docs, screenshots). Made-up data only, as above.
+- **Declare every outside service in the widget's manifest**, as `permissions`: who it is, what the
+  widget sends it in plain words ("The street addresses in the CSV you load, not the names"), and
+  https links to its privacy policy and terms of service. Be specific and complete: this is what the
+  user agrees to. A widget that sends nothing anywhere leaves `permissions` out.
+- **The page asks the user, not the widget.** Until the user has read the services and agreed, the
+  page loads none of the widget's code: its card shows a notice and a Review button, which opens the
+  permission screen. The answer is kept in the browser's `localStorage`, once per widget type, and
+  the column editor shows it with a way to change it. If the manifest's services change, the user is
+  asked again. Don't build a consent screen into a widget; the page's is the one.
+  (`src/client/permissions.ts` and `permissions-view.tsx`.)
+- **Send only what the service needs**, and say so in `sends`. If names aren't needed to look up an
+  address, don't send them.
+- **Change `permissions` whenever what's sent changes**: a new service, or more data to one. Sending
+  something the manifest doesn't declare breaks the user's trust in every widget's notice.
+- Maps and other things that load content from outside servers (tiles, images, fonts) count too: the
+  request tells that server what the user is looking at.
+
+The permission is a consent step, not a sandbox: once the user agrees, the widget's code runs in the
+page like any other. What keeps it honest is the manifest being accurate, and reviewed with the
+code.
+
 ## Rules when writing code
 
 - Never `git add -f` anything under `data/`, `.secrets/` or `logs/`, and never remove those entries

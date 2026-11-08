@@ -33,6 +33,33 @@ Deno.test("decodeManifestModule says what's wrong with a bad manifest", async (t
   });
 });
 
+Deno.test("a manifest may declare the outside services it sends data to", async (t) => {
+  const service = {
+    name: "Geocoder",
+    sends: "Street addresses",
+    privacyPolicy: "https://example.com/privacy",
+    terms: "https://example.com/terms",
+  };
+  const decode = (permissions: unknown) =>
+    decodeManifestModule({ manifest: { ...manifest, permissions } });
+  await t.step("a list of services", () => {
+    const decoded = decode({ services: [service] });
+    assertEquals(Either.isRight(decoded) && decoded.right.permissions, { services: [service] });
+  });
+  await t.step("none, by leaving it out", () => {
+    const decoded = decodeManifestModule({ manifest });
+    assertEquals(Either.isRight(decoded) && decoded.right.permissions, undefined);
+  });
+  await t.step("but not an empty list, or a policy that isn't https", () => {
+    const failure = (permissions: unknown) => {
+      const result = decode(permissions);
+      return Either.isLeft(result) ? result.left : "decoded";
+    };
+    assertStringIncludes(failure({ services: [] }), "services");
+    assertStringIncludes(failure({ services: [{ ...service, terms: "http://x" }] }), "https://");
+  });
+});
+
 Deno.test("widgetBundleUrl versions the URL from the registry", () => {
   const registry: Registry = {
     widgets: [{
@@ -42,6 +69,7 @@ Deno.test("widgetBundleUrl versions the URL from the registry", () => {
       version: "abc",
       configSchema: {},
       defaultConfig: {},
+      permissions: null,
     }],
   };
   assertEquals(

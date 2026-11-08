@@ -20,9 +20,14 @@ how to do that? That's also something the assistant can help you with.
 The assistant makes a sharp distinction between source code and personal data. Source code never
 contains secrets or private data, and can thus be committed to the repo. Personal data is never
 committed. It's stored in a [git-ignored](https://git-scm.com/docs/gitignore) folder, or in your
-browser's local storage. It never leaves your machine, except what the assistant reads to do what
-you ask (a screenshot of the page with each message, and your layout when you ask it to change the
-page), which goes to Anthropic as in any Claude Code session.
+browser's local storage. It never leaves your machine, with two exceptions:
+
+- What the assistant reads to do what you ask (a screenshot of the page with each message, and your
+  layout when you ask it to change the page), which goes to Anthropic as in any Claude Code session.
+- What a widget sends to an outside service (to look up addresses, say). Such a widget has to ask
+  you first. It shows what it sends, to whom, and links to their privacy policy and terms of
+  service, and stays off until you agree. Your answer is kept in this browser, and you can change it
+  in the column editor.
 
 ## Screenshots
 

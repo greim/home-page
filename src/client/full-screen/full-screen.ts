@@ -20,7 +20,9 @@ export type FullScreenView =
   | { readonly is: "assistant" }
   | { readonly is: "settings" }
   | { readonly is: "column-editor"; readonly columnId: string; readonly widgetId: string | null }
-  | { readonly is: "widget"; readonly widgetId: string };
+  | { readonly is: "widget"; readonly widgetId: string }
+  /** What a widget type sends to outside services, for the user to agree to (or not). */
+  | { readonly is: "permissions"; readonly widgetType: string };
 
 export type FullScreenState<W> = {
   readonly modal: FullScreenView | null;
@@ -42,6 +44,8 @@ export const viewKey = (view: FullScreenView): string => {
       return `column-editor:${view.columnId}`;
     case "widget":
       return `widget:${view.widgetId}`;
+    case "permissions":
+      return `permissions:${view.widgetType}`;
     default:
       return view satisfies never;
   }
@@ -87,6 +91,7 @@ export const stillThere = (view: FullScreenView, layout: Layout): boolean => {
   switch (view.is) {
     case "assistant":
     case "settings":
+    case "permissions":
       return true;
     case "column-editor":
       return layout.columns.some((c) => c.id === view.columnId);

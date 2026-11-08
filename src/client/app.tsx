@@ -25,6 +25,9 @@ import {
 import { WidgetFullScreen } from "./widget-card.tsx";
 import { widgetLabel } from "./widget-draft.ts";
 import { registeredTypes, useWidgetHost } from "./widget-host.tsx";
+import { allowed } from "./permissions.ts";
+import { answer, usePermissions } from "./permissions-live.ts";
+import { PermissionsView } from "./permissions-view.tsx";
 
 type LoadState =
   | { is: "loading" }
@@ -56,6 +59,7 @@ export function App() {
   // While a modal is open, the page beneath it is out of reach, admin mode included.
   const [admin, exitAdmin] = useAdminMode(fullScreen.state.modal !== null);
   const { registry } = useWidgetHost();
+  const permissionOf = usePermissions();
 
   useEffect(() => {
     run(loadLayout).then((result) =>
@@ -195,7 +199,10 @@ export function App() {
       case "widget": {
         const column = layout.columns.find((c) => c.widgets.some((w) => w.id === view.widgetId));
         const widget = column?.widgets.find((w) => w.id === view.widgetId);
+        const type = registeredTypes(registry).find((t) => t.id === widget?.is);
         if (column === undefined || widget === undefined) return null;
+        // A widget whose permission is withdrawn closes, wherever it's open.
+        if (type !== undefined && !allowed(permissionOf(type.id, type.permissions))) return null;
         return {
           title: widgetLabel(widget, registeredTypes(registry)),
           width: "full",
@@ -204,6 +211,27 @@ export function App() {
             <Box flex="1" minH="0" overflow="auto">
               <WidgetFullScreen columnId={column.id} widget={widget} />
             </Box>
+          ),
+        };
+      }
+      case "permissions": {
+        const type = registeredTypes(registry).find((t) => t.id === view.widgetType);
+        if (type === undefined || type.permissions === null) return null;
+        const { permissions } = type;
+        return {
+          title: `Allow ${type.title} to send data?`,
+          width: "40rem",
+          fullHeight: false,
+          content: (
+            <PermissionsView
+              title={type.title}
+              permissions={permissions}
+              state={permissionOf(type.id, permissions)}
+              onAnswer={(yes) => {
+                answer(type.id, permissions, yes);
+                close();
+              }}
+            />
           ),
         };
       }

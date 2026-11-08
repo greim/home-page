@@ -174,6 +174,7 @@ const buildOne = (
         version: script.hash,
         configSchema,
         defaultConfig,
+        permissions: manifest.right.permissions ?? null,
       },
       files: [
         [bundle, script.contents] as const,

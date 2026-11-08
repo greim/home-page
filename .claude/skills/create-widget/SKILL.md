@@ -14,7 +14,10 @@ page on demand. The `micro-frontends` skill explains how that works. This skill 
    folder, the `registerMfe` call, and `is` in the layout. Renaming it later breaks every layout
    that uses it.
 2. **Write `config.ts`**: the settings the user edits, as an Effect Schema (template below).
-3. **Write `manifest.ts`**: title, description, config schema, default config.
+3. **Write `manifest.ts`**: title, description, config schema, default config. If it sends the
+   user's data to any outside service (an API, a map's tile server), declare each one under
+   `permissions` (see "Sending data to outside services" in the `code-vs-data` skill). The page asks
+   the user about them before the widget runs; don't build a consent screen of your own.
 4. **Put the logic in plain modules with tests** (`<name>.ts` and `<name>.test.ts`), per the
    `functional-core` and `testing` skills. Anything that branches (parsing, formatting, converting,
    deciding) belongs here, not in components. Shape the input as plain data (e.g. a tree, not a DOM
@@ -59,6 +62,19 @@ export const manifest = defineManifest({
   config: ExampleConfig,
   defaultConfig: { heading: "Example" },
 });
+```
+
+A widget that sends the user's data to an outside service also declares it, one entry per service:
+
+```ts
+permissions: {
+  services: [{
+    name: "US Census Geocoder",
+    sends: "The street, city, state and zip of each address in your CSV (not the names)",
+    privacyPolicy: "https://www.census.gov/about/policies/privacy.html",
+    terms: "https://www.census.gov/data/developers/about/terms-of-service.html",
+  }],
+},
 ```
 
 The view, in `example.tsx`:
