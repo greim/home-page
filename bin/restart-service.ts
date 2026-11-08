@@ -13,6 +13,7 @@ import { config } from "../src/server/config.ts";
 import { executePlan } from "../tooling/plan-live.ts";
 import { parseServiceNames, restartPlan, type ServiceName } from "../tooling/service-plan.ts";
 import { awaitServices, WaitIo } from "../tooling/service-wait.ts";
+import { liveWaitIo } from "../tooling/service-wait-live.ts";
 
 const parsed = parseServiceNames(Deno.args);
 if (!parsed.ok) {
@@ -30,22 +31,9 @@ const services = {
   },
 } satisfies Record<ServiceName, unknown>;
 
-const live = WaitIo.of({
-  listening: (port) =>
-    Effect.tryPromise(() => Deno.connect({ hostname: "127.0.0.1", port })).pipe(
-      Effect.map((conn) => {
-        conn.close();
-        return true;
-      }),
-      Effect.orElseSucceed(() => false),
-    ),
-  sleep: (ms) => Effect.sleep(ms),
-  log: (line) => Effect.sync(() => console.log(line)),
-});
-
 const back = await Effect.runPromise(
   awaitServices(parsed.names.map((name) => services[name])).pipe(
-    Effect.provideService(WaitIo, live),
+    Effect.provideService(WaitIo, liveWaitIo),
   ),
 );
 if (back) console.log(`\nReady. Reload ${config.appUrl}`);

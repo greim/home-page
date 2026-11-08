@@ -44,7 +44,7 @@ const assistant = await Effect.runPromise(
     makeEventLog(crypto.randomUUID(), keptEvents),
     (log) =>
       makeAssistant(config.assistant, log, {
-        // Run by launchd (install-service), which restarts the services; else by hand.
+        // Run by launchd (installed by setup), which restarts the services; else by hand.
         supervised: Deno.env.get("XPC_SERVICE_NAME") === config.assistant.label,
         pollMs: 1000,
         attempts: 120,

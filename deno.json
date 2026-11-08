@@ -34,11 +34,9 @@
     "fmt": "deno fmt",
     "lint": "deno fmt --check && deno lint",
     "test": "deno test --allow-read --allow-write --allow-run --allow-env --allow-sys --allow-net=127.0.0.1 --coverage --clean --coverage-threshold=90",
-    "doctor": "deno run --allow-read --allow-run --allow-env --allow-net=127.0.0.1 bin/doctor.ts",
     "build-widgets": "deno run --allow-read --allow-write=dist --allow-env bin/build-widgets.ts",
     "build": "deno task check && deno task lint && deno task test && deno task build-widgets",
-    "setup-certs": "deno run --allow-read --allow-write --allow-run --allow-env bin/setup-certs.ts",
-    "install-service": "deno run --allow-read --allow-write --allow-run --allow-env --allow-sys=uid bin/install-service.ts",
+    "setup": "deno run --allow-read --allow-write --allow-run --allow-env --allow-sys=uid --allow-net=127.0.0.1 bin/setup.ts",
     "uninstall-service": "deno run --allow-read --allow-write --allow-run --allow-env --allow-sys=uid bin/uninstall-service.ts",
     "restart-service": "deno run --allow-read --allow-run --allow-env --allow-sys=uid --allow-net=127.0.0.1 bin/restart-service.ts"
   },

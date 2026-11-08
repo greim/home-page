@@ -60,9 +60,9 @@ export function SettingsDialog(props: {
             <Dialog.Body>
               <Stack gap="6">
                 <Text fontSize="sm" color="fg.muted">
-                  Set your working hours and weekend. The workday widget uses them
-                  to show progress through your workday, evening, and weekend.
-                  These also control when the app switches into night mode.
+                  Set your working hours and weekend. The workday widget uses them to show progress
+                  through your workday, evening, and weekend. These also control when the app
+                  switches into night mode.
                 </Text>
                 <HStack gap="4" align="start">
                   <Box flex="1">

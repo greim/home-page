@@ -39,7 +39,7 @@ Run `deno task fmt` and then `deno task build` before calling a change done.
 
 ## The two services
 
-The app runs as two processes, each a launchd job (`deno task install-service`):
+The app runs as two processes, each a launchd job (installed by `deno task setup`):
 
 | Process                                                   | Entry point                    | Port | Log                  |
 | --------------------------------------------------------- | ------------------------------ | ---- | -------------------- |
@@ -51,7 +51,8 @@ The app runs as two processes, each a launchd job (`deno task install-service`):
   the page and builds the widgets first.
 - To run them by hand beside the installed ones, use other ports:
   `PORT=8444 ASSISTANT_PORT=9444 deno task dev` and the same with `deno task start-assistant`.
-- `deno task doctor` checks the machine and both services.
+- `deno task setup` checks the machine and both services, and offers to fix what's wrong. It's
+  interactive: it's for people at a terminal, not for you to run.
 - When you are the assistant built into the page, don't restart them yourself: when your turn ends,
   the assistant service compares the repo with how it was and restarts whatever your changes need
   (see `src/server/restarts.ts`).

@@ -24,41 +24,79 @@ It runs on your Mac, on localhost over HTTPS, and your layout never leaves your 
 
 ![The same page at night: gray columns under a field of stars](.github/readme-night.png)
 
-## Requirements
+## Getting started
 
-| What                                                   | Why                                                                                                                                                        | Get it                                                            |
-| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| **macOS**                                              | The server runs as a launchd service, and its HTTPS certificate is trusted through the login keychain. Linux and Windows aren't supported yet (see below). | —                                                                 |
-| **[Deno](https://deno.com/) 2**                        | Runs everything. The server bundles the page at startup with Deno's built-in bundler, so older versions won't do. Known to work with 2.9.                  | `brew install deno`, or `deno upgrade`                            |
-| **[Claude Code](https://code.claude.com/)**, signed in | The assistant runs Claude Code (bundled with the Agent SDK) and signs in with your Claude Code login.                                                      | Install it, then run `claude` once to sign in                     |
-| **git**                                                | Getting the code, and for the assistant to commit when you ask it to.                                                                                      | Comes with the Xcode command line tools: `xcode-select --install` |
-| **openssl** and **security**                           | Making and trusting the certificate.                                                                                                                       | Built into macOS                                                  |
-| **A current browser**                                  | The page uses recent CSS (e.g. OKLCH colors). Current Chrome, Firefox and Safari work.                                                                     | —                                                                 |
-| **Ports 8443 and 9443** free                           | The server and the assistant service listen on them, on 127.0.0.1 only.                                                                                    | —                                                                 |
+You need a Mac and a current browser (Chrome, Firefox or Safari). These first steps get you to the
+point where one command can take over. They all happen in the **Terminal** app: press ⌘-Space, type
+`Terminal` and press Return.
+
+**1. Check for git.** Type this and press Return:
+
+```sh
+git --version
+```
+
+If it prints a version, such as `git version 2.50.1`, you have it. If macOS instead offers to
+install the command line developer tools, click **Install** and wait for it to finish. (Typing
+`xcode-select --install` opens that same offer.)
+
+**2. Check for Deno.** Deno runs everything here, and it needs to be version 2 or later:
+
+```sh
+deno --version
+```
+
+- If it prints `deno 2.` something, you're set.
+- If it prints `deno 1.` something, run `deno upgrade`.
+- If it says `command not found`, install it with `curl -fsSL https://deno.land/install.sh | sh` (or
+  `brew install deno`, if you use [Homebrew](https://brew.sh/)). Then close the Terminal window and
+  open a new one, so it finds `deno`.
+  [Deno's install guide](https://docs.deno.com/runtime/getting_started/installation/) has more ways.
+
+**3. Get the code.** This puts it in a `home-page` folder in your home folder:
+
+```sh
+cd ~
+git clone https://github.com/greim/home-page.git
+cd home-page
+```
+
+**4. Run setup:**
+
+```sh
+deno task setup
+```
+
+From here, setup takes over.
 
 **Linux and Windows** aren't supported yet, only because I don't run them, not because they're
 unwelcome. The macOS-specific parts are running the services (launchd) and trusting the certificate
-(the login keychain): the service and certificate scripts in `bin/` and `tooling/`, plus the
-assistant service restarting the server (`src/server/assistant-live.ts`). If you'd like it on your
-OS, pull requests are welcome.
+(the login keychain): the setup and service scripts in `bin/` and `tooling/`, plus the assistant
+service restarting the server (`src/server/assistant-live.ts`). If you'd like it on your OS, pull
+requests are welcome.
 
 ## Setup
 
-```sh
-git clone https://github.com/greim/home-page.git
-cd home-page
-deno task doctor           # what's missing, and how to fix it (fetches dependencies first)
-deno task setup-certs      # create & trust a localhost TLS certificate (prompts for approval)
-deno task install-service  # start at login, restart automatically if it ever exits
-deno task doctor           # everything should now pass
-```
+`deno task setup` looks at how things stand on your computer, tells you, and asks before it changes
+anything. In turn, it:
 
-Then open and pin <https://localhost:8443/web/app>. It starts with a single column holding a clock;
-press **F2** to start making it your own.
+- Checks for macOS, Deno 2, git, and the `openssl` and `security` tools that come with macOS.
+- Checks for [Claude Code](https://code.claude.com/), which the assistant runs on and signs in with.
+  If you don't have it, setup says where to get it. You can carry on without it and add it later;
+  the page works without the assistant.
+- Makes the page's HTTPS certificate and has macOS trust it. macOS asks for your password for this.
+  (If Firefox is open at the time, quit and reopen it afterwards. It only reads trusted certificates
+  when it starts.)
+- Installs the page's two background services, which start when you log in.
+- Waits for them to start, then gives you the page's address: <https://localhost:8443/web/app>.
 
-`deno task doctor` checks each requirement above, then the certificate (and its expiry), whether
-macOS trusts it, and whether both services are running. It prints a fix for anything wrong. Run it
-whenever something seems off.
+The page starts with a single column holding a clock. Pin it, or make it your browser's home page,
+and press **F2** to start making it your own.
+
+You can stop setup at any point, and run it again to pick up where you left off. Run it again any
+time, too. With everything already working, it says so and offers to restart the services (say,
+after pulling new code). If something's wrong, it says what and offers to fix it. It also offers to
+renew the certificate when it's about to expire.
 
 ## Using it
 
@@ -116,15 +154,16 @@ terminal, so treat it the same way.
 
 ### The services
 
-`install-service` registers two launchd user agents with `KeepAlive`, so launchd restarts each
-whenever it exits:
+Setup installs them as two launchd user agents with `KeepAlive`, so launchd restarts each whenever
+it exits:
 
 - `local.home-page`, the server (port 8443), logging to `logs/server.log`.
 - `local.home-page.assistant`, the assistant service (port 9443), logging to `logs/assistant.log`.
   It's separate so restarting the server never stops the assistant mid-turn.
 
-Both get the installing shell's `PATH`, since the assistant runs commands (`deno`, `git`, ...) as a
-terminal would; re-run `install-service` if that changes.
+Both get the `PATH` of the terminal you ran setup in, since the assistant runs commands (`deno`,
+`git`, ...) as a terminal would. If that changes, or you move the repo or Deno, `deno task setup`
+notices and offers to reinstall them.
 
 ```sh
 deno task restart-service             # restart both (e.g. after pulling changes), wait till ready
@@ -138,26 +177,26 @@ each service takes connections again (up to 2 minutes) and says when to reload.
 
 ### How HTTPS works here
 
-`setup-certs` creates a throwaway certificate authority that is _name-constrained_ to `localhost`
-and `127.0.0.1`, signs a server certificate with it, then **deletes the CA's private key**. Only the
+Setup creates a throwaway certificate authority that is _name-constrained_ to `localhost` and
+`127.0.0.1`, signs a server certificate with it, then **deletes the CA's private key**. Only the
 server's key remains (in the gitignored `.secrets/`), and the trusted CA can never be used to issue
 another certificate — nor, thanks to the name constraints, could it vouch for any other site even if
-the key had leaked. Certificates last 825 days; re-run `deno task setup-certs` and restart the
-services to renew.
+the key had leaked. Certificates last 825 days. In the last 30, `deno task setup` offers to make a
+new one and restart the services.
 
 ### Troubleshooting
 
-Start with `deno task doctor`. Beyond what it reports:
+Start by running `deno task setup` again. Beyond what it finds:
 
 - **The page doesn't load.** Look in `logs/server.log`. If the service keeps restarting, the error
   is there.
 - **The assistant doesn't answer.** Look in `logs/assistant.log`, and check `claude` works and is
   signed in from a terminal.
 - **The browser warns the connection isn't private.** Firefox reads trusted certificates from the
-  keychain only when it starts, so if it was open when you ran `setup-certs`, quit and reopen it.
-  Don't click through the warning: that only covers the page's port, and the assistant (on port
-  9443) will still fail to connect. Otherwise, re-run `deno task setup-certs` and approve the
-  keychain prompt, then restart the services and the browser.
+  keychain only when it starts, so if it was open when setup made the certificate, quit and reopen
+  it. Don't click through the warning: that only covers the page's port, and the assistant (on port
+  9443) will still fail to connect. Otherwise, run `deno task setup` and approve the keychain
+  prompt, then restart the browser.
 - **Port 8443 or 9443 is taken.** `lsof -nP -iTCP:8443 -sTCP:LISTEN` shows by what. For development,
   run second servers beside the services on other ports (see [Development](#development)).
 
