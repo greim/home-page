@@ -7,6 +7,7 @@ import {
   certOffer,
   certState,
   claudeUrl,
+  loggedIn,
   parseAnswer,
   prerequisites,
   type Probes,
@@ -55,6 +56,7 @@ const ready: Probes = {
   openssl: { found: true, path: "/usr/bin/openssl", version: "LibreSSL 3.3.6" },
   security: { found: true, path: "/usr/bin/security", version: "" },
   claude: { found: true, path: "/Users/me/.local/bin/claude", version: "2.1.319" },
+  servicesLoggedIn: true,
   cert: { is: "present", expires: new Date("2028-02-09T12:00:00Z") },
   caTrusted: true,
   services: { app: running("app"), assistant: running("assistant") },
@@ -350,6 +352,29 @@ Deno.test("without Claude Code, setup can carry on or stop with where to get it"
   const carried = session(noClaude, ["", "", ""]);
   assertEquals(carried.ok, true);
   assertEquals(carried.questions.at(0), "Carry on without it for now? [Y/n]");
+});
+
+Deno.test("setup says how to log the services in when they aren't, and carries on", () => {
+  const s = session({ ...ready, servicesLoggedIn: false }, [""]);
+  assertEquals(s.ok, true);
+  assertStringIncludes(s.shown, "! Claude Code isn't logged in for the services");
+  assertStringIncludes(
+    s.shown,
+    '"CLAUDE_CODE_USE_BEDROCK": "1" to "env" in ~/.claude/settings.json',
+  );
+  for (const unasked of [true, null]) {
+    const quiet = session({ ...ready, servicesLoggedIn: unasked }, [""]);
+    assertEquals(quiet.shown.includes("isn't logged in"), false);
+  }
+});
+
+Deno.test("loggedIn reads claude auth status, and nothing else", () => {
+  assertEquals(loggedIn('{"loggedIn": true, "apiProvider": "bedrock"}'), true);
+  assertEquals(loggedIn('{\n  "loggedIn": false,\n  "authMethod": "none"\n}\n'), false);
+  assertEquals(loggedIn(""), null);
+  assertEquals(loggedIn("Unknown command: auth"), null);
+  assertEquals(loggedIn('{"loggedIn": "yes"}'), null);
+  assertEquals(loggedIn("null"), null);
 });
 
 Deno.test("declining an essential certificate stops; declining a renewal carries on", () => {

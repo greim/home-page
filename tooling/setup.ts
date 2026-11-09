@@ -4,7 +4,7 @@
  * so, and asks before changing anything. This is the functional core: every decision is
  * here, and it reaches the computer only through the injected pipes.
  */
-import { Context, Data, Effect } from "effect";
+import { Context, Data, Effect, Either } from "effect";
 import { type CertPaths, certPlan } from "./cert-plan.ts";
 import { PlanIo, runPlan, type Step } from "./plan.ts";
 import {
@@ -43,6 +43,12 @@ export type Probes = {
   /** macOS's `security`, which trusts the certificate in the keychain. */
   readonly security: Tool;
   readonly claude: Tool;
+  /**
+   * Whether Claude Code is logged in as the services run it: the Agent SDK's own copy, with
+   * only the environment launchd gives them (`claude` on PATH may be a launcher that adds
+   * to it). null when it couldn't be asked, e.g. before the SDK is downloaded.
+   */
+  readonly servicesLoggedIn: boolean | null;
   readonly cert:
     | { readonly is: "missing" }
     /** null when its expiry date couldn't be read. */
@@ -106,6 +112,15 @@ export const parseAnswer = (reply: string | null, yesByDefault: boolean): Answer
   if (text === "y" || text === "yes") return { is: "yes" };
   if (text === "n" || text === "no") return { is: "no" };
   return { is: "unclear" };
+};
+
+/** Whether `claude auth status` says it's logged in; null when what it printed isn't that. */
+export const loggedIn = (printed: string): boolean | null => {
+  const status = Either.getOrNull(Either.try(() => JSON.parse(printed) as unknown));
+  return typeof status === "object" && status !== null && "loggedIn" in status &&
+      typeof status.loggedIn === "boolean"
+    ? status.loggedIn
+    : null;
 };
 
 /** A requirement that isn't met, and how to meet it. */
@@ -283,6 +298,16 @@ const checkClaude = (p: Probes) =>
   Effect.gen(function* () {
     if (p.claude.found) {
       yield* say(`✓ Claude Code ${versionNumber(p.claude.version)}`);
+      if (p.servicesLoggedIn === false) {
+        yield* say(
+          "! Claude Code isn't logged in for the services, so the assistant and widget agents\n" +
+            "  can't reach Claude. They don't get this terminal's environment, only your Claude\n" +
+            "  Code settings. If you reach Claude through Bedrock, add\n" +
+            '  "CLAUDE_CODE_USE_BEDROCK": "1" to "env" in ~/.claude/settings.json (Vertex:\n' +
+            '  "CLAUDE_CODE_USE_VERTEX"). Otherwise run claude in a terminal and log in.\n' +
+            "  Then restart the services (deno task restart-service).",
+        );
+      }
       return;
     }
     yield* say(

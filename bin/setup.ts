@@ -18,7 +18,14 @@ import { livePlanIo } from "../tooling/plan-live.ts";
 import { plistPath, type ServiceSettings } from "../tooling/service-plan.ts";
 import { WaitIo } from "../tooling/service-wait.ts";
 import { listening, liveWaitIo } from "../tooling/service-wait-live.ts";
-import { type Probes, setup, SetupIo, type SetupSettings, type Tool } from "../tooling/setup.ts";
+import {
+  loggedIn,
+  type Probes,
+  setup,
+  SetupIo,
+  type SetupSettings,
+  type Tool,
+} from "../tooling/setup.ts";
 
 type Output = { readonly ok: boolean; readonly out: string };
 
@@ -83,6 +90,27 @@ const settings: SetupSettings = {
   appUrl: config.appUrl,
 };
 
+/**
+ * Asks the Agent SDK's own Claude Code (not `claude` on PATH, which may be a launcher that
+ * adds to the environment) whether it's logged in, with only what launchd gives the services.
+ */
+const servicesLoggedIn: Effect.Effect<boolean | null> = Effect.gen(function* () {
+  const arch = Deno.build.arch === "aarch64" ? "arm64" : "x64";
+  const sdk = yield* Effect.tryPromise(() =>
+    Deno.realPath(`${config.repoRoot}/node_modules/@anthropic-ai/claude-agent-sdk`)
+  );
+  const output = yield* Effect.tryPromise(() =>
+    new Deno.Command(`${sdk}/../claude-agent-sdk-${Deno.build.os}-${arch}/claude`, {
+      args: ["auth", "status"],
+      clearEnv: true,
+      env: { HOME: service.home, PATH: service.path, NO_COLOR: "1" },
+      stdin: "null",
+      stderr: "null",
+    }).output()
+  );
+  return loggedIn(new TextDecoder().decode(output.stdout));
+}).pipe(Effect.orElseSucceed(() => null));
+
 const probe: Effect.Effect<Probes> = Effect.gen(function* () {
   const certExists = (yield* readText(config.certFile)) !== null;
   return {
@@ -93,6 +121,7 @@ const probe: Effect.Effect<Probes> = Effect.gen(function* () {
     openssl: yield* tool("openssl", ["version"]),
     security: yield* tool("security", null),
     claude: yield* tool("claude", ["--version"]),
+    servicesLoggedIn: yield* servicesLoggedIn,
     cert: certExists
       ? { is: "present", expires: yield* certExpiry(config.certFile) }
       : { is: "missing" },

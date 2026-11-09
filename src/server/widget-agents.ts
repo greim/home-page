@@ -144,6 +144,29 @@ export const capabilityNote = (capabilities: ReadonlyArray<Capability>): string 
     `Answer with the structured output asked for.${files}`;
 };
 
+/**
+ * The user's Claude Code settings (~/.claude/settings.json) a run needs to reach Claude the
+ * way the user does: how it logs in (Bedrock credentials, an API key helper, ...), the
+ * environment those settings set, and how model names map to the provider's. Nothing else
+ * (hooks, permissions, plugins, ...) is passed on, as runs are kept from the user's settings.
+ */
+export const loginSettings = (
+  userSettings: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, unknown>> =>
+  Object.fromEntries(
+    Object.entries(userSettings).filter(([key]) => loginSettingKeys.includes(key)),
+  );
+
+const loginSettingKeys: ReadonlyArray<string> = [
+  "apiKeyHelper",
+  "awsAuthRefresh",
+  "awsCredentialExport",
+  "gcpAuthRefresh",
+  "forceLoginMethod",
+  "env",
+  "modelOverrides",
+];
+
 /** How a run of `agent` is started, in its folder `cwd`, with the MCP servers it may use. */
 export const agentOptions = (
   agent: AgentEntry,

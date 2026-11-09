@@ -5,7 +5,7 @@
 import { type Options, query } from "@anthropic-ai/claude-agent-sdk";
 import { Effect, Stream } from "effect";
 import { IoError } from "./http.ts";
-import { type McpConfig, WidgetAgentIo } from "./widget-agents.ts";
+import { loginSettings, type McpConfig, WidgetAgentIo } from "./widget-agents.ts";
 
 const attempt = <A>(fn: () => Promise<A>) =>
   Effect.tryPromise({ try: fn, catch: (cause) => new IoError({ cause }) });
@@ -71,10 +71,15 @@ export const widgetAgentIoLive = (
           Effect.sync(() => new AbortController()),
           (controller) => Effect.sync(() => controller.abort()),
         );
+        // Runs don't load the user's settings, but log in with them, as the user's sessions do.
+        const userSettings = yield* Effect.promise(() =>
+          readJson(`${settings.home}/.claude/settings.json`)
+        );
         const run = query({
           prompt,
           options: {
             ...(options as unknown as Options),
+            settings: loginSettings(userSettings),
             abortController,
             canUseTool: (toolName, input) =>
               Effect.runPromise(decide(toolName, input)).then((decision) =>

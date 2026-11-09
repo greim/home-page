@@ -12,6 +12,7 @@ import {
   describeCall,
   findAgent,
   gate,
+  loginSettings,
   makeRuns,
   maxActiveRuns,
   mcpProblem,
@@ -86,6 +87,19 @@ Deno.test("an agent with no capabilities runs with no tools, settings or MCP ser
   assertStringIncludes(options.systemPrompt, "You're a copy editor.");
   assertStringIncludes(options.systemPrompt, "You have no tools");
   assertEquals("model" in agentOptions({ ...plain, model: null }, "/x"), false);
+});
+
+Deno.test("runs get only the user settings they log in and pick models with", () => {
+  const login = {
+    awsCredentialExport: "creds export",
+    env: { AWS_REGION: "us-west-2" },
+    modelOverrides: { "claude-sonnet-5-5": "global.anthropic.claude-sonnet-5-5" },
+  };
+  assertEquals(
+    loginSettings({ ...login, hooks: { Stop: [] }, permissions: { allow: [] }, model: "x" }),
+    login,
+  );
+  assertEquals(loginSettings({}), {});
 });
 
 Deno.test("capabilities give their tools, pre-allowing only what's auto", () => {
