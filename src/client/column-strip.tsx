@@ -29,6 +29,19 @@ import {
 
 const { gap } = surface;
 
+/**
+ * The admin mode hint in the bottom-left corner: how far up it sits, its padding
+ * and its text size (its line height is 1, so that's its text's height too).
+ */
+const hint = { bottom: "0.25rem", paddingY: "0.125rem", fontSize: "0.66rem" } as const;
+/** Below the hint's text: its offset plus its padding. */
+const belowHint = `(${hint.bottom} + ${hint.paddingY})`;
+/**
+ * Space under the columns while the navigator isn't shown: room for the hint, with as
+ * much space between it and the columns as between it and the window's edge.
+ */
+const bottomGap = `calc(2 * ${belowHint} + ${hint.fontSize})`;
+
 /** Width of one column: the view's width, minus the gaps between columns, split evenly. */
 const slotWidth = `calc((100% - ${columnsPerView - 1} * ${gap}) / ${columnsPerView})`;
 
@@ -115,7 +128,10 @@ export function ColumnStrip(props: {
       <Box
         m={gap}
         mt={frameTop}
-        h={frameHeight({ top: frameTop, bottom: gap }, navigator ? [navigatorHeight] : [])}
+        h={frameHeight(
+          { top: frameTop, bottom: navigator ? gap : bottomGap },
+          navigator ? [navigatorHeight] : [],
+        )}
         transition={`margin-top ${surface.adminTransition}, height ${surface.adminTransition}`}
         _motionReduce={{ transition: "none" }}
       >
@@ -175,10 +191,10 @@ export function ColumnStrip(props: {
       <Box
         position="absolute"
         left="1"
-        bottom="1"
+        bottom={hint.bottom}
         px="1.5"
-        py="0.5"
-        fontSize="66%"
+        py={hint.paddingY}
+        fontSize={hint.fontSize}
         lineHeight="1"
         color={surface.ink}
         pointerEvents="none"
