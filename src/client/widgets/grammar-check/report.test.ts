@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { applySuggestion, formatCost, type Issue } from "./report.ts";
+import { applySuggestion, excerptRange, formatCost, type Issue } from "./report.ts";
 
 const issue = (excerpt: string, suggestion: string): Issue => ({
   excerpt,
@@ -18,6 +18,12 @@ Deno.test("a suggestion replaces the first place its excerpt appears", () => {
 Deno.test("a suggestion whose excerpt isn't in the text can't be applied", () => {
   assertEquals(applySuggestion("The cat.", issue("Teh", "The")), null);
   assertEquals(applySuggestion("The cat.", issue("", "x")), null);
+});
+
+Deno.test("an excerpt is found where it first appears, if it's there", () => {
+  assertEquals(excerptRange("Teh cat and teh dog.", issue("teh", "the")), { start: 12, end: 15 });
+  assertEquals(excerptRange("The cat.", issue("Teh", "The")), null);
+  assertEquals(excerptRange("The cat.", issue("", "x")), null);
 });
 
 Deno.test("a cost is shown in dollars, with more places when it's tiny", () => {

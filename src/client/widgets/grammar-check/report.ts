@@ -41,12 +41,21 @@ export type GrammarReport = typeof GrammarReport.Type;
 /** Most characters checked at once. */
 export const maxTextLength = 20_000;
 
+/** Where the issue's excerpt first appears in the text, or null if it isn't there now. */
+export const excerptRange = (
+  text: string,
+  issue: Issue,
+): { readonly start: number; readonly end: number } | null => {
+  const start = text.indexOf(issue.excerpt);
+  return issue.excerpt === "" || start === -1 ? null : { start, end: start + issue.excerpt.length };
+};
+
 /** The text with the issue's suggestion in place of its excerpt, or null if it isn't there now. */
 export const applySuggestion = (text: string, issue: Issue): string | null => {
-  const at = text.indexOf(issue.excerpt);
-  return issue.excerpt === "" || at === -1
+  const range = excerptRange(text, issue);
+  return range === null
     ? null
-    : text.slice(0, at) + issue.suggestion + text.slice(at + issue.excerpt.length);
+    : text.slice(0, range.start) + issue.suggestion + text.slice(range.end);
 };
 
 /** Each kind of issue, as the widget labels it. */

@@ -15,7 +15,7 @@ import {
   Text,
   Textarea,
 } from "@chakra-ui/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { LuArrowRight, LuCheck, LuSpellCheck, LuX } from "react-icons/lu";
 import { widgetHeading } from "../../surface.ts";
 import { TextBox } from "../../widget-kit/text-box.tsx";
@@ -25,13 +25,14 @@ import type { FullScreenProps, WidgetProps } from "../../widget-kit/views.tsx";
 import type { GrammarCheckConfig } from "./config.ts";
 import {
   applySuggestion,
+  excerptRange,
   formatCost,
   GrammarReport,
   type Issue,
   kindLabels,
   maxTextLength,
 } from "./report.ts";
-import { useText } from "./text-live.ts";
+import { requestCheck, useCheckRequests, useText } from "./text-live.ts";
 
 export function GrammarCheck(
   { config, widgetId, openFullScreen }: WidgetProps<GrammarCheckConfig>,
@@ -48,9 +49,17 @@ export function GrammarCheck(
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      <TextBoxButton onClick={openFullScreen}>
-        <LuSpellCheck /> {text.trim() === "" ? "Open the checker" : "Check it"}
-      </TextBoxButton>
+      <HStack gap="0.5rem">
+        <TextBoxButton
+          onClick={() => {
+            if (text.trim() !== "") requestCheck(widgetId);
+            openFullScreen();
+          }}
+        >
+          <LuSpellCheck /> {text.trim() === "" ? "Open the checker" : "Check it"}
+        </TextBoxButton>
+        <TextBoxButton disabled={text === ""} onClick={() => setText("")}>Clear</TextBoxButton>
+      </HStack>
     </>
   );
 }
@@ -66,10 +75,51 @@ type Check =
     readonly costUsd: number;
   };
 
-/** One issue: what's wrong, the fix, and buttons to apply or dismiss it. */
+/**
+ * Selects `start`–`end` in the text box and scrolls it to the middle of the box. A
+ * textarea doesn't scroll to a selection made from code in every browser, so this
+ * finds where it is with an invisible copy of the box, laid out the same.
+ */
+const selectInBox = (box: HTMLTextAreaElement, start: number, end: number) => {
+  const doc = box.ownerDocument;
+  const style = doc.defaultView?.getComputedStyle(box);
+  if (style !== undefined) {
+    const mirror = doc.createElement("div");
+    Object.assign(mirror.style, {
+      font: style.font,
+      letterSpacing: style.letterSpacing,
+      lineHeight: style.lineHeight,
+      padding: style.padding,
+      borderWidth: style.borderWidth,
+      borderStyle: "solid",
+      boxSizing: style.boxSizing,
+      width: `${box.clientWidth + box.clientLeft * 2}px`,
+      whiteSpace: "pre-wrap",
+      overflowWrap: "break-word",
+      position: "absolute",
+      visibility: "hidden",
+      top: "0",
+      left: "-9999px",
+    });
+    mirror.textContent = box.value.slice(0, start);
+    const marker = doc.createElement("span");
+    marker.textContent = box.value.slice(start, end) || "\u200b";
+    mirror.append(marker);
+    doc.body.append(mirror);
+    const top = marker.offsetTop;
+    mirror.remove();
+    box.scrollTop = Math.max(0, top - box.clientHeight / 2);
+  }
+  box.focus({ preventScroll: true });
+  box.setSelectionRange(start, end);
+};
+
+/** One issue: what's wrong, the fix, and buttons to find, apply or dismiss it. */
 function IssueCard(props: {
   issue: Issue;
-  canApply: boolean;
+  /** Whether the excerpt is still in the text, to find or fix. */
+  found: boolean;
+  onLocate: () => void;
   onApply: () => void;
   onDismiss: () => void;
 }) {
@@ -83,8 +133,8 @@ function IssueCard(props: {
             size="xs"
             variant="ghost"
             aria-label="Apply the fix"
-            title={props.canApply ? "Apply the fix" : "Those words aren't in the text anymore"}
-            disabled={!props.canApply}
+            title={props.found ? "Apply the fix" : "Those words aren't in the text anymore"}
+            disabled={!props.found}
             onClick={props.onApply}
           >
             <LuCheck />
@@ -102,7 +152,22 @@ function IssueCard(props: {
       </HStack>
       <Text mt="2" fontSize="sm">{issue.problem}</Text>
       <HStack mt="2" gap="2" align="baseline" wrap="wrap" fontSize="sm">
-        <chakra.span textDecoration="line-through" color="fg.muted">{issue.excerpt}</chakra.span>
+        <chakra.button
+          type="button"
+          textAlign="start"
+          textDecoration="line-through"
+          color="fg.muted"
+          rounded="sm"
+          px="1"
+          mx="-1"
+          cursor={props.found ? "pointer" : "default"}
+          _hover={props.found ? { bg: "bg.muted", color: "fg" } : {}}
+          title={props.found ? "Show it in the text" : "Those words aren't in the text anymore"}
+          disabled={!props.found}
+          onClick={props.onLocate}
+        >
+          {issue.excerpt}
+        </chakra.button>
         <LuArrowRight />
         <chakra.span fontWeight="medium">{issue.suggestion}</chakra.span>
       </HStack>
@@ -113,9 +178,13 @@ function IssueCard(props: {
 export function GrammarCheckFullScreen({ widgetId }: FullScreenProps<GrammarCheckConfig>) {
   const [text, setText] = useText(widgetId);
   const [check, setCheck] = useState<Check>({ is: "idle" });
+  const box = useRef<HTMLTextAreaElement>(null);
   const tooLong = text.length > maxTextLength;
 
+  const canCheck = text.trim() !== "" && !tooLong && check.is !== "checking";
+
   const run = async () => {
+    if (!canCheck) return;
     setCheck({ is: "checking" });
     const result = await runWidgetAgent("grammar-check", "check", { text }, GrammarReport);
     setCheck(
@@ -128,10 +197,14 @@ export function GrammarCheckFullScreen({ widgetId }: FullScreenProps<GrammarChec
   const without = (issue: Issue) =>
     check.is === "done" ? { ...check, issues: check.issues.filter((i) => i !== issue) } : check;
 
+  // "Check it" in the card starts a check straight away.
+  useCheckRequests(widgetId, run);
+
   return (
     <Box display="flex" h="full" w="full" bg="bg" color="fg">
       <Stack flex="1" minW="0" p="5" gap="3">
         <Textarea
+          ref={box}
           flex="1"
           resize="none"
           placeholder="Paste or type the text to check"
@@ -142,14 +215,26 @@ export function GrammarCheckFullScreen({ widgetId }: FullScreenProps<GrammarChec
           <Text fontSize="sm" color={tooLong ? "fg.error" : "fg.muted"}>
             {text.length.toLocaleString()} / {maxTextLength.toLocaleString()} characters
           </Text>
-          <Button
-            onClick={run}
-            loading={check.is === "checking"}
-            loadingText="Checking…"
-            disabled={text.trim() === "" || tooLong}
-          >
-            <LuSpellCheck /> Check
-          </Button>
+          <HStack gap="2">
+            <Button
+              variant="outline"
+              disabled={text === "" || check.is === "checking"}
+              onClick={() => {
+                setText("");
+                setCheck({ is: "idle" });
+              }}
+            >
+              Clear
+            </Button>
+            <Button
+              onClick={run}
+              loading={check.is === "checking"}
+              loadingText="Checking…"
+              disabled={!canCheck}
+            >
+              <LuSpellCheck /> Check
+            </Button>
+          </HStack>
         </HStack>
       </Stack>
       <Stack w="26rem" flexShrink="0" borderLeftWidth="1px" p="5" gap="3" overflowY="auto">
@@ -178,7 +263,13 @@ export function GrammarCheckFullScreen({ widgetId }: FullScreenProps<GrammarChec
               <IssueCard
                 key={`${i}:${issue.excerpt}`}
                 issue={issue}
-                canApply={applySuggestion(text, issue) !== null}
+                found={excerptRange(text, issue) !== null}
+                onLocate={() => {
+                  const range = excerptRange(text, issue);
+                  if (range !== null && box.current !== null) {
+                    selectInBox(box.current, range.start, range.end);
+                  }
+                }}
                 onApply={() => {
                   const fixed = applySuggestion(text, issue);
                   if (fixed === null) return;
