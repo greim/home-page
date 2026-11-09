@@ -6,7 +6,9 @@
 import { chakra, HStack, Text } from "@chakra-ui/react";
 import { Effect } from "effect";
 import { type ClipboardEvent, useEffect, useState } from "react";
-import { codeBox, widgetHeading } from "../../surface.ts";
+import { widgetHeading } from "../../surface.ts";
+import { TextBox } from "../../widget-kit/text-box.tsx";
+import { TextBoxButton } from "../../widget-kit/text-box-button.tsx";
 import type { WidgetProps } from "../../widget-kit/views.tsx";
 import type { PasteMarkdownConfig } from "./config.ts";
 import { type HtmlNode, htmlToMarkdown } from "./html-to-markdown.ts";
@@ -52,16 +54,6 @@ function useStoredText(widgetId: string) {
 
 const flashMs = 900;
 
-const ActionButton = chakra("button", {
-  base: {
-    cursor: "pointer",
-    fontSize: "0.85rem",
-    opacity: 0.7,
-    _hover: { opacity: 1, textDecoration: "underline" },
-    _disabled: { opacity: 0.3, cursor: "default", textDecoration: "none" },
-  },
-});
-
 export function PasteMarkdown(props: WidgetProps<PasteMarkdownConfig>) {
   const heading = props.config.heading.trim();
   const [text, setText] = useStoredText(props.widgetId);
@@ -90,21 +82,7 @@ export function PasteMarkdown(props: WidgetProps<PasteMarkdownConfig>) {
   return (
     <>
       {heading !== "" && <chakra.h3 {...widgetHeading}>{heading}</chakra.h3>}
-      <chakra.textarea
-        css={codeBox}
-        display="block"
-        w="100%"
-        minH="10rem"
-        resize="vertical"
-        px="0.5em"
-        py="0.4em"
-        fontFamily="mono"
-        fontSize="0.85rem"
-        color="inherit"
-        border="none"
-        outline="none"
-        _focusVisible={{ outline: "1px solid rgba(255, 255, 255, 0.5)" }}
-        _placeholder={{ color: "inherit", opacity: 0.5 }}
+      <TextBox
         spellCheck={false}
         placeholder="Paste from a web page to get Markdown"
         aria-label="Markdown"
@@ -112,11 +90,11 @@ export function PasteMarkdown(props: WidgetProps<PasteMarkdownConfig>) {
         onChange={(e) => setText(e.target.value)}
         onPaste={onPaste}
       />
-      <HStack mt="0.4rem" gap="1rem">
-        <ActionButton type="button" disabled={text === ""} onClick={copy}>Copy</ActionButton>
-        <ActionButton type="button" disabled={text === ""} onClick={() => setText("")}>
+      <HStack mt="0.6rem" gap="0.5rem">
+        <TextBoxButton disabled={text === ""} onClick={copy}>Copy</TextBoxButton>
+        <TextBoxButton disabled={text === ""} onClick={() => setText("")}>
           Clear
-        </ActionButton>
+        </TextBoxButton>
         {flash !== null && (
           <Text fontSize="0.85rem" color={flash === "Copied!" ? "fg.success" : "fg.error"}>
             {flash}

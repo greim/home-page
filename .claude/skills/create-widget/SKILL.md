@@ -150,8 +150,9 @@ uses it, read `bookmarks/`.
 - **Chakra UI** components, set up as the page has it.
 - **Shared styles** in `src/client/surface.ts`: `widgetHeading` for headings, so they match other
   widgets; `codeBox` for monospace boxes; `hatching`.
-- **Kit pieces** in `src/client/widget-kit/`: `Label` and `RowControls` for editors, `nudge` for
-  reordering rows, `useNow`.
+- **Kit pieces** in `src/client/widget-kit/`: `TextBox` for a text box in the column (styled like
+  `codeBox`) and `TextBoxButton` for the buttons under it, `Label` and `RowControls` for editors,
+  `nudge` for reordering rows, `useNow`.
 - **Common code** in `src/common/`. Never import other widgets' folders: copy what you need, or move
   it to `src/common/` or the kit.
 

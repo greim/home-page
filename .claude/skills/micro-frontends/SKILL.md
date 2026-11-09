@@ -153,6 +153,8 @@ Build views with `src/client/widget-kit/`, not with bare components:
   has it (`src/client/chakra-system.ts`). `customView(decode, Component)` does the same for any
   other view.
 - `useNow` re-renders each minute, for widgets that show the time.
+- `TextBox` is a text box styled for a column, and `TextBoxButton` the solid black button for the
+  row under it, as Paste as Markdown and Grammar Check use.
 - `Label`, `RowControls` and `nudge` are small pieces editors share.
 
 ### The contract (`src/client/widget-kit/contract.ts`)

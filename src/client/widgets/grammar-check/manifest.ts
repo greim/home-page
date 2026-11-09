@@ -25,8 +25,8 @@ export const manifest = defineManifest({
   title: "Grammar Check",
   description: "Checks a block of text the user pastes in for grammar, spelling, punctuation, " +
     "wording, clarity and readability, using Claude, and suggests fixes they can apply. It " +
-    "opens over the page from a button in the column. The text isn't kept. The setting is just " +
-    "a heading.",
+    "can be pasted into a box in the column, then checked in a view that opens over the page " +
+    "from a button. The text isn't saved. The setting is just a heading.",
   config: GrammarCheckConfig,
   defaultConfig: { heading: "Grammar Check" },
   permissions: {

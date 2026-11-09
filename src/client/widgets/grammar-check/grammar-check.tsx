@@ -1,7 +1,8 @@
 /**
- * The grammar check widget's views: a button in its column, and the full-screen
- * view where the text is checked. The text stays in the view while it's open, and
- * goes only to the widget's agent (Claude, through the assistant service).
+ * The grammar check widget's views: a text box and a button in its column, and the
+ * full-screen view where the text is checked. Both show the same text (text-live.ts),
+ * which is kept only until the page reloads, and goes only to the widget's agent
+ * (Claude, through the assistant service).
  */
 import {
   Badge,
@@ -17,6 +18,8 @@ import {
 import { useState } from "react";
 import { LuArrowRight, LuCheck, LuSpellCheck, LuX } from "react-icons/lu";
 import { widgetHeading } from "../../surface.ts";
+import { TextBox } from "../../widget-kit/text-box.tsx";
+import { TextBoxButton } from "../../widget-kit/text-box-button.tsx";
 import { runWidgetAgent } from "../../widget-kit/agents.ts";
 import type { FullScreenProps, WidgetProps } from "../../widget-kit/views.tsx";
 import type { GrammarCheckConfig } from "./config.ts";
@@ -28,18 +31,26 @@ import {
   kindLabels,
   maxTextLength,
 } from "./report.ts";
+import { useText } from "./text-live.ts";
 
-export function GrammarCheck({ config, openFullScreen }: WidgetProps<GrammarCheckConfig>) {
+export function GrammarCheck(
+  { config, widgetId, openFullScreen }: WidgetProps<GrammarCheckConfig>,
+) {
   const heading = config.heading.trim();
+  const [text, setText] = useText(widgetId);
   return (
     <>
       {heading !== "" && <chakra.h3 {...widgetHeading}>{heading}</chakra.h3>}
-      <Text fontSize="0.9rem" mb="0.6rem">
-        Check the grammar, wording and readability of a block of text.
-      </Text>
-      <Button size="sm" variant="outline" color="inherit" onClick={openFullScreen}>
-        <LuSpellCheck /> Check some text
-      </Button>
+      <TextBox
+        mb="0.6rem"
+        aria-label="Text to check"
+        placeholder="Paste text to check its grammar, wording and readability"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <TextBoxButton onClick={openFullScreen}>
+        <LuSpellCheck /> {text.trim() === "" ? "Open the checker" : "Check it"}
+      </TextBoxButton>
     </>
   );
 }
@@ -99,8 +110,8 @@ function IssueCard(props: {
   );
 }
 
-export function GrammarCheckFullScreen(_props: FullScreenProps<GrammarCheckConfig>) {
-  const [text, setText] = useState("");
+export function GrammarCheckFullScreen({ widgetId }: FullScreenProps<GrammarCheckConfig>) {
+  const [text, setText] = useText(widgetId);
   const [check, setCheck] = useState<Check>({ is: "idle" });
   const tooLong = text.length > maxTextLength;
 
