@@ -17,7 +17,8 @@ page on demand. The `micro-frontends` skill explains how that works. This skill 
 3. **Write `manifest.ts`**: title, description, config schema, default config. If it sends the
    user's data to any outside service (an API, a map's tile server), declare each one under
    `permissions` (see "Sending data to outside services" in the `code-vs-data` skill). The page asks
-   the user about them before the widget runs; don't build a consent screen of your own.
+   the user about them before the widget runs; don't build a consent screen of your own. If it uses
+   AI (Claude) for part of its work, give it an agent: see the `widget-agents` skill.
 4. **Put the logic in plain modules with tests** (`<name>.ts` and `<name>.test.ts`), per the
    `functional-core` and `testing` skills. Anything that branches (parsing, formatting, converting,
    deciding) belongs here, not in components. Shape the input as plain data (e.g. a tree, not a DOM

@@ -37,6 +37,7 @@ Deno.test("widgetLabel is the widget's heading, else its type's title, else its 
     configSchema: {},
     defaultConfig: {},
     permissions: null,
+    agents: {},
   }];
   assertEquals(widgetLabel({ ...widget, config: { heading: "Here" } }, types), "Here");
   assertEquals(widgetLabel(widget, types), "Clock");

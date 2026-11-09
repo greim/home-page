@@ -12,6 +12,7 @@ const registry: Registry = {
     configSchema: {},
     defaultConfig: {},
     permissions: null,
+    agents: {},
   }],
 };
 

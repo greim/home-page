@@ -10,6 +10,8 @@ import { AssistantService, handleAssistant } from "./assistant-routes.ts";
 import { config } from "./config.ts";
 import { type HttpRequest, type HttpResponse, IoError, ServerIo } from "./http.ts";
 import { makeEventLog } from "./event-log.ts";
+import { WidgetAgentIo } from "./widget-agents.ts";
+import { widgetAgentIoLive } from "./widget-agents-live.ts";
 
 /** Most events kept for clients that reconnect. */
 const keptEvents = 2000;
@@ -76,6 +78,13 @@ Deno.serve(
         appOrigins: config.appOrigins,
       }).pipe(
         Effect.provideService(AssistantService, assistant),
+        Effect.provideService(
+          WidgetAgentIo,
+          widgetAgentIoLive(
+            config.assistant.registryFile,
+            `${config.dataDir}/widget-agent-runs`,
+          ),
+        ),
         Effect.map(toResponse),
       ),
     ),

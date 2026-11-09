@@ -30,6 +30,26 @@ export type OutsideService = typeof OutsideService.Type;
 export const Permissions = Schema.Struct({ services: Schema.NonEmptyArray(OutsideService) });
 export type Permissions = typeof Permissions.Type;
 
+/**
+ * An AI agent a widget runs for one task: Claude with the widget's instructions as
+ * its whole system prompt, no tools at all, answering with data matching `output`.
+ * The assistant service runs it (see src/server/widget-agents.ts).
+ */
+export type WidgetAgent = {
+  /** What it does, e.g. "Grammar check". */
+  readonly title: string;
+  /** Its entire system prompt. Claude Code's own isn't used. */
+  readonly instructions: string;
+  /** What it must answer with. Converted to JSON Schema by the widget build. */
+  readonly output: Schema.Schema.AnyNoContext;
+  /** A model ID, e.g. "claude-sonnet-5-5"; the user's default if left out. */
+  readonly model?: string;
+  /** Most turns a run may take (structured output can take a retry or two). */
+  readonly maxTurns: number;
+  /** Most a run may cost, in US dollars. */
+  readonly maxBudgetUsd: number;
+};
+
 /** What a widget's `manifest.ts` exports as `manifest`. */
 export type WidgetManifest<A, I> = {
   readonly title: string;
@@ -43,6 +63,11 @@ export type WidgetManifest<A, I> = {
    * the widget is used. Leave it out for a widget that sends nothing anywhere.
    */
   readonly permissions?: Permissions;
+  /**
+   * The AI agents it runs, by name. What it sends them goes to Anthropic, so a widget
+   * with agents must declare that under `permissions` too.
+   */
+  readonly agents?: Readonly<Record<string, WidgetAgent>>;
 };
 
 /** Declares a manifest, checking its shape. */
@@ -62,6 +87,20 @@ const ManifestModule = Schema.Struct({
     config: AnySchema,
     defaultConfig: Schema.Unknown,
     permissions: Schema.optionalWith(Permissions, { exact: true }),
+    agents: Schema.optionalWith(
+      Schema.Record({
+        key: WidgetId,
+        value: Schema.Struct({
+          title: Schema.NonEmptyTrimmedString,
+          instructions: Schema.NonEmptyTrimmedString,
+          output: AnySchema,
+          model: Schema.optionalWith(Schema.NonEmptyTrimmedString, { exact: true }),
+          maxTurns: Schema.Int.pipe(Schema.between(1, 20)),
+          maxBudgetUsd: Schema.Number.pipe(Schema.between(0.01, 10)),
+        }),
+      }),
+      { exact: true },
+    ),
   }),
 });
 
@@ -72,6 +111,19 @@ export const decodeManifestModule = (
     Either.mapLeft(Schema.decodeUnknownEither(ManifestModule)(module), (e) => e.message),
     (m) => m.manifest,
   );
+
+/** A widget's agent as the registry has it, for the assistant service to run. */
+export const AgentEntry = Schema.Struct({
+  title: Schema.String,
+  instructions: Schema.String,
+  /** What it must answer with, as JSON Schema. */
+  outputSchema: Schema.Unknown,
+  /** null for the user's default. */
+  model: Schema.NullOr(Schema.String),
+  maxTurns: Schema.Number,
+  maxBudgetUsd: Schema.Number,
+});
+export type AgentEntry = typeof AgentEntry.Type;
 
 export const RegistryEntry = Schema.Struct({
   id: WidgetId,
@@ -85,6 +137,10 @@ export const RegistryEntry = Schema.Struct({
   defaultConfig: Schema.Unknown,
   /** The outside services it sends data to; null when it sends nothing anywhere. */
   permissions: Schema.optionalWith(Schema.NullOr(Permissions), { default: () => null }),
+  /** Its AI agents, by name. */
+  agents: Schema.optionalWith(Schema.Record({ key: Schema.String, value: AgentEntry }), {
+    default: () => ({}),
+  }),
 });
 export type RegistryEntry = typeof RegistryEntry.Type;
 

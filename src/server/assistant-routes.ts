@@ -17,10 +17,14 @@
  *   GET  /api/assistant/sessions/{id}        a past session, as events to replay
  *   GET  /api/assistant/state                the log being kept, and its last event's number
  *   GET  /api/assistant/health               is the service up
+ *
+ *   POST /api/widget-agents/{widget}/{agent}  run a widget's agent on `{ "input": ... }`, answering
+ *                                            `{ output, costUsd }` (see widget-agents.ts)
  */
 import { Context, Effect, Either, Schema, Stream } from "effect";
 import { Answer, SendMessage, SetMode, SetModel } from "../common/assistant.ts";
 import type { Assistant } from "./assistant.ts";
+import { runAgent, type WidgetAgentIo } from "./widget-agents.ts";
 import {
   type HttpRequest,
   type HttpResponse,
@@ -43,6 +47,24 @@ export type AssistantSite = {
 };
 
 const prefix = "/api/assistant/";
+const agentsPrefix = "/api/widget-agents/";
+
+/** A widget agent's route: POST /api/widget-agents/{widget}/{agent}. */
+const widgetAgentRoute = (
+  request: HttpRequest,
+): Effect.Effect<HttpResponse, never, WidgetAgentIo> =>
+  Effect.gen(function* () {
+    const [widget, agent, ...rest] = request.url.pathname.slice(agentsPrefix.length).split("/");
+    if (widget === undefined || agent === undefined || rest.length > 0) {
+      return text(404, "Not found");
+    }
+    if (request.method !== "POST") return methodNotAllowed("POST");
+    const body = yield* Effect.orElseSucceed(request.body, () => "");
+    const outcome = yield* runAgent(decodeURIComponent(widget), decodeURIComponent(agent), body);
+    return outcome.ok
+      ? json({ output: outcome.output, costUsd: outcome.costUsd })
+      : text(outcome.status, outcome.message);
+  });
 
 const decodeJson = <A, I>(schema: Schema.Schema<A, I>, raw: string): Either.Either<A, string> =>
   Either.flatMap(
@@ -61,8 +83,9 @@ const seqParam = (value: string | null): number | null => {
 
 const route = (
   request: HttpRequest,
-): Effect.Effect<HttpResponse, never, AssistantService> =>
+): Effect.Effect<HttpResponse, never, AssistantService | WidgetAgentIo> =>
   Effect.gen(function* () {
+    if (request.url.pathname.startsWith(agentsPrefix)) return yield* widgetAgentRoute(request);
     const assistant = yield* AssistantService;
     const path = request.url.pathname.startsWith(prefix)
       ? request.url.pathname.slice(prefix.length)
@@ -179,7 +202,7 @@ const corsHeaders = (origin: string): Record<string, string> => ({
 export const handleAssistant = (
   request: HttpRequest,
   site: AssistantSite,
-): Effect.Effect<HttpResponse, never, AssistantService> => {
+): Effect.Effect<HttpResponse, never, AssistantService | WidgetAgentIo> => {
   if (!site.hosts.has(request.url.host)) {
     return Effect.succeed(text(421, "Misdirected request"));
   }

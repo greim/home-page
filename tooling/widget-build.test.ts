@@ -316,3 +316,69 @@ Deno.test("buildWidgets builds a real widget with the real bundler", async () =>
   );
   await Deno.remove(`${outDir}/..`, { recursive: true });
 });
+
+const agent = {
+  title: "Check",
+  instructions: "Check it.",
+  output: Schema.Struct({ summary: Schema.String }),
+  maxTurns: 3,
+  maxBudgetUsd: 0.2,
+};
+const toAnthropic = {
+  services: [{
+    name: "Anthropic (Claude)",
+    sends: "Your text",
+    privacyPolicy: "https://example.com/privacy",
+    terms: "https://example.com/terms",
+  }],
+};
+
+Deno.test("the registry carries a widget's agents, their output schemas as JSON Schema", () => {
+  const world = worldWith(["clock"]);
+  world.modules.set("/src/clock/manifest.ts", {
+    manifest: { ...manifest, permissions: toAnthropic, agents: { check: agent } },
+  });
+  const { disk } = run(world);
+  const registry = JSON.parse(disk.get("/dist/widgets.next/registry.json") ?? "");
+  const check = registry.widgets[0].agents.check;
+  assertEquals([check.title, check.instructions, check.model, check.maxTurns, check.maxBudgetUsd], [
+    "Check",
+    "Check it.",
+    null,
+    3,
+    0.2,
+  ]);
+  assertEquals(check.outputSchema.properties.summary, { type: "string" });
+  assertEquals(
+    JSON.parse(disk.get("/dist/widgets.next/registry.json") ?? "").widgets[0].id,
+    "clock",
+  );
+});
+
+Deno.test("a widget with agents must declare that its data goes to Anthropic", () => {
+  const world = worldWith(["clock"]);
+  world.modules.set("/src/clock/manifest.ts", {
+    manifest: { ...manifest, agents: { check: agent } },
+  });
+  assertStringIncludes(problems(world).join(), "must name Anthropic");
+  world.modules.set("/src/clock/manifest.ts", {
+    manifest: {
+      ...manifest,
+      agents: { check: agent },
+      permissions: { services: [{ ...toAnthropic.services[0], name: "Geocoder" }] },
+    },
+  });
+  assertStringIncludes(problems(world).join(), "must name Anthropic");
+});
+
+Deno.test("an agent's limits must be sensible", () => {
+  const world = worldWith(["clock"]);
+  world.modules.set("/src/clock/manifest.ts", {
+    manifest: {
+      ...manifest,
+      permissions: toAnthropic,
+      agents: { check: { ...agent, maxTurns: 0 } },
+    },
+  });
+  assertStringIncludes(problems(world).join(), "maxTurns");
+});

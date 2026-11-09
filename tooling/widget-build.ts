@@ -4,12 +4,14 @@
  */
 import { Context, Data, Effect, Either, JSONSchema, Schema } from "effect";
 import {
+  type AgentEntry,
   bundleFile,
   decodeManifestModule,
   type Registry,
   type RegistryEntry,
   registryFile,
   WidgetId,
+  type WidgetManifest,
 } from "../src/common/widgets.ts";
 import {
   bundledSharedPackages,
@@ -143,6 +145,7 @@ const buildOne = (
       Schema.encodeEither(manifest.right.config)(manifest.right.defaultConfig),
       (e) => `its defaultConfig doesn't fit its config schema: ${e.message}`,
     );
+    const agents = yield* agentEntries(manifest.right);
     // The page supplies the shared packages (see src/common/shared-modules.ts).
     const output = yield* bundler.bundle({
       entrypoints: [`${dir}/main.tsx`],
@@ -175,6 +178,7 @@ const buildOne = (
         configSchema,
         defaultConfig,
         permissions: manifest.right.permissions ?? null,
+        agents,
       },
       files: [
         [bundle, script.contents] as const,
@@ -207,6 +211,41 @@ const writeOutput = (
     }
     yield* removeIfThere(outDir);
     yield* io.rename(staging, outDir);
+  });
+
+/**
+ * A manifest's agents as the registry has them. What a widget sends its agents goes to
+ * Anthropic, so a widget with agents must say so under `permissions`.
+ */
+export const agentEntries = (
+  manifest: WidgetManifest<unknown, unknown>,
+): Effect.Effect<Readonly<Record<string, AgentEntry>>, string> =>
+  Effect.gen(function* () {
+    const agents = Object.entries(manifest.agents ?? {});
+    if (agents.length === 0) return {};
+    const toAnthropic = manifest.permissions?.services.some((s) => /anthropic/i.test(s.name));
+    if (toAnthropic !== true) {
+      return yield* Effect.fail(
+        "it has agents, so its manifest's permissions must name Anthropic as a service it " +
+          "sends data to (what it sends its agents goes there)",
+      );
+    }
+    const entries = yield* Effect.forEach(agents, ([name, agent]) =>
+      Effect.try({
+        try: (): readonly [string, AgentEntry] => [name, {
+          title: agent.title,
+          instructions: agent.instructions,
+          outputSchema: JSONSchema.make(agent.output),
+          model: agent.model ?? null,
+          maxTurns: agent.maxTurns,
+          maxBudgetUsd: agent.maxBudgetUsd,
+        }],
+        catch: (cause) =>
+          `its agent "${name}"'s output schema can't be described as JSON Schema: ${
+            describe(cause)
+          }`,
+      }));
+    return Object.fromEntries(entries);
   });
 
 export const buildWidgets = (

@@ -4,6 +4,7 @@ import type { Answer, LoggedEvent, SendMessage } from "../common/assistant.ts";
 import type { Assistant, SendResult } from "./assistant.ts";
 import { AssistantService, handleAssistant } from "./assistant-routes.ts";
 import { type HttpRequest, type HttpResponse, IoError } from "./http.ts";
+import { WidgetAgentIo } from "./widget-agents.ts";
 
 const site = {
   hosts: new Set(["localhost:9443"]),
@@ -58,9 +59,49 @@ const request = (
   body: Effect.succeed(options.body ?? ""),
 });
 
-const handle = (req: HttpRequest, assistant: Assistant) =>
+/** Widget agents for the route tests: one agent, "grammar-check"'s "check", which says "ok". */
+const agentIo = (runs: Array<string>) =>
+  WidgetAgentIo.of({
+    readRegistry: Effect.succeed(JSON.stringify({
+      widgets: [{
+        id: "grammar-check",
+        title: "Grammar Check",
+        description: "",
+        version: "v",
+        configSchema: {},
+        defaultConfig: {},
+        agents: {
+          check: {
+            title: "Check",
+            instructions: "Check it.",
+            outputSchema: {},
+            model: null,
+            maxTurns: 2,
+            maxBudgetUsd: 0.1,
+          },
+        },
+      }],
+    })),
+    makeWorkdir: Effect.succeed("/tmp/run"),
+    removeWorkdir: () => Effect.void,
+    query: (_options, prompt) =>
+      Effect.sync(() => {
+        runs.push(prompt);
+        return [{
+          type: "result",
+          subtype: "success",
+          total_cost_usd: 0.01,
+          structured_output: "ok",
+        }];
+      }),
+  });
+
+const handle = (req: HttpRequest, assistant: Assistant, runs: Array<string> = []) =>
   Effect.runPromise(
-    handleAssistant(req, site).pipe(Effect.provideService(AssistantService, assistant)),
+    handleAssistant(req, site).pipe(
+      Effect.provideService(AssistantService, assistant),
+      Effect.provideService(WidgetAgentIo, agentIo(runs)),
+    ),
   );
 
 const bodyText = async (response: HttpResponse) =>
@@ -271,4 +312,39 @@ Deno.test("the model is set; capabilities are listed", async () => {
     (await handle(request("POST", "/api/assistant/capabilities"), noCaps)).status,
     405,
   );
+});
+
+Deno.test("POST /api/widget-agents/{widget}/{agent} runs a widget's agent", async () => {
+  const { assistant } = fake();
+  const runs: Array<string> = [];
+  const ran = await handle(
+    request("POST", "/api/widget-agents/grammar-check/check", { body: '{"input":{"text":"Hi"}}' }),
+    assistant,
+    runs,
+  );
+  assertEquals([ran.status, JSON.parse(await bodyText(ran))], [200, {
+    output: "ok",
+    costUsd: 0.01,
+  }]);
+  assertEquals(ran.headers["access-control-allow-origin"], "https://localhost:8443");
+  assertStringIncludes(runs.at(0) ?? "", '"text": "Hi"');
+
+  const missing = await handle(
+    request("POST", "/api/widget-agents/grammar-check/fix", { body: '{"input":1}' }),
+    assistant,
+  );
+  assertEquals(missing.status, 404);
+  const get = await handle(request("GET", "/api/widget-agents/grammar-check/check"), assistant);
+  assertEquals(get.status, 405);
+  const deep = await handle(request("POST", "/api/widget-agents/a/b/c"), assistant);
+  assertEquals(deep.status, 404);
+  const foreign = await handle(
+    request("POST", "/api/widget-agents/grammar-check/check", {
+      body: '{"input":1}',
+      origin: "https://evil.test",
+    }),
+    assistant,
+    runs,
+  );
+  assertEquals([foreign.status, runs.length], [403, 1]);
 });

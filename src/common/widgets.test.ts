@@ -70,6 +70,7 @@ Deno.test("widgetBundleUrl versions the URL from the registry", () => {
       configSchema: {},
       defaultConfig: {},
       permissions: null,
+      agents: {},
     }],
   };
   assertEquals(

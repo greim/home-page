@@ -204,6 +204,9 @@ the assistant, the settings and the column editor.
   modal is open. Opening the same view from the page does the same.
 - **State survives the move.** The view's DOM moves between the modal and the window; it isn't
   remounted, so drafts and scroll position survive. The kit restyles it for the window's document.
+- **Filling it.** The view is given the whole area under the frame's title bar: give its root
+  `h="full"` (not `100vh`, which is the page's height, not the modal's) and let its own parts
+  scroll. The frame shows the widget's name as its title, so the view needn't repeat it.
 - **Sizing.** The modal is the page's: 1rem is 1vw. In a PiP window, 1rem is the browser's default
   16px, and the view reflows as the window is resized. So lay a full-screen view out to reflow
   (flex, grid, wrapping), not to fixed widths.
@@ -315,6 +318,8 @@ still uses gives exactly that error; the rest of the page keeps working.
   never call a service. See "Sending data to outside services" in the `code-vs-data` skill.
 - Keep secrets such as API keys in `localStorage`, prompting for them when missing, and never in
   their config. See the `code-vs-data` skill.
+- Use Claude for one task through an agent of their own (no tools, a declared answer), with
+  `runWidgetAgent` from the kit. See the `widget-agents` skill.
 - Use React, Chakra and Effect freely: they're the page's shared copies, so they cost a widget
   nothing. Import them only by the shared names (see "Shared packages"); the build rejects anything
   else from those packages.
