@@ -3,6 +3,7 @@
  * widget build collects them into.
  */
 import { Either, Schema } from "effect";
+import { Capability, defaultInputTraits, InputTraits } from "./agent-capabilities.ts";
 
 /** A widget type's ID: its folder's name under src/client/widgets/. */
 export const WidgetId = Schema.String.pipe(Schema.pattern(/^[a-z0-9]+(-[a-z0-9]+)*$/));
@@ -48,6 +49,15 @@ export type WidgetAgent = {
   readonly maxTurns: number;
   /** Most a run may cost, in US dollars. */
   readonly maxBudgetUsd: number;
+  /** Longest a run may take, waiting for the user's answers included (default 3). */
+  readonly maxMinutes?: number;
+  /**
+   * What it may do beyond answering (see agent-capabilities.ts), each `auto` or `ask`.
+   * None if left out: it's given the input, and answers.
+   */
+  readonly capabilities?: ReadonlyArray<Capability>;
+  /** What its input holds; private and possibly untrusted if left out. */
+  readonly input?: InputTraits;
 };
 
 /** What a widget's `manifest.ts` exports as `manifest`. */
@@ -95,8 +105,13 @@ const ManifestModule = Schema.Struct({
           instructions: Schema.NonEmptyTrimmedString,
           output: AnySchema,
           model: Schema.optionalWith(Schema.NonEmptyTrimmedString, { exact: true }),
-          maxTurns: Schema.Int.pipe(Schema.between(1, 20)),
+          maxTurns: Schema.Int.pipe(Schema.between(1, 100)),
           maxBudgetUsd: Schema.Number.pipe(Schema.between(0.01, 10)),
+          maxMinutes: Schema.optionalWith(Schema.Number.pipe(Schema.between(1, 30)), {
+            exact: true,
+          }),
+          capabilities: Schema.optionalWith(Schema.Array(Capability), { exact: true }),
+          input: Schema.optionalWith(InputTraits, { exact: true }),
         }),
       }),
       { exact: true },
@@ -122,8 +137,14 @@ export const AgentEntry = Schema.Struct({
   model: Schema.NullOr(Schema.String),
   maxTurns: Schema.Number,
   maxBudgetUsd: Schema.Number,
+  maxMinutes: Schema.optionalWith(Schema.Number, { default: () => defaultMaxMinutes }),
+  capabilities: Schema.optionalWith(Schema.Array(Capability), { default: () => [] }),
+  input: Schema.optionalWith(InputTraits, { default: () => defaultInputTraits }),
 });
 export type AgentEntry = typeof AgentEntry.Type;
+
+/** How long a run may take, unless its agent says otherwise. */
+export const defaultMaxMinutes = 3;
 
 export const RegistryEntry = Schema.Struct({
   id: WidgetId,

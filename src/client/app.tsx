@@ -232,6 +232,7 @@ export function App() {
             <PermissionsView
               title={type.title}
               permissions={permissions}
+              agents={type.agents}
               state={permissionOf(type.id, permissions)}
               onAnswer={(yes) => {
                 answer(type.id, permissions, yes);

@@ -18,13 +18,15 @@
  *   GET  /api/assistant/state                the log being kept, and its last event's number
  *   GET  /api/assistant/health               is the service up
  *
- *   POST /api/widget-agents/{widget}/{agent}  run a widget's agent on `{ "input": ... }`, answering
- *                                            `{ output, costUsd }` (see widget-agents.ts)
+ *   POST /api/widget-agents/{widget}/{agent}  run a widget's agent that never asks, on
+ *                                            `{ "input": ... }`, answering `{ output, costUsd }`
+ *   /api/widget-agent-runs/...               runs of widget agents: see src/common/agent-runs.ts
  */
 import { Context, Effect, Either, Schema, Stream } from "effect";
 import { Answer, SendMessage, SetMode, SetModel } from "../common/assistant.ts";
 import type { Assistant } from "./assistant.ts";
-import { runAgent, type WidgetAgentIo } from "./widget-agents.ts";
+import { AskAnswer, runsPath } from "../common/agent-runs.ts";
+import { WidgetAgentRuns } from "./widget-agents.ts";
 import {
   type HttpRequest,
   type HttpResponse,
@@ -49,23 +51,6 @@ export type AssistantSite = {
 const prefix = "/api/assistant/";
 const agentsPrefix = "/api/widget-agents/";
 
-/** A widget agent's route: POST /api/widget-agents/{widget}/{agent}. */
-const widgetAgentRoute = (
-  request: HttpRequest,
-): Effect.Effect<HttpResponse, never, WidgetAgentIo> =>
-  Effect.gen(function* () {
-    const [widget, agent, ...rest] = request.url.pathname.slice(agentsPrefix.length).split("/");
-    if (widget === undefined || agent === undefined || rest.length > 0) {
-      return text(404, "Not found");
-    }
-    if (request.method !== "POST") return methodNotAllowed("POST");
-    const body = yield* Effect.orElseSucceed(request.body, () => "");
-    const outcome = yield* runAgent(decodeURIComponent(widget), decodeURIComponent(agent), body);
-    return outcome.ok
-      ? json({ output: outcome.output, costUsd: outcome.costUsd })
-      : text(outcome.status, outcome.message);
-  });
-
 const decodeJson = <A, I>(schema: Schema.Schema<A, I>, raw: string): Either.Either<A, string> =>
   Either.flatMap(
     Either.try({ try: (): unknown => JSON.parse(raw), catch: String }),
@@ -81,11 +66,106 @@ const seqParam = (value: string | null): number | null => {
   return Number.isInteger(n) && n >= 0 ? n : null;
 };
 
+/** The simple route: POST /api/widget-agents/{widget}/{agent}. */
+const widgetAgentRoute = (
+  request: HttpRequest,
+): Effect.Effect<HttpResponse, never, WidgetAgentRuns> =>
+  Effect.gen(function* () {
+    const [widget, agent, ...rest] = request.url.pathname.slice(agentsPrefix.length).split("/");
+    if (widget === undefined || agent === undefined || rest.length > 0) {
+      return text(404, "Not found");
+    }
+    if (request.method !== "POST") return methodNotAllowed("POST");
+    const runs = yield* WidgetAgentRuns;
+    const body = yield* Effect.orElseSucceed(request.body, () => "");
+    const outcome = yield* runs.runToEnd(
+      decodeURIComponent(widget),
+      decodeURIComponent(agent),
+      body,
+    );
+    return outcome.ok
+      ? json({ output: outcome.output, costUsd: outcome.costUsd })
+      : text(outcome.status, outcome.message);
+  });
+
+const decode = decodeURIComponent;
+
+/** Runs of widget agents (see src/common/agent-runs.ts). */
+const runsRoute = (
+  request: HttpRequest,
+): Effect.Effect<HttpResponse, never, WidgetAgentRuns> =>
+  Effect.gen(function* () {
+    const runs = yield* WidgetAgentRuns;
+    const parts = request.url.pathname.slice(runsPath.length).split("/").map(decode);
+    const [first = "", second = "", third = "", ...rest] = parts;
+    const post = request.method === "POST";
+    const get = request.method === "GET";
+    if (rest.length > 0) return text(404, "Not found");
+    if (third === "" && second !== "" && second !== "events" && second !== "cancel") {
+      // POST /{widget}/{agent}: start a run.
+      if (!post) return methodNotAllowed("POST");
+      const started = yield* runs.start(
+        first,
+        second,
+        yield* Effect.orElseSucceed(request.body, () => ""),
+      );
+      return started.ok
+        ? json({ runId: started.runId }, 201)
+        : text(started.status, started.message);
+    }
+    if (second === "events" && third === "") {
+      if (!get) return methodNotAllowed("GET");
+      const after = seqParam(request.url.searchParams.get("after"));
+      if (after === null) return text(400, "`after` must be a whole number");
+      const events = yield* runs.events(first, after);
+      if (events === null) return text(404, "There's no such run (it may have ended a while ago).");
+      const body = yield* events.pipe(
+        Stream.map((logged) => encoder.encode(JSON.stringify(logged) + "\n")),
+        Stream.toReadableStreamEffect(),
+      );
+      return {
+        status: 200,
+        headers: {
+          "content-type": "application/x-ndjson; charset=utf-8",
+          "cache-control": "no-store",
+        },
+        body,
+      } satisfies HttpResponse;
+    }
+    if (second === "answers" && third !== "") {
+      if (!post) return methodNotAllowed("POST");
+      const answer = decodeJson(AskAnswer, yield* Effect.orElseSucceed(request.body, () => ""));
+      if (Either.isLeft(answer)) return text(400, answer.left);
+      return (yield* runs.answer(first, third, answer.right))
+        ? noContent
+        : text(404, "The run isn't waiting for that answer.");
+    }
+    if (second === "cancel" && third === "") {
+      if (!post) return methodNotAllowed("POST");
+      return (yield* runs.cancel(first)) ? noContent : text(404, "There's no such run going.");
+    }
+    if (second === "files" && third !== "") {
+      if (!get) return methodNotAllowed("GET");
+      const bytes = yield* runs.file(first, third);
+      return bytes === null ? text(404, "There's no such file.") : {
+        status: 200,
+        headers: {
+          "content-type": "application/octet-stream",
+          "content-disposition": `attachment; filename="${third.replaceAll('"', "")}"`,
+          "cache-control": "no-store",
+        },
+        body: new Uint8Array(bytes),
+      } satisfies HttpResponse;
+    }
+    return text(404, "Not found");
+  });
+
 const route = (
   request: HttpRequest,
-): Effect.Effect<HttpResponse, never, AssistantService | WidgetAgentIo> =>
+): Effect.Effect<HttpResponse, never, AssistantService | WidgetAgentRuns> =>
   Effect.gen(function* () {
     if (request.url.pathname.startsWith(agentsPrefix)) return yield* widgetAgentRoute(request);
+    if (request.url.pathname.startsWith(runsPath)) return yield* runsRoute(request);
     const assistant = yield* AssistantService;
     const path = request.url.pathname.startsWith(prefix)
       ? request.url.pathname.slice(prefix.length)
@@ -202,7 +282,7 @@ const corsHeaders = (origin: string): Record<string, string> => ({
 export const handleAssistant = (
   request: HttpRequest,
   site: AssistantSite,
-): Effect.Effect<HttpResponse, never, AssistantService | WidgetAgentIo> => {
+): Effect.Effect<HttpResponse, never, AssistantService | WidgetAgentRuns> => {
   if (!site.hosts.has(request.url.host)) {
     return Effect.succeed(text(421, "Misdirected request"));
   }

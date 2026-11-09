@@ -17,6 +17,9 @@ $REPO_ROOT
 
 - `src/common/` must not touch browser globals or Deno APIs. Anything runtime-specific goes in
   `client/` or `server/`, injected into common code if needed.
+- One exception in `client/`: a widget's `agent-tools.ts` runs in Deno (the tools its AI agent
+  calls, sandboxed by the assistant service), never in the browser. It and what it imports must not
+  touch browser globals; it's never imported by the widget's `main.tsx`. See `widget-agents`.
 - Nothing compiles to `.js` in `lib/` or similar: the server runs TypeScript directly with Deno.
 
 ## Naming

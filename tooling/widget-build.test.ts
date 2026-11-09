@@ -382,3 +382,82 @@ Deno.test("an agent's limits must be sensible", () => {
   });
   assertStringIncludes(problems(world).join(), "maxTurns");
 });
+
+Deno.test("the registry carries an agent's capabilities, input traits and time limit", () => {
+  const world = worldWith(["clock"]);
+  world.modules.set("/src/clock/manifest.ts", {
+    manifest: {
+      ...manifest,
+      permissions: toAnthropic,
+      agents: {
+        check: {
+          ...agent,
+          maxMinutes: 10,
+          input: { private: false, untrusted: false },
+          capabilities: [{ use: "web-search", policy: "auto" }, {
+            use: "web-fetch",
+            policy: "ask",
+          }],
+        },
+      },
+    },
+  });
+  const { disk } = run(world);
+  const check =
+    JSON.parse(disk.get("/dist/widgets.next/registry.json") ?? "").widgets[0].agents.check;
+  assertEquals([check.maxMinutes, check.input, check.capabilities.length], [
+    10,
+    { private: false, untrusted: false },
+    2,
+  ]);
+});
+
+Deno.test("an agent with private data, untrusted content and an automatic way out isn't built", () => {
+  const world = worldWith(["clock"]);
+  world.modules.set("/src/clock/manifest.ts", {
+    manifest: {
+      ...manifest,
+      permissions: toAnthropic,
+      agents: { check: { ...agent, capabilities: [{ use: "web-fetch", policy: "auto" }] } },
+    },
+  });
+  assertStringIncludes(problems(world).join(), 'its agent "check" is too risky');
+});
+
+Deno.test("an agent's MCP server must reach a listed service, and widget tools need agent-tools.ts", () => {
+  const gmail = {
+    use: "mcp",
+    server: "gmail",
+    tools: ["search"],
+    policy: "auto",
+    service: "Gmail",
+    reads: "private",
+    sends: false,
+    does: "Reads your email",
+  };
+  const world = worldWith(["clock"]);
+  world.modules.set("/src/clock/manifest.ts", {
+    manifest: {
+      ...manifest,
+      permissions: toAnthropic,
+      agents: { check: { ...agent, capabilities: [gmail] } },
+    },
+  });
+  assertStringIncludes(problems(world).join(), 'must list "Gmail"');
+
+  world.modules.set("/src/clock/manifest.ts", {
+    manifest: {
+      ...manifest,
+      permissions: toAnthropic,
+      agents: {
+        check: { ...agent, capabilities: [{ use: "widget-tools", policy: "auto", does: "x" }] },
+      },
+    },
+  });
+  assertStringIncludes(problems(world).join(), "has no agent-tools.ts");
+  world.dirs.set("/src/clock", [...(world.dirs.get("/src/clock") ?? []), {
+    name: "agent-tools.ts",
+    isDirectory: false,
+  }]);
+  assertEquals(problems(world), []);
+});

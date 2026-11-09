@@ -124,6 +124,9 @@ that account. Other accounts on the same Mac get a certificate warning if they o
   - **A clock**.
   - **A workday bar** showing how far you are through your working week.
   - **A grammar checker**, which has Claude check a block of text and suggest fixes.
+  - **A web researcher**, which has Claude research a topic on the web and write a short report with
+    sources, asking you before it reads each page.
+  - **A spreadsheet fixer**, which has Claude clean up a messy CSV, and gives you the fixed copy.
 - **The assistant.** Claude Code, over the page or in a floating window of its own. It can rearrange
   the page for you, write new kinds of widget, or work on any other part of the code, as it would in
   a terminal.

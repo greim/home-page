@@ -318,8 +318,9 @@ still uses gives exactly that error; the rest of the page keeps working.
   never call a service. See "Sending data to outside services" in the `code-vs-data` skill.
 - Keep secrets such as API keys in `localStorage`, prompting for them when missing, and never in
   their config. See the `code-vs-data` skill.
-- Use Claude for one task through an agent of their own (no tools, a declared answer), with
-  `runWidgetAgent` from the kit. See the `widget-agents` skill.
+- Use Claude for one task through an agent of their own, with only the capabilities it declares
+  (web, files, its own tools, MCP servers; each auto or ask) and a declared answer. See the
+  `widget-agents` skill.
 - Use React, Chakra and Effect freely: they're the page's shared copies, so they cost a widget
   nothing. Import them only by the shared names (see "Shared packages"); the build rejects anything
   else from those packages.

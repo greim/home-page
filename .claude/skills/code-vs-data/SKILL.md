@@ -70,6 +70,9 @@ service, a location to a weather API. What's sent is the user's data, so:
   something the manifest doesn't declare breaks the user's trust in every widget's notice.
 - Maps and other things that load content from outside servers (tiles, images, fonts) count too: the
   request tells that server what the user is looking at.
+- A widget's AI agent counts too: everything it sees goes to Anthropic, and its capabilities (web,
+  MCP servers) may reach more services. See the `widget-agents` skill, including the rule against
+  sending private data out on its own near untrusted content.
 
 The permission is a consent step, not a sandbox: once the user agrees, the widget's code runs in the
 page like any other. What keeps it honest is the manifest being accurate, and reviewed with the

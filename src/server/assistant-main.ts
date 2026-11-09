@@ -10,7 +10,7 @@ import { AssistantService, handleAssistant } from "./assistant-routes.ts";
 import { config } from "./config.ts";
 import { type HttpRequest, type HttpResponse, IoError, ServerIo } from "./http.ts";
 import { makeEventLog } from "./event-log.ts";
-import { WidgetAgentIo } from "./widget-agents.ts";
+import { makeRuns, WidgetAgentIo, WidgetAgentRuns } from "./widget-agents.ts";
 import { widgetAgentIoLive } from "./widget-agents-live.ts";
 
 /** Most events kept for clients that reconnect. */
@@ -63,6 +63,23 @@ const assistant = await Effect.runPromise(
   ),
 );
 
+const repoDir = config.repoRoot.replace(/\/$/, "");
+
+// Widget agents' runs: kept in memory, each in a folder of its own under data/.
+const widgetAgentRuns = await Effect.runPromise(
+  makeRuns({ repoDir, widgetsSourceDir: config.widgetsSourceDir, denoPath: Deno.execPath() }).pipe(
+    Effect.provideService(
+      WidgetAgentIo,
+      widgetAgentIoLive({
+        registryFile: config.assistant.registryFile,
+        runsDir: `${config.dataDir}/widget-agent-runs`,
+        home: Deno.env.get("HOME") ?? "",
+        repoDir,
+      }),
+    ),
+  ),
+);
+
 Deno.serve(
   {
     hostname: config.hostname,
@@ -78,13 +95,7 @@ Deno.serve(
         appOrigins: config.appOrigins,
       }).pipe(
         Effect.provideService(AssistantService, assistant),
-        Effect.provideService(
-          WidgetAgentIo,
-          widgetAgentIoLive(
-            config.assistant.registryFile,
-            `${config.dataDir}/widget-agent-runs`,
-          ),
-        ),
+        Effect.provideService(WidgetAgentRuns, widgetAgentRuns),
         Effect.map(toResponse),
       ),
     ),

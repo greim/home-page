@@ -7,12 +7,15 @@ import {
   type AgentEntry,
   bundleFile,
   decodeManifestModule,
+  defaultMaxMinutes,
   type Registry,
   type RegistryEntry,
   registryFile,
+  type WidgetAgent,
   WidgetId,
   type WidgetManifest,
 } from "../src/common/widgets.ts";
+import { defaultInputTraits, riskyCombination } from "../src/common/agent-capabilities.ts";
 import {
   bundledSharedPackages,
   dynamicRequireMarker,
@@ -145,7 +148,7 @@ const buildOne = (
       Schema.encodeEither(manifest.right.config)(manifest.right.defaultConfig),
       (e) => `its defaultConfig doesn't fit its config schema: ${e.message}`,
     );
-    const agents = yield* agentEntries(manifest.right);
+    const agents = yield* agentEntries(manifest.right, names.has(agentToolsFile));
     // The page supplies the shared packages (see src/common/shared-modules.ts).
     const output = yield* bundler.bundle({
       entrypoints: [`${dir}/main.tsx`],
@@ -213,12 +216,39 @@ const writeOutput = (
     yield* io.rename(staging, outDir);
   });
 
+/** Where a widget's own agent tools are, in its folder. */
+export const agentToolsFile = "agent-tools.ts";
+
+/** Why an agent's capabilities can't be built, or null if they can. */
+const capabilityProblem = (
+  name: string,
+  agent: WidgetAgent,
+  services: ReadonlyArray<string>,
+  hasAgentTools: boolean,
+): string | null => {
+  const capabilities = agent.capabilities ?? [];
+  const risky = riskyCombination(agent.input ?? defaultInputTraits, capabilities);
+  if (risky !== null) return `its agent "${name}" is too risky: ${risky}`;
+  for (const capability of capabilities) {
+    if (capability.use === "mcp" && !services.includes(capability.service)) {
+      return `its agent "${name}" uses the "${capability.server}" MCP server, so its ` +
+        `manifest's permissions must list "${capability.service}" as a service it sends data to`;
+    }
+    if (capability.use === "widget-tools" && !hasAgentTools) {
+      return `its agent "${name}" uses widget tools, but the widget has no ${agentToolsFile}`;
+    }
+  }
+  return null;
+};
+
 /**
  * A manifest's agents as the registry has them. What a widget sends its agents goes to
- * Anthropic, so a widget with agents must say so under `permissions`.
+ * Anthropic, so a widget with agents must say so under `permissions`; and each agent's
+ * capabilities must pass the checks in `capabilityProblem`.
  */
 export const agentEntries = (
   manifest: WidgetManifest<unknown, unknown>,
+  hasAgentTools: boolean,
 ): Effect.Effect<Readonly<Record<string, AgentEntry>>, string> =>
   Effect.gen(function* () {
     const agents = Object.entries(manifest.agents ?? {});
@@ -230,6 +260,11 @@ export const agentEntries = (
           "sends data to (what it sends its agents goes there)",
       );
     }
+    const services = (manifest.permissions?.services ?? []).map((s) => s.name);
+    for (const [name, agent] of agents) {
+      const problem = capabilityProblem(name, agent, services, hasAgentTools);
+      if (problem !== null) return yield* Effect.fail(problem);
+    }
     const entries = yield* Effect.forEach(agents, ([name, agent]) =>
       Effect.try({
         try: (): readonly [string, AgentEntry] => [name, {
@@ -239,6 +274,9 @@ export const agentEntries = (
           model: agent.model ?? null,
           maxTurns: agent.maxTurns,
           maxBudgetUsd: agent.maxBudgetUsd,
+          maxMinutes: agent.maxMinutes ?? defaultMaxMinutes,
+          capabilities: agent.capabilities ?? [],
+          input: agent.input ?? defaultInputTraits,
         }],
         catch: (cause) =>
           `its agent "${name}"'s output schema can't be described as JSON Schema: ${

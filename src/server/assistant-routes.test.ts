@@ -4,7 +4,7 @@ import type { Answer, LoggedEvent, SendMessage } from "../common/assistant.ts";
 import type { Assistant, SendResult } from "./assistant.ts";
 import { AssistantService, handleAssistant } from "./assistant-routes.ts";
 import { type HttpRequest, type HttpResponse, IoError } from "./http.ts";
-import { WidgetAgentIo } from "./widget-agents.ts";
+import { type Runs, WidgetAgentRuns } from "./widget-agents.ts";
 
 const site = {
   hosts: new Set(["localhost:9443"]),
@@ -59,54 +59,50 @@ const request = (
   body: Effect.succeed(options.body ?? ""),
 });
 
-/** Widget agents for the route tests: one agent, "grammar-check"'s "check", which says "ok". */
-const agentIo = (runs: Array<string>) =>
-  WidgetAgentIo.of({
-    readRegistry: Effect.succeed(JSON.stringify({
-      widgets: [{
-        id: "grammar-check",
-        title: "Grammar Check",
-        description: "",
-        version: "v",
-        configSchema: {},
-        defaultConfig: {},
-        agents: {
-          check: {
-            title: "Check",
-            instructions: "Check it.",
-            outputSchema: {},
-            model: null,
-            maxTurns: 2,
-            maxBudgetUsd: 0.1,
-          },
-        },
-      }],
-    })),
-    makeWorkdir: Effect.succeed("/tmp/run"),
-    removeWorkdir: () => Effect.void,
-    query: (_options, prompt) =>
-      Effect.sync(() => {
-        runs.push(prompt);
-        return [{
-          type: "result",
-          subtype: "success",
-          total_cost_usd: 0.01,
-          structured_output: "ok",
-        }];
-      }),
-  });
+/** Widget agent runs for the route tests: "grammar-check"'s "check" answers "ok". */
+const fakeRuns = (log: Array<string>): Runs => ({
+  start: (widget, agent, body) =>
+    Effect.sync(() => {
+      log.push(`start ${widget} ${agent} ${body}`);
+      return agent === "check"
+        ? { ok: true, runId: "r1" }
+        : { ok: false, status: 404, message: "No agent" };
+    }),
+  events: (runId, after) =>
+    Effect.succeed(
+      runId === "r1"
+        ? Stream.make({ seq: after + 1, event: { is: "progress", text: "Reading" } } as const)
+        : null,
+    ),
+  answer: (runId, askId, answer) =>
+    Effect.sync(
+      () => (log.push(`answer ${runId} ${askId} ${answer.allow} ${answer.forRun}`), askId === "a1"),
+    ),
+  cancel: (runId) => Effect.succeed(runId === "r1"),
+  file: (runId, name) =>
+    Effect.succeed(runId === "r1" && name === "out.csv" ? new Uint8Array([65]) : null),
+  runToEnd: (widget, agent, body) =>
+    Effect.sync(() => {
+      log.push(`runToEnd ${widget} ${agent} ${body}`);
+      return agent === "check"
+        ? { ok: true, output: "ok", costUsd: 0.01 }
+        : { ok: false, status: 404, message: "No agent" };
+    }),
+});
 
 const handle = (req: HttpRequest, assistant: Assistant, runs: Array<string> = []) =>
   Effect.runPromise(
     handleAssistant(req, site).pipe(
       Effect.provideService(AssistantService, assistant),
-      Effect.provideService(WidgetAgentIo, agentIo(runs)),
+      Effect.provideService(WidgetAgentRuns, fakeRuns(runs)),
     ),
   );
 
 const bodyText = async (response: HttpResponse) =>
   response.body instanceof ReadableStream
     ? await new Response(response.body).text()
+    : response.body instanceof Uint8Array
+    ? new TextDecoder().decode(response.body)
     : String(response.body);
 
 Deno.test("only the app's own origins, and requests from no page at all, are answered", async () => {
@@ -314,37 +310,83 @@ Deno.test("the model is set; capabilities are listed", async () => {
   );
 });
 
-Deno.test("POST /api/widget-agents/{widget}/{agent} runs a widget's agent", async () => {
+Deno.test("POST /api/widget-agents/{widget}/{agent} runs a widget's agent to its end", async () => {
   const { assistant } = fake();
-  const runs: Array<string> = [];
+  const log: Array<string> = [];
   const ran = await handle(
     request("POST", "/api/widget-agents/grammar-check/check", { body: '{"input":{"text":"Hi"}}' }),
     assistant,
-    runs,
+    log,
   );
   assertEquals([ran.status, JSON.parse(await bodyText(ran))], [200, {
     output: "ok",
     costUsd: 0.01,
   }]);
   assertEquals(ran.headers["access-control-allow-origin"], "https://localhost:8443");
-  assertStringIncludes(runs.at(0) ?? "", '"text": "Hi"');
-
+  assertEquals(log, ['runToEnd grammar-check check {"input":{"text":"Hi"}}']);
   const missing = await handle(
-    request("POST", "/api/widget-agents/grammar-check/fix", { body: '{"input":1}' }),
+    request("POST", "/api/widget-agents/grammar-check/fix", { body: "{}" }),
     assistant,
   );
   assertEquals(missing.status, 404);
-  const get = await handle(request("GET", "/api/widget-agents/grammar-check/check"), assistant);
-  assertEquals(get.status, 405);
-  const deep = await handle(request("POST", "/api/widget-agents/a/b/c"), assistant);
-  assertEquals(deep.status, 404);
+  assertEquals(
+    (await handle(request("GET", "/api/widget-agents/grammar-check/check"), assistant)).status,
+    405,
+  );
+  assertEquals((await handle(request("POST", "/api/widget-agents/a/b/c"), assistant)).status, 404);
   const foreign = await handle(
     request("POST", "/api/widget-agents/grammar-check/check", {
       body: '{"input":1}',
       origin: "https://evil.test",
     }),
     assistant,
-    runs,
+    log,
   );
-  assertEquals([foreign.status, runs.length], [403, 1]);
+  assertEquals([foreign.status, log.length], [403, 1]);
+});
+
+Deno.test("widget agent runs: start, events, answers, cancel and files", async () => {
+  const { assistant } = fake();
+  const log: Array<string> = [];
+  const call = (method: string, path: string, body?: string) =>
+    handle(
+      request(method, `/api/widget-agent-runs/${path}`, body === undefined ? {} : { body }),
+      assistant,
+      log,
+    );
+
+  const started = await call("POST", "w/check", '{"input":1}');
+  assertEquals([started.status, JSON.parse(await bodyText(started))], [201, { runId: "r1" }]);
+  assertEquals((await call("POST", "w/nope", "{}")).status, 404);
+  assertEquals((await call("GET", "w/check")).status, 405);
+
+  const events = await call("GET", "r1/events?after=2");
+  assertEquals(events.headers["content-type"], "application/x-ndjson; charset=utf-8");
+  assertEquals(await bodyText(events), '{"seq":3,"event":{"is":"progress","text":"Reading"}}\n');
+  assertEquals((await call("GET", "r2/events")).status, 404);
+  assertEquals((await call("GET", "r1/events?after=-1")).status, 400);
+  assertEquals((await call("POST", "r1/events")).status, 405);
+
+  assertEquals((await call("POST", "r1/answers/a1", '{"allow":true,"forRun":true}')).status, 204);
+  assertEquals((await call("POST", "r1/answers/a2", '{"allow":false}')).status, 404);
+  assertEquals((await call("POST", "r1/answers/a1", "nope")).status, 400);
+  assertEquals((await call("GET", "r1/answers/a1")).status, 405);
+  assertEquals(log.filter((l) => l.startsWith("answer")), [
+    "answer r1 a1 true true",
+    "answer r1 a2 false false",
+  ]);
+
+  assertEquals((await call("POST", "r1/cancel")).status, 204);
+  assertEquals((await call("POST", "r2/cancel")).status, 404);
+  assertEquals((await call("GET", "r1/cancel")).status, 405);
+
+  const file = await call("GET", "r1/files/out.csv");
+  assertEquals([file.status, file.headers["content-disposition"], await bodyText(file)], [
+    200,
+    'attachment; filename="out.csv"',
+    "A",
+  ]);
+  assertEquals((await call("GET", "r1/files/nope.csv")).status, 404);
+  assertEquals((await call("POST", "r1/files/out.csv")).status, 405);
+  assertEquals((await call("GET", "r1/what/x/y")).status, 404);
 });

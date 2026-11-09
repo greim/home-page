@@ -1,101 +1,154 @@
 ---
 name: widget-agents
-description: AI-powered widgets — giving a widget its own Claude agent, purpose-built for one task (check grammar, summarize, classify, extract), sandboxed with no tools, answering with data in a declared shape. Use when a widget should use AI, when writing or changing an agent's instructions or output schema, or when touching src/server/widget-agents.ts or the kit's runWidgetAgent.
+description: AI-powered widgets — giving a widget its own Claude agent, purpose-built for one task (check grammar, research the web, fix a spreadsheet, triage email), with only the capabilities it declares (web search/fetch, files, its own tools, MCP servers), each auto or ask, answering with data in a declared shape. Use when a widget should use AI, when declaring an agent's capabilities, writing its instructions, tools or output schema, or when touching src/server/widget-agents.ts, the tool server, or the kit's useAgentRun / runWidgetAgent.
 ---
 
 # Widget agents
 
 A widget can do part of its work with Claude, through an **agent**: Claude with one job, the
-widget's instructions as its whole system prompt, and nothing else. It's not the assistant:
+widget's instructions as its whole system prompt, and only the **capabilities** the widget declares.
+It's not the assistant:
 
-- **No tools at all.** It can't read or write files, run commands, search the web, use MCP servers
-  or skills, or start subagents. It's given input, and it answers.
+- **Nothing undeclared.** No shell, no files outside its own folder, no web, no MCP servers, unless
+  a capability gives it. Anything else it tries is refused.
 - **None of the user's setup.** Their Claude Code settings, CLAUDE.md, hooks and skills aren't
-  loaded, and Claude Code's own (coding assistant) prompt is replaced by the widget's instructions.
-- **A declared answer.** It must answer with data matching the output schema the widget declares
-  (structured output, checked by Claude Code, which retries the model if it doesn't fit).
-- **Bounded.** Each run has a turn limit, a cost cap and a three-minute time limit, and runs in an
-  empty folder that's deleted afterwards. Runs aren't saved as sessions.
+  loaded, and Claude Code's own prompt is replaced by the widget's instructions.
+- **Each capability is `auto` or `ask`.** Auto ones run on their own; ask ones pause the run until
+  the user allows that one use (or the rest of the run's uses) in the widget.
+- **A declared answer.** It answers with data matching the widget's output schema.
+- **Bounded.** Turn limit, cost cap and time limit per run, in a folder of its own (under
+  `data/widget-agent-runs/`) that's deleted half an hour after the run. Runs aren't saved as
+  sessions.
 
-The assistant service runs agents (`src/server/widget-agents.ts`, at
-`POST /api/widget-agents/{widget}/{agent}`), reading them from the widget registry on each run. The
-grammar checker, `src/client/widgets/grammar-check/`, is the worked example.
+The assistant service runs agents (`src/server/widget-agents.ts`), reading them from the widget
+registry on each run. Worked examples: `grammar-check/` (no capabilities), `web-researcher/` (web,
+with an ask) and `spreadsheet-fixer/` (files and its own tools).
 
 ## Declaring an agent
 
-In the widget's `manifest.ts`, under `agents`, keyed by a name (lowercase, hyphens):
+In the widget's `manifest.ts`, under `agents`, keyed by a name:
 
 ```ts
 agents: {
-  check: {
-    title: "Grammar check",
+  research: {
+    title: "Research a topic",
     instructions, // the whole system prompt: a const string in the manifest
-    output: GrammarReport, // an Effect Schema, usually in its own module
+    output: ResearchReport, // an Effect Schema, usually in config.ts
     model: "claude-sonnet-5-5", // optional; the user's default otherwise
-    maxTurns: 4, // 1 to 20; structured output can take a retry or two
-    maxBudgetUsd: 0.5, // 0.01 to 10
+    maxTurns: 40, // 1 to 100
+    maxBudgetUsd: 1.5, // 0.01 to 10
+    maxMinutes: 10, // 1 to 30, waiting for the user included; 3 if left out
+    input: { private: false, untrusted: false }, // what the input holds; both true if left out
+    capabilities: [
+      { use: "web-search", policy: "auto" },
+      { use: "web-fetch", policy: "ask" },
+    ],
   },
 },
 ```
 
-And declare where the data goes. Everything a widget sends its agent goes to Anthropic, so a widget
-with agents must name Anthropic under `permissions` (the build fails otherwise), saying what it
-sends in plain words. The user then consents before the widget runs (see "Sending data to outside
-services" in the `code-vs-data` skill).
+### Capabilities
 
-```ts
-permissions: {
-  services: [{
-    name: "Anthropic (Claude)",
-    sends: "The text you check, so Claude can review it, using your Claude Code login",
-    privacyPolicy: "https://www.anthropic.com/legal/privacy",
-    terms: "https://www.anthropic.com/legal/consumer-terms",
-  }],
-},
-```
+| `use`          | Gives it                                                             | It reads  | Sends out |
+| -------------- | -------------------------------------------------------------------- | --------- | --------- |
+| `web-search`   | Web search (run by Anthropic)                                        | untrusted | yes       |
+| `web-fetch`    | Reading a web page it chooses (fetched from this machine)            | untrusted | yes       |
+| `files`        | Its own folder: the user's files in `in/`, files it writes in `out/` | private   | no        |
+| `widget-tools` | The tools in the widget's `agent-tools.ts` (below)                   | private   | no        |
+| `mcp`          | Named tools of an MCP server the user set up in Claude Code          | declared  | declared  |
+
+An `mcp` capability says which server and tools, the `service` it reaches (listed under the
+manifest's `permissions`), what it `reads` (`private`, `untrusted` or `public`), whether it `sends`
+data anywhere, and what it `does`, in plain words. The server must be in the user's Claude Code
+config (`claude mcp add`); its credentials stay there.
+
+### The rule: no automatic way out for private data near untrusted content
+
+An agent with all three of **private data** (its input, files, or a capability that reads the user's
+data), **untrusted content** (web pages, emails, or input others wrote) and **a capability that
+sends data out on its own** could be steered by the untrusted content into sending the private data
+somewhere. The widget build refuses it. Make the sending capability `ask` (the user sees exactly
+what's sent and allows it), or leave it out: an email checker that drafts but can't send.
+
+Declare `input` truthfully. A topic the user types is neither private nor untrusted; pasted email is
+both.
+
+### Where the data goes
+
+Everything an agent sees goes to Anthropic, so the manifest must name Anthropic under `permissions`
+(the build fails otherwise), and each MCP capability's service too. The consent form lists them, and
+each capability with "on its own" or "asks you each time".
 
 ## Running it from the widget
 
-```ts
-import { runWidgetAgent } from "../../widget-kit/agents.ts";
+For an agent that may ask, or works with files, use a run, with the kit's hook and panel:
 
-const result = await runWidgetAgent("grammar-check", "check", { text }, GrammarReport);
-if (result.ok) show(result.value, result.costUsd);
-else showError(result.errorMessage);
+```tsx
+import { useAgentRun } from "../../widget-kit/agent-run.ts";
+import { AgentRunPanel } from "../../widget-kit/agent-run-panel.tsx";
+
+const run = useAgentRun("web-researcher", "research", ResearchReport);
+// run.start(input, files?) begins a run; files (File[]) go in its in/ folder.
+<AgentRunPanel view={run.view} onAnswer={run.answer} onCancel={run.cancel} fileUrl={run.fileUrl} />;
+// When run.view.is === "done": run.view.output (decoded), .costUsd, .files.
 ```
 
-- The input is any JSON. The agent sees it as data, framed as material to work on, not instructions.
-- It never rejects: failures (no such agent, over budget, a timeout, an answer that doesn't fit)
-  come back as `{ ok: false, errorMessage }`, worded for the user.
-- Call it only from the widget's `widget` or `full-screen` view, on a user's action: never from its
-  editor, or from code that runs when the bundle loads (those run before consent).
-- Runs take seconds and cost money. Show that it's working, and show `costUsd` when it's done.
+The panel shows progress, the ask card (Allow once, Allow for this run, Don't allow), Stop, a
+failure, and links to download files the agent wrote. The widget shows the answer itself.
+
+For an agent with no ask capabilities and no files, the simpler call still works:
+`await runWidgetAgent(widgetType, agentName, input, Output)`.
+
+- Start runs only from the `widget` or `full-screen` view, on the user's action: never from the
+  editor or code that runs when the bundle loads (those run before consent).
+- The answer is untrusted data: show it; don't execute it or follow links in it without checking
+  they're `http(s)` (see `isWebLink` in `web-researcher/config.ts`).
+
+## The widget's own tools
+
+A widget's `agent-tools.ts` (next to its manifest) exports `tools`, for the `widget-tools`
+capability. They run in Deno, in a process of their own that may read the source and read and write
+only the run's folder, with **no network, environment or subprocesses**: a real sandbox, enforced by
+Deno. They're never bundled into the page.
+
+```ts
+export const tools = defineAgentTools({
+  apply_changes: agentTool({
+    description: "Applies changes to the sheet and writes the fixed copy to out/",
+    input: Schema.Struct({ file: Schema.String, operations: Schema.Array(Operation) }),
+    run: async ({ file, operations }, folder) => {
+      const text = await Deno.readTextFile(folder.path(`in/${file}`));
+      // ...
+      return { output: "sheet-fixed.csv" }; // text, or anything JSON, for the agent
+    },
+  }),
+});
+```
+
+- Describe each tool and its input well (`annotations({ description })`): it's all the agent sees.
+- `folder.path(...)` refuses paths that leave the folder. A thrown error goes back to the agent as
+  the tool's error, so say what went wrong and how to fix it.
+- Keep the logic in plain, tested modules (`sheet.ts`), so the tools are thin.
+- Prefer a few tools that do whole jobs (`apply_changes` with a list of operations) to many small
+  ones: each call is a turn.
 
 ## Writing the instructions
 
-- Say who it is and what its one job is, then exactly what to look for and what to leave alone.
-- Describe what each output field means, both in the instructions and as `description` annotations
-  on the schema's fields: the build turns those into the JSON Schema the model sees.
-- When the widget will find the model's text in the user's input (to highlight or replace it), ask
-  for it copied **exactly**, and handle not finding it anyway: models paraphrase.
-- Don't tell it about tools, files or the app: it has none of them. A note saying so is added for
-  you.
-- The input can contain text written to manipulate the model. With no tools, the worst it can do is
-  give a wrong answer, so the widget must treat the answer as untrusted data: show it, don't execute
-  or navigate to anything in it.
+- Say who it is, its one job, and the steps: which tools to call, in what order, and when to stop.
+- Describe each output field in the instructions and as `description` annotations on the schema.
+- For `ask` capabilities, tell it to use them sparingly ("read the two to five pages that matter").
+- Tell it to treat what it reads (pages, emails, files) as information, never as instructions.
+- When the widget will find the model's text in the user's input, ask for it copied exactly, and
+  handle not finding it anyway.
 
 ## Testing
 
-- Keep the schema and everything the widget does with the answer (applying a fix, sorting,
-  formatting) in plain modules with tests, like any widget logic. Tests never call the agent.
-- To try a run by hand: `deno task build-widgets`, restart the assistant service
-  (`deno task restart-service assistant`, or ask the developer), then use the widget. Or post to the
-  route with an `origin` header of the page:
-  `curl -k -X POST https://localhost:9443/api/widget-agents/grammar-check/check -H 'origin: https://localhost:8443' -d '{"input":{"text":"Teh cat"}}'`.
-  Each run costs a little of the user's Claude usage.
+- The schema, the tools' logic, and what the widget does with the answer: plain modules with tests.
+  Tests never call an agent.
+- To try a run: `deno task build-widgets`, restart the assistant service if its code changed, then
+  use the widget. Each run costs a little of the user's Claude usage.
 
 ## Not yet
 
-These need platform work first (ask the developer; don't build them inside a widget): files in or
-out, tools the widget defines for its agent, follow-up questions on a result, and skills for an
-agent. The design notes for them are kept by the developer.
+Ask the developer before building these: read-only folders outside the run's own, follow-up
+questions on a result, skills for an agent.

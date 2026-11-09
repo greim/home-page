@@ -5,7 +5,8 @@
  */
 import { Box, Button, chakra, HStack, Link, Stack, Text } from "@chakra-ui/react";
 import { LuExternalLink, LuMessageCircleWarning, LuShieldAlert } from "react-icons/lu";
-import type { OutsideService, Permissions } from "../common/widgets.ts";
+import { traits } from "../common/agent-capabilities.ts";
+import type { AgentEntry, OutsideService, Permissions } from "../common/widgets.ts";
 import { FullScreenBody, FullScreenFooter } from "./full-screen/full-screen-host.tsx";
 import type { PermissionState } from "./permissions.ts";
 
@@ -38,10 +39,38 @@ function ServiceList(props: { services: ReadonlyArray<OutsideService> }) {
   );
 }
 
+/** What a widget's AI agents can do beyond answering, each on its own or asking each time. */
+function AgentCapabilities(props: { agents: Readonly<Record<string, AgentEntry>> }) {
+  const lines = Object.values(props.agents).flatMap((agent) =>
+    agent.capabilities.map((capability) => {
+      const t = traits(capability);
+      return { key: `${agent.title}:${t.does}`, does: t.does, auto: t.auto };
+    })
+  );
+  if (lines.length === 0) return null;
+  return (
+    <Box>
+      <Text fontWeight="semibold">What its AI can do</Text>
+      <Stack as="ul" gap="1" mt="2" ps="5" listStyleType="disc">
+        {lines.map((line) => (
+          <chakra.li key={line.key}>
+            {line.does}{" "}
+            <chakra.span color="fg.muted">
+              {line.auto ? "(on its own)" : "(asks you each time)"}
+            </chakra.span>
+          </chakra.li>
+        ))}
+      </Stack>
+    </Box>
+  );
+}
+
 /** The permission screen, as a full-screen view: the services, then yes or no. */
 export function PermissionsView(props: {
   title: string;
   permissions: Permissions;
+  /** Its AI agents, whose capabilities are listed too. */
+  agents: Readonly<Record<string, AgentEntry>>;
   state: PermissionState;
   onAnswer: (yes: boolean) => void;
 }) {
@@ -63,9 +92,10 @@ export function PermissionsView(props: {
           </Text>
         </HStack>
         <ServiceList services={props.permissions.services} />
+        <AgentCapabilities agents={props.agents} />
         <Text fontSize="sm" color="fg.muted">
           Your answer is kept in this browser, for every {props.title}{" "}
-          widget. You can change it in the column editor.
+          widget. To withdraw consent later, use the column editor.
         </Text>
       </FullScreenBody>
       <FullScreenFooter>
