@@ -2,7 +2,7 @@
 
 _Your Home Page_ is an app that can add features to itself and fix its own bugs, via a
 Claude-powered assistant that launches from within the app. Ask it for a column of news links, a
-stock ticker, a feed reader, or a map, and if it can't do that yet, it writes the code for you.
+stock ticker, a feed reader, or a map, and if it can't do that yet, it modifies itself so it can.
 Think of it as just another way of using [Claude Code](https://code.claude.com/) — the assistant can
 do anything Claude can do. If you're more of a power user type, you can use Claude directly to do
 all the same things.
