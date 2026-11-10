@@ -97,6 +97,8 @@ export const night = {
   starFadeSeconds: 30,
   /** Stars' delays are spread at random over this many seconds. */
   starDelayWindowSeconds: 30,
+  /** How opaque constellations' lines are, within the starfield: faint, so they're only just there. */
+  constellationLineOpacity: 0.375,
 } as const;
 
 /**

@@ -1,12 +1,13 @@
 /**
  * The starfield over the page in night mode: an SVG covering the whole window,
- * which never takes clicks. Its stars come out one by one as night falls, and
- * the whole field fades away by day.
+ * which never takes clicks. Its stars come out one by one as night falls, each
+ * constellation's faint lines once all its stars are out, and the whole field
+ * fades away by day.
  */
 import { chakra } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 import { night as nightStyle } from "./surface.ts";
-import { generateStars, starPath } from "./starfield.ts";
+import { generateConstellations, generateStars, starPath } from "./starfield.ts";
 
 /** The field is this many units wide, and as tall as the window's shape makes it. */
 const fieldWidth = 1000;
@@ -16,7 +17,12 @@ const starId = "starfield-star";
 const starStyles = `
   .starfield-star { opacity: 0; animation: starfield-in ${nightStyle.starFadeSeconds}s linear forwards; }
   @keyframes starfield-in { to { opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { .starfield-star { animation: none; opacity: 1; } }
+  .starfield-line { opacity: 0; animation: starfield-line-in ${nightStyle.starFadeSeconds}s linear forwards; }
+  @keyframes starfield-line-in { to { opacity: ${nightStyle.constellationLineOpacity}; } }
+  @media (prefers-reduced-motion: reduce) {
+    .starfield-star { animation: none; opacity: 1; }
+    .starfield-line { animation: none; opacity: ${nightStyle.constellationLineOpacity}; }
+  }
 `;
 
 /** The window's shape: height over width. Fixed when the field's made; the SVG covers any change. */
@@ -51,11 +57,29 @@ export function Starfield(props: {
         height,
         minRadius: 1.5,
         maxRadius: 7,
-        density: 0.0003,
+        smallBias: 2,
+        density: 0.0006,
         delayWindow: nightStyle.starDelayWindowSeconds,
         random: Math.random,
       }),
     [nightsFallen, height],
+  );
+  const constellations = useMemo(
+    () =>
+      generateConstellations(stars, {
+        count: 6,
+        minStarRadius: 4,
+        minStars: 3,
+        maxStars: 7,
+        maxLineLength: 150,
+        loopChance: 0.4,
+        random: Math.random,
+      }).map((c) => ({
+        lines: c.lines,
+        // Drawn once its last star has half come out.
+        delay: Math.max(...c.stars.map((s) => s.delay)) + nightStyle.starFadeSeconds / 2,
+      })),
+    [stars],
   );
 
   return (
@@ -77,6 +101,24 @@ export function Starfield(props: {
       <defs>
         <path id={starId} d={starPath()} />
       </defs>
+      {starsOut
+        ? constellations.map((c, i) => (
+          <g key={i} className="starfield-line" style={{ animationDelay: `${c.delay}s` }}>
+            {c.lines.map((l, j) => (
+              <line
+                key={j}
+                x1={l.from.x}
+                y1={l.from.y}
+                x2={l.to.x}
+                y2={l.to.y}
+                stroke="white"
+                strokeWidth="1px"
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+          </g>
+        ))
+        : null}
       {starsOut
         ? stars.map((s, i) => (
           <use
