@@ -2,17 +2,15 @@
  * A widget agent's run, as the assistant service and the widget kit see it: started
  * with input (and files), it reports progress, may ask the user to allow something,
  * and ends with an answer (and files to download), a failure, or being cancelled.
- *
- *   POST /api/widget-agent-runs/{widget}/{agent}       start: `RunRequest`, answers `{ runId }`
- *   GET  /api/widget-agent-runs/{runId}/events?after=  the run's events, as NDJSON, from `after`
- *   POST /api/widget-agent-runs/{runId}/answers/{askId}  `AskAnswer`
- *   POST /api/widget-agent-runs/{runId}/cancel
- *   GET  /api/widget-agent-runs/{runId}/files/{name}   a file the agent wrote
+ * Widgets reach runs through the agent-runs widget API (src/common/apis/agent-runs.ts).
  */
 import { Schema } from "effect";
 
-/** Where run routes are. Apart from the simple route (`/api/widget-agents/...`). */
-export const runsPath = "/api/widget-agent-runs/";
+/** The most a run's input may be, for an agent run to its answer. */
+export const maxInputBytes = 200_000;
+
+/** The most a run's start may be, its files included. */
+export const maxStartBytes = 30_000_000;
 
 /** A file given to a run, as base64. It's put in the run's `in/` folder. */
 export const RunFile = Schema.Struct({

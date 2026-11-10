@@ -69,7 +69,7 @@ function Report(props: { report: ResearchReport }) {
 
 export function WebResearcherFullScreen(_props: FullScreenProps<WebResearcherConfig>) {
   const [topic, setTopic] = useState("");
-  const run = useAgentRun("web-researcher", "research", ResearchReport);
+  const run = useAgentRun("research", ResearchReport);
   const busy = run.view.is === "starting" || run.view.is === "running";
 
   return (

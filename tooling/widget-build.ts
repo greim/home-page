@@ -2,6 +2,8 @@
  * The widget build: bundles every widget folder's main.tsx, and collects their
  * manifests into registry.json.
  */
+import { agentsApiName, allApis } from "../src/common/apis/all.ts";
+import type { AnyApi } from "../src/common/widget-apis.ts";
 import { Context, Data, Effect, Either, JSONSchema, Schema } from "effect";
 import {
   type AgentEntry,
@@ -149,6 +151,7 @@ const buildOne = (
       (e) => `its defaultConfig doesn't fit its config schema: ${e.message}`,
     );
     const agents = yield* agentEntries(manifest.right, names.has(agentToolsFile));
+    const apis = yield* apiNames(manifest.right);
     // The page supplies the shared packages (see src/common/shared-modules.ts).
     const output = yield* bundler.bundle({
       entrypoints: [`${dir}/main.tsx`],
@@ -182,6 +185,7 @@ const buildOne = (
         defaultConfig,
         permissions: manifest.right.permissions ?? null,
         agents,
+        apis,
       },
       files: [
         [bundle, script.contents] as const,
@@ -284,6 +288,44 @@ export const agentEntries = (
           }`,
       }));
     return Object.fromEntries(entries);
+  });
+
+/**
+ * The widget APIs the page gives a widget: those its manifest declares, each of which
+ * must exist and have its outside services listed under `permissions`, and agent-runs
+ * if it has agents (which it mustn't declare: having agents says so).
+ */
+export const apiNames = (
+  manifest: WidgetManifest<unknown, unknown>,
+  apis: ReadonlyArray<AnyApi> = allApis,
+): Effect.Effect<ReadonlyArray<string>, string> =>
+  Effect.gen(function* () {
+    const declared = manifest.apis ?? [];
+    const services = (manifest.permissions?.services ?? []).map((s) => s.name);
+    for (const name of declared) {
+      if (name === agentsApiName) {
+        return yield* Effect.fail(
+          `its manifest lists the "${name}" API, which a widget gets by having agents: ` +
+            `take it out of \`apis\``,
+        );
+      }
+      const api = apis.find((a) => a.name === name);
+      if (api === undefined) {
+        const known = apis.map((a) => `"${a.name}"`).join(", ");
+        return yield* Effect.fail(
+          `its manifest lists an API "${name}" there isn't (there's ${known})`,
+        );
+      }
+      const unlisted = api.services.filter((service) => !services.includes(service));
+      if (unlisted.length > 0) {
+        return yield* Effect.fail(
+          `it uses the "${name}" API, so its manifest's permissions must list ` +
+            `${unlisted.map((u) => `"${u}"`).join(" and ")} as services it sends data to`,
+        );
+      }
+    }
+    const hasAgents = Object.keys(manifest.agents ?? {}).length > 0;
+    return [...new Set([...declared]), ...(hasAgents ? [agentsApiName] : [])];
   });
 
 export const buildWidgets = (

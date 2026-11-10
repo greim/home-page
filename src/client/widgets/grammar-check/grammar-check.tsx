@@ -20,7 +20,7 @@ import { LuArrowRight, LuCheck, LuSpellCheck, LuX } from "react-icons/lu";
 import { widgetHeading } from "../../surface.ts";
 import { TextBox } from "../../widget-kit/text-box.tsx";
 import { TextBoxButton } from "../../widget-kit/text-box-button.tsx";
-import { runWidgetAgent } from "../../widget-kit/agents.ts";
+import { useWidgetAgent } from "../../widget-kit/agents.ts";
 import type { FullScreenProps, WidgetProps } from "../../widget-kit/views.tsx";
 import type { GrammarCheckConfig } from "./config.ts";
 import {
@@ -180,13 +180,14 @@ export function GrammarCheckFullScreen({ widgetId }: FullScreenProps<GrammarChec
   const [check, setCheck] = useState<Check>({ is: "idle" });
   const box = useRef<HTMLTextAreaElement>(null);
   const tooLong = text.length > maxTextLength;
+  const checkGrammar = useWidgetAgent("check", GrammarReport);
 
   const canCheck = text.trim() !== "" && !tooLong && check.is !== "checking";
 
   const run = async () => {
     if (!canCheck) return;
     setCheck({ is: "checking" });
-    const result = await runWidgetAgent("grammar-check", "check", { text }, GrammarReport);
+    const result = await checkGrammar({ text });
     setCheck(
       result.ok
         ? { is: "done", ...result.value, costUsd: result.costUsd }

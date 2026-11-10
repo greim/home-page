@@ -42,6 +42,9 @@ views or provide other services inside the host. That's what makes MFEs flexible
     point (`src/client/main.tsx`), and never adds a view name the page doesn't already show. If a
     widget seems to need one of those, stop and ask the developer: it's a change to the framework
     every widget shares, to design on its own, not a detail of one widget.
+  - **Widget APIs are part of the contract too.** When a widget needs the app's server, it uses a
+    widget API (see the `widget-apis` skill). Adding or changing one is its own task, with the
+    developer's go-ahead, following that skill's recipe.
 
 Here, the payoff is that the page can grow widget types nobody planned for: the assistant (or the
 developer) writes a new widget folder, and the page loads it without the page's code changing.
@@ -165,6 +168,10 @@ Build views with `src/client/widget-kit/`, not with bare components:
 - **`widget` view** also gets `openFullScreen()`, which opens its `full-screen` view (if it has one)
   as a modal. Call it only from a user action, such as a button's click.
 - **`full-screen` view** props: the `widget` view's, less `openFullScreen`.
+- **`widget` and `full-screen` views** also get `apis`: a client for each widget API the manifest
+  declares, built by the page for that widget. The kit's `widgetView` and `fullScreenView` move it
+  into React context, for `useWidgetApi`, so components don't see it as a prop. The `editor` view
+  doesn't get it: it loads before the user consents.
 - **`editor` view** props: `{ widgetId, config, reportDraft }`. `config` is where to start; the
   editor owns its state from then on. Call `reportDraft` with `{ ok: true, config }` or
   `{ ok: false, errorMessage }` when it opens and after each change. The column editor's Save
@@ -312,8 +319,9 @@ still uses gives exactly that error; the rest of the page keeps working.
 
 ### What widgets may do
 
-- Call APIs straight from the browser. There's no server-side proxy yet, so only APIs that allow
-  cross-origin requests work.
+- Call outside APIs straight from the browser, if they allow cross-origin requests.
+- Use the app's server through widget APIs (`useWidgetApi`, declared under `apis` in the manifest),
+  never by `fetch`ing its routes. See the `widget-apis` skill.
 - Send the user's data to an outside service only if the manifest declares it under `permissions`.
   The page then shows neither its `widget` nor its `full-screen` view until the user agrees. Its
   `editor` does load before that, so the editor, and anything that runs when the bundle loads, must

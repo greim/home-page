@@ -7,8 +7,14 @@
  */
 import { Either, Schema } from "effect";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { assistantPortMetaName } from "../../common/assistant.ts";
-import { LoggedRunEvent, type OutFile, runsPath } from "../../common/agent-runs.ts";
+import {
+  isFinal,
+  type LoggedRunEvent,
+  type OutFile,
+  type RunRequest,
+} from "../../common/agent-runs.ts";
+import { agentRunsApi } from "../../common/apis/agent-runs.ts";
+import { useWidgetApi } from "./apis.tsx";
 
 export type Ask = {
   readonly askId: string;
@@ -95,23 +101,6 @@ export const nextView = <A, I>(
   }
 };
 
-/** Where a run's routes are: the assistant service's port, on the host the page was loaded from. */
-export const runsBase = (
-  page: { readonly protocol: string; readonly hostname: string },
-  port: string,
-): string => `${page.protocol}//${page.hostname}:${port}${runsPath}`;
-
-/** Splits text into whole lines, keeping a partial last line for the next chunk. */
-export const splitLines = (
-  pending: string,
-  chunk: string,
-): { readonly lines: ReadonlyArray<string>; readonly pending: string } => {
-  const parts = (pending + chunk).split("\n");
-  return { lines: parts.slice(0, -1).filter((l) => l.trim() !== ""), pending: parts.at(-1) ?? "" };
-};
-
-const decodeLogged = Schema.decodeUnknownEither(Schema.parseJson(LoggedRunEvent));
-
 /** A file's contents as base64, to send with a run. */
 const fileBase64 = async (file: File): Promise<string> => {
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -122,22 +111,17 @@ const fileBase64 = async (file: File): Promise<string> => {
   return btoa(binary);
 };
 
-const base = () =>
-  runsBase(
-    location,
-    document.querySelector(`meta[name="${assistantPortMetaName}"]`)?.getAttribute("content") ?? "",
-  );
+/** What an agent is given: anything JSON, as the widget's agent expects it. */
+export type AgentInput = RunRequest["input"];
 
 /**
- * Runs of widget `widgetType`'s agent `agentName`, whose answer is decoded with `output`.
+ * Runs of this widget's agent `agentName`, whose answer is decoded with `output`.
  * `start` begins one (replacing any before it); `answer` replies to what it's asking;
- * `cancel` stops it; `fileUrl` is where to download a file it wrote.
+ * `cancel` stops it; `fileUrl` is where to download a file it wrote. Built on the
+ * agent-runs widget API, so use it in a widget's `widget` or `full-screen` view.
  */
-export const useAgentRun = <A, I>(
-  widgetType: string,
-  agentName: string,
-  output: Schema.Schema<A, I>,
-) => {
+export const useAgentRun = <A, I>(agentName: string, output: Schema.Schema<A, I>) => {
+  const runs = useWidgetApi(agentRunsApi);
   const [view, setView] = useState<RunView<A>>({ is: "idle" });
   // Each run's reading stops when another starts, or the view goes away.
   const reading = useRef<AbortController | null>(null);
@@ -145,85 +129,61 @@ export const useAgentRun = <A, I>(
 
   const follow = useCallback(async (runId: string, signal: AbortSignal) => {
     let after = 0;
-    let finished = false;
-    // Reconnects (from the last event seen) if the stream drops before the run ends.
-    while (!finished && !signal.aborted) {
-      const response = await fetch(`${base()}${runId}/events?after=${after}`, { signal })
-        .catch(() => null);
-      if (response === null || !response.ok || response.body === null) {
-        if (!signal.aborted) {
-          setView((v) => ({ is: "failed", progress: progressOf(v), message: "The run was lost." }));
-        }
+    // Reconnects (from the last event seen) if the stream drops partway through the run.
+    while (!signal.aborted) {
+      let progressed = false;
+      let finished = false;
+      const { items, result } = runs.events({ runId, after }, { signal });
+      for await (const logged of items) {
+        progressed = true;
+        after = logged.seq;
+        finished ||= isFinal(logged.event);
+        setView((v) => nextView(v, logged, output));
+      }
+      const ended = await result;
+      if (finished || signal.aborted) return;
+      if (!progressed) {
+        const message = ended.ok ? "The run was lost." : ended.error.message;
+        setView((v) => ({ is: "failed", progress: progressOf(v), message }));
         return;
       }
-      let pending = "";
-      for await (const chunk of response.body.pipeThrough(new TextDecoderStream())) {
-        const split = splitLines(pending, chunk);
-        pending = split.pending;
-        for (const line of split.lines) {
-          const logged = decodeLogged(line);
-          if (Either.isLeft(logged)) continue;
-          after = logged.right.seq;
-          finished ||= ["done", "failed", "cancelled"].includes(logged.right.event.is);
-          setView((v) => nextView(v, logged.right, output));
-        }
-      }
     }
-  }, [output]);
+  }, [runs, output]);
 
-  const start = useCallback(async (input: unknown, files: ReadonlyArray<File> = []) => {
+  const start = useCallback(async (input: AgentInput, files: ReadonlyArray<File> = []) => {
     reading.current?.abort();
     const controller = new AbortController();
     reading.current = controller;
     setView({ is: "starting" });
-    const body = JSON.stringify({
+    const started = await runs.start({
+      agent: agentName,
       input,
       files: await Promise.all(
         files.map(async (f) => ({ name: f.name, base64: await fileBase64(f) })),
       ),
-    });
-    const response = await fetch(
-      `${base()}${encodeURIComponent(widgetType)}/${encodeURIComponent(agentName)}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body,
-        signal: controller.signal,
-      },
-    ).catch((
-      cause,
-    ) => ({ ok: false, status: 0, text: () => Promise.resolve(String(cause)) } as const));
-    if (!response.ok) {
-      const message = (await response.text()).trim();
-      setView({
-        is: "failed",
-        progress: [],
-        message: message || `The assistant service answered ${response.status}.`,
-      });
+    }, { signal: controller.signal });
+    if (controller.signal.aborted) return;
+    if (!started.ok) {
+      setView({ is: "failed", progress: [], message: started.error.message });
       return;
     }
-    const { runId } = await response.json() as { runId: string };
+    const { runId } = started.value;
     setView({ is: "running", runId, progress: [], ask: null });
     await follow(runId, controller.signal);
-  }, [widgetType, agentName, follow]);
+  }, [runs, agentName, follow]);
 
   const answer = useCallback((allow: boolean, forRun = false) => {
     if (view.is !== "running" || view.ask === null) return;
-    void fetch(`${base()}${view.runId}/answers/${encodeURIComponent(view.ask.askId)}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ allow, forRun }),
-    });
-  }, [view]);
+    void runs.answer({ runId: view.runId, askId: view.ask.askId, allow, forRun });
+  }, [runs, view]);
 
   const cancel = useCallback(() => {
-    if (view.is === "running") void fetch(`${base()}${view.runId}/cancel`, { method: "POST" });
-  }, [view]);
+    if (view.is === "running") void runs.cancel({ runId: view.runId });
+  }, [runs, view]);
 
   const fileUrl = useCallback(
-    (name: string) =>
-      view.is === "done" ? `${base()}${view.runId}/files/${encodeURIComponent(name)}` : "",
-    [view],
+    (name: string) => view.is === "done" ? runs.file({ runId: view.runId, name }) : "",
+    [runs, view],
   );
 
   return { view, start, answer, cancel, fileUrl };

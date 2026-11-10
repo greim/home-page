@@ -78,6 +78,12 @@ export type WidgetManifest<A, I> = {
    * with agents must declare that under `permissions` too.
    */
   readonly agents?: Readonly<Record<string, WidgetAgent>>;
+  /**
+   * The widget APIs it uses, by name (src/common/apis/all.ts). Each API's outside
+   * services must be listed under `permissions`. A widget with agents gets the
+   * agent-runs API without listing it. See the `widget-apis` skill.
+   */
+  readonly apis?: ReadonlyArray<string>;
 };
 
 /** Declares a manifest, checking its shape. */
@@ -116,6 +122,7 @@ const ManifestModule = Schema.Struct({
       }),
       { exact: true },
     ),
+    apis: Schema.optionalWith(Schema.Array(Schema.String), { exact: true }),
   }),
 });
 
@@ -162,6 +169,11 @@ export const RegistryEntry = Schema.Struct({
   agents: Schema.optionalWith(Schema.Record({ key: Schema.String, value: AgentEntry }), {
     default: () => ({}),
   }),
+  /**
+   * The widget APIs the page gives it (src/common/apis/all.ts): those its manifest
+   * declares, and agent-runs if it has agents.
+   */
+  apis: Schema.optionalWith(Schema.Array(Schema.String), { default: () => [] }),
 });
 export type RegistryEntry = typeof RegistryEntry.Type;
 

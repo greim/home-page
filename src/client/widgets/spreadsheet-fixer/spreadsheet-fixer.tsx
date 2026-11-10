@@ -29,7 +29,7 @@ export function SpreadsheetFixer({ config, openFullScreen }: WidgetProps<Spreads
 export function SpreadsheetFixerFullScreen(_props: FullScreenProps<SpreadsheetFixerConfig>) {
   const [file, setFile] = useState<File | null>(null);
   const [request, setRequest] = useState("");
-  const run = useAgentRun("spreadsheet-fixer", "fix", FixReport);
+  const run = useAgentRun("fix", FixReport);
   const busy = run.view.is === "starting" || run.view.is === "running";
   const report = run.view.is === "done" ? run.view.output : null;
 

@@ -13,6 +13,7 @@ const registry: Registry = {
     defaultConfig: {},
     permissions: null,
     agents: {},
+    apis: [],
   }],
 };
 

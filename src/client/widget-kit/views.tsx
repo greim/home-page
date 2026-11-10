@@ -5,9 +5,11 @@
  * inherited from where the shell embeds them.
  */
 import { Text } from "@chakra-ui/react";
-import { Either, type Schema } from "effect";
+import { Either, Schema } from "effect";
 import type { ComponentType, JSX } from "react";
 import { DocumentStyles } from "../document-styles.tsx";
+import { WidgetApisProvider } from "./apis.tsx";
+import type { WidgetApis } from "./contract.ts";
 import type { View, ViewProps } from "../mfe/register-live.tsx";
 import {
   decodeEditorProps,
@@ -43,11 +45,29 @@ export const customView = <P,>(
   );
 };
 
+const PropsWithApis = Schema.Struct({
+  apis: Schema.Record({ key: Schema.String, value: Schema.Object }),
+});
+
+/** The widget APIs in a view's props; none if they aren't there. */
+const apisOf = (props: unknown): WidgetApis =>
+  Either.getOrElse(
+    Either.map(Schema.decodeUnknownEither(PropsWithApis)(props), (p) => p.apis),
+    () => ({}),
+  );
+
+/** A view that gives its component the widget APIs in its props, for `useWidgetApi`. */
+const withApis = (Inner: View): View => (viewProps: ViewProps) => (
+  <WidgetApisProvider apis={apisOf(viewProps.props)}>
+    <Inner {...viewProps} />
+  </WidgetApisProvider>
+);
+
 /** The view shown in a column, given its config decoded with `schema`. */
 export const widgetView = <A, I>(
   schema: Schema.Schema<A, I>,
   Component: ComponentType<WidgetProps<A>>,
-): View => customView((props) => decodeWidgetProps(schema, props), Component);
+): View => withApis(customView((props) => decodeWidgetProps(schema, props), Component));
 
 /**
  * The widget with room to spread out, given its config decoded with `schema`: shown
@@ -57,7 +77,7 @@ export const widgetView = <A, I>(
 export const fullScreenView = <A, I>(
   schema: Schema.Schema<A, I>,
   Component: ComponentType<FullScreenProps<A>>,
-): View => customView((props) => decodeFullScreenProps(schema, props), Component);
+): View => withApis(customView((props) => decodeFullScreenProps(schema, props), Component));
 
 /** The settings form shown in the column editor. */
 export const editorView = <A, I>(

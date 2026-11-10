@@ -1,7 +1,7 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Chunk, Effect, Either, Fiber, Stream, TestClock, TestContext } from "effect";
 import type { Capability } from "../common/agent-capabilities.ts";
-import type { LoggedRunEvent, RunEvent } from "../common/agent-runs.ts";
+import type { LoggedRunEvent, RunEvent, RunRequest } from "../common/agent-runs.ts";
 import type { AgentEntry } from "../common/widgets.ts";
 import { IoError } from "./http.ts";
 import {
@@ -361,10 +361,16 @@ const withRuns = <A>(
     ),
   );
 
+/** The widget the tests' runs are started by. */
+const me = { widgetType: "w", widgetId: "w1" };
+
+/** A run's request, from its JSON. */
+const req = (json: string): RunRequest => ({ files: [], ...JSON.parse(json) });
+
 /** All of a run's events, to its end. */
 const events = (runs: Runs, runId: string) =>
   Effect.gen(function* () {
-    const stream = yield* runs.events(runId, 0);
+    const stream = yield* runs.events(me, runId, 0);
     if (stream === null) return [];
     return Chunk.toArray(yield* Stream.runCollect(stream)).map((e: LoggedRunEvent) => e.event);
   });
@@ -372,7 +378,7 @@ const events = (runs: Runs, runId: string) =>
 /** The run's events until it next asks: the ask, or undefined if it never does. */
 const nextAsk = (runs: Runs, runId: string) =>
   Effect.gen(function* () {
-    const stream = yield* runs.events(runId, 0);
+    const stream = yield* runs.events(me, runId, 0);
     if (stream === null) return undefined;
     const upToAsk = yield* Stream.runCollect(
       stream.pipe(Stream.takeUntil((e) => e.event.is === "ask")),
@@ -400,11 +406,11 @@ Deno.test("a run asks, waits for the answer, and ends with its answer and files"
   const w = world();
   const seen = await withRuns(io(w, fetching), (runs) =>
     Effect.gen(function* () {
-      const started = yield* runs.start("w", "research", '{"input":{"topic":"deno"}}');
+      const started = yield* runs.start(me, "research", req('{"input":{"topic":"deno"}}'));
       if (!started.ok) return [started.message];
       const ask = yield* nextAsk(runs, started.runId);
       if (ask === undefined) return ["no ask"];
-      yield* runs.answer(started.runId, ask.askId, { allow: true, forRun: false });
+      yield* runs.answer(me, started.runId, ask.askId, { allow: true, forRun: false });
       return (yield* events(runs, started.runId)).map(summary);
     }));
   assertEquals(seen, [
@@ -420,13 +426,19 @@ Deno.test("a run asks, waits for the answer, and ends with its answer and files"
 Deno.test("a denied ask is refused to the agent, and answered only once", async () => {
   const seen = await withRuns(io(world(), fetching), (runs) =>
     Effect.gen(function* () {
-      const started = yield* runs.start("w", "research", '{"input":1}');
+      const started = yield* runs.start(me, "research", req('{"input":1}'));
       if (!started.ok) return started.message;
       const ask = yield* nextAsk(runs, started.runId);
       if (ask === undefined) return "no ask";
-      const first = yield* runs.answer(started.runId, ask.askId, { allow: false, forRun: false });
+      const first = yield* runs.answer(me, started.runId, ask.askId, {
+        allow: false,
+        forRun: false,
+      });
       const all = yield* events(runs, started.runId);
-      const again = yield* runs.answer(started.runId, ask.askId, { allow: true, forRun: false });
+      const again = yield* runs.answer(me, started.runId, ask.askId, {
+        allow: true,
+        forRun: false,
+      });
       return `${first} ${again} ${summary(all.at(-1) ?? { is: "cancelled" })}`;
     }));
   assertEquals(seen, 'true false done {"fetched":"deny"} fixed.csv');
@@ -441,11 +453,11 @@ Deno.test("allowing for the run stops later asks about the same capability", asy
     }));
   const seen = await withRuns(io(world(), twice), (runs) =>
     Effect.gen(function* () {
-      const started = yield* runs.start("w", "research", '{"input":1}');
+      const started = yield* runs.start(me, "research", req('{"input":1}'));
       if (!started.ok) return started.message;
       const ask = yield* nextAsk(runs, started.runId);
       if (ask === undefined) return "no ask";
-      yield* runs.answer(started.runId, ask.askId, { allow: true, forRun: true });
+      yield* runs.answer(me, started.runId, ask.askId, { allow: true, forRun: true });
       const all = yield* events(runs, started.runId);
       return `${all.filter((e) => e.is === "ask").length} ${
         summary(all.at(-1) ?? { is: "cancelled" })
@@ -457,13 +469,13 @@ Deno.test("allowing for the run stops later asks about the same capability", asy
 Deno.test("a cancelled run ends cancelled", async () => {
   const seen = await withRuns(io(world(), () => Stream.never), (runs) =>
     Effect.gen(function* () {
-      const started = yield* runs.start("w", "check", '{"input":1}');
+      const started = yield* runs.start(me, "check", req('{"input":1}'));
       if (!started.ok) return [started.message];
       const reading = yield* Effect.fork(events(runs, started.runId));
       yield* TestClock.adjust("1 second");
-      const cancelled = yield* runs.cancel(started.runId);
+      const cancelled = yield* runs.cancel(me, started.runId);
       const all = yield* Fiber.join(reading);
-      const again = yield* runs.cancel(started.runId);
+      const again = yield* runs.cancel(me, started.runId);
       return [String(cancelled), String(again), ...all.map(summary)];
     }));
   assertEquals(seen, ["true", "false", "cancelled"]);
@@ -472,7 +484,7 @@ Deno.test("a cancelled run ends cancelled", async () => {
 Deno.test("a run that takes too long fails", async () => {
   const seen = await withRuns(io(world(), () => Stream.never), (runs) =>
     Effect.gen(function* () {
-      const started = yield* runs.start("w", "check", '{"input":1}');
+      const started = yield* runs.start(me, "check", req('{"input":1}'));
       if (!started.ok) return started.message;
       const reading = yield* Effect.fork(events(runs, started.runId));
       yield* TestClock.adjust("4 minutes");
@@ -487,17 +499,16 @@ Deno.test("a run's files go in, its own come out, and it's removed after a while
     io(w, () => Stream.make(success({}))),
     (runs) =>
       Effect.gen(function* () {
-        const started = yield* runs.start(
-          "w",
-          "fix",
-          JSON.stringify({ input: {}, files: [{ name: "sheet.csv", base64: btoa("a,b") }] }),
-        );
+        const started = yield* runs.start(me, "fix", {
+          input: {},
+          files: [{ name: "sheet.csv", base64: btoa("a,b") }],
+        });
         if (!started.ok) return started.message;
         yield* events(runs, started.runId);
-        const file = yield* runs.file(started.runId, "fixed.csv");
-        const sneaky = yield* runs.file(started.runId, "../in/sheet.csv");
+        const file = yield* runs.file(me, started.runId, "fixed.csv");
+        const sneaky = yield* runs.file(me, started.runId, "../in/sheet.csv");
         yield* TestClock.adjust("31 minutes");
-        const gone = yield* runs.events(started.runId, 0);
+        const gone = yield* runs.events(me, started.runId, 0);
         return `${file?.length} ${sneaky} ${gone}`;
       }),
   );
@@ -516,19 +527,16 @@ Deno.test("runs that can't start say why", async () => {
     withRuns(
       io(world(), () => Stream.make(success({})), overrides),
       (runs) =>
-        Effect.map(runs.start("w", agent, body), (s) => s.ok ? "ok" : `${s.status} ${s.message}`),
+        Effect.map(
+          runs.start(me, agent, req(body)),
+          (s) => s.ok ? "ok" : `${s.status} ${s.message}`,
+        ),
     );
   const failing = Effect.fail(new IoError({ cause: "x" }));
-  assertStringIncludes(await status("nope"), "400");
-  assertStringIncludes(await status('{"files":[]}'), "400");
   assertStringIncludes(await status('{"input":1}', "nope"), "404");
   assertStringIncludes(
     await status(JSON.stringify({ input: 1, files: [{ name: "a", base64: "" }] })),
     "doesn't take files",
-  );
-  assertStringIncludes(
-    await status(JSON.stringify({ input: 1, files: [{ name: "../a", base64: "" }] }), "fix"),
-    "400",
   );
   assertStringIncludes(await status('{"input":1}', "mail"), 'the "gmail" MCP server');
   assertStringIncludes(await status('{"input":1}', "check", { readRegistry: failing }), "500");
@@ -539,7 +547,6 @@ Deno.test("runs that can't start say why", async () => {
     }),
     "500",
   );
-  assertStringIncludes(await status("x".repeat(30_000_001)), "413");
 });
 
 Deno.test("only so many runs go at once", async () => {
@@ -547,7 +554,7 @@ Deno.test("only so many runs go at once", async () => {
     Effect.gen(function* () {
       const results = [];
       for (let i = 0; i <= maxActiveRuns; i++) {
-        results.push(yield* runs.start("w", "check", '{"input":1}'));
+        results.push(yield* runs.start(me, "check", req('{"input":1}')));
       }
       return results.map((r) => r.ok ? "ok" : r.status);
     }));
@@ -556,7 +563,7 @@ Deno.test("only so many runs go at once", async () => {
 
 Deno.test("the simple route waits for an agent that never asks, and refuses one that might", async () => {
   const outcome = (agent: string, script: Script = () => Stream.make(success({ n: 1 }))) =>
-    withRuns(io(world(), script), (runs) => runs.runToEnd("w", agent, '{"input":1}'));
+    withRuns(io(world(), script), (runs) => runs.runToEnd(me, agent, 1));
   assertEquals(await outcome("check"), { ok: true, output: { n: 1 }, costUsd: 0.03 });
   assertEquals((await outcome("research")).ok, false);
   const failed = await outcome(
@@ -564,11 +571,6 @@ Deno.test("the simple route waits for an agent that never asks, and refuses one 
     () => Stream.make({ type: "result", subtype: "error_max_turns" }),
   );
   assertEquals(failed.ok ? "" : failed.message, "The agent took more than its 4 turns.");
-  const tooBig = await withRuns(
-    io(world(), () => Stream.empty),
-    (runs) => runs.runToEnd("w", "check", "x".repeat(200_001)),
-  );
-  assertEquals(tooBig.ok ? 0 : tooBig.status, 413);
 });
 
 const init = (servers: ReadonlyArray<{ name: string; status: string }>) => ({
@@ -607,7 +609,7 @@ Deno.test("a run stops as soon as an MCP server it needs fails to start", async 
     io(w, () => Stream.make(init([{ name: "widget", status: "failed" }]), success({}))),
     (runs) =>
       Effect.gen(function* () {
-        const started = yield* runs.start("w", "fix", '{"input":1}');
+        const started = yield* runs.start(me, "fix", req('{"input":1}'));
         if (!started.ok) return [started.message];
         return (yield* events(runs, started.runId)).map(summary);
       }),
@@ -615,4 +617,22 @@ Deno.test("a run stops as soon as an MCP server it needs fails to start", async 
   assertEquals(seen, [
     "failed The widget's own tools didn't start (failed). Its agent-tools.ts may have an error.",
   ]);
+});
+
+Deno.test("a run belongs to the widget that started it", async () => {
+  const seen = await withRuns(io(world(), () => Stream.never), (runs) =>
+    Effect.gen(function* () {
+      const started = yield* runs.start(me, "check", req('{"input":1}'));
+      if (!started.ok) return [started.message];
+      const otherWidget = { widgetType: "w", widgetId: "w2" };
+      const otherType = { widgetType: "x", widgetId: "w1" };
+      return [
+        yield* runs.events(otherWidget, started.runId, 0),
+        yield* runs.answer(otherType, started.runId, "a", { allow: true, forRun: false }),
+        yield* runs.cancel(otherWidget, started.runId),
+        yield* runs.file(otherType, started.runId, "x.csv"),
+        yield* runs.cancel(me, started.runId),
+      ];
+    }));
+  assertEquals(seen, [null, null, false, null, true]);
 });

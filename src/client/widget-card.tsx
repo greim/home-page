@@ -16,6 +16,7 @@ import { usePermissions } from "./permissions-live.ts";
 import { PermissionNotice } from "./permissions-view.tsx";
 import { widgetLabel } from "./widget-draft.ts";
 import { registeredTypes, useWidgetHost } from "./widget-host.tsx";
+import { useWidgetApis } from "./widget-apis-live.ts";
 
 /** Shown in place of a widget, or its editor, that can't be shown. */
 export const WidgetProblem = (props: { message: string }) => (
@@ -27,14 +28,16 @@ function WidgetBody(props: { columnId: string; widget: Widget }) {
   const { dispatch, schedule, open } = useBoard();
   const { manager } = useWidgetHost();
   const { columnId, widget } = props;
+  const apis = useWidgetApis(widget);
   const viewProps: WidgetViewProps = useMemo(() => ({
     widgetId: widget.id,
     config: widget.config,
     saveConfig: (config: unknown) =>
       dispatch({ is: "set-widget-config", columnId, widgetId: widget.id, config }),
     schedule,
+    apis,
     openFullScreen: () => open({ is: "widget", widgetId: widget.id }),
-  }), [columnId, widget.id, widget.config, dispatch, schedule, open]);
+  }), [columnId, widget.id, widget.config, dispatch, schedule, apis, open]);
   return (
     <MfeView
       manager={manager}
@@ -51,13 +54,15 @@ export function WidgetFullScreen(props: { columnId: string; widget: Widget }) {
   const { dispatch, schedule } = useBoard();
   const { manager } = useWidgetHost();
   const { columnId, widget } = props;
+  const apis = useWidgetApis(widget);
   const viewProps: FullScreenViewProps = useMemo(() => ({
     widgetId: widget.id,
     config: widget.config,
     saveConfig: (config: unknown) =>
       dispatch({ is: "set-widget-config", columnId, widgetId: widget.id, config }),
     schedule,
-  }), [columnId, widget.id, widget.config, dispatch, schedule]);
+    apis,
+  }), [columnId, widget.id, widget.config, dispatch, schedule, apis]);
   return (
     <MfeView
       manager={manager}

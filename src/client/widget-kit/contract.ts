@@ -23,6 +23,13 @@ export const editorViewName = "editor";
  */
 export const fullScreenViewName = "full-screen";
 
+/**
+ * The widget APIs a widget's views are given, by name: a client (`ApiClient`, in
+ * src/common/widget-apis.ts) for each API its manifest declares. The kit puts them
+ * in React context, for `useWidgetApi`. See the `widget-apis` skill.
+ */
+export type WidgetApis = Readonly<Record<string, unknown>>;
+
 /** What a full-screen view is given: the widget view's props, less the way to open it. */
 export type FullScreenViewProps = {
   readonly widgetId: string;
@@ -32,6 +39,8 @@ export type FullScreenViewProps = {
   readonly saveConfig: (config: unknown) => void;
   /** When the user's day starts and ends, and their weekend (see day-cycle.ts). */
   readonly schedule: Schedule;
+  /** The widget's APIs. Not given to the editor, which loads before the user consents. */
+  readonly apis: WidgetApis;
 };
 
 export type WidgetViewProps = FullScreenViewProps & {

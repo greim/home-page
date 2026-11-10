@@ -19,6 +19,13 @@ import { assistantPortMetaName } from "../common/assistant.ts";
 import { widgetAssetsPath } from "../common/widgets.ts";
 import { importMap } from "../common/shared-modules.ts";
 import { serveWidgetFile } from "./widget-files.ts";
+import { handleWidgetApis, isWidgetApiRequest, type ServedApi } from "./widget-api-routes.ts";
+
+/**
+ * The widget APIs this server serves (the assistant service serves its own). Add an
+ * API's `serve(...)` here. See the `widget-apis` skill.
+ */
+const widgetApis: ReadonlyArray<ServedApi<ServerIo>> = [];
 
 /** File name the bundler gives the client entry point (src/client/main.tsx). */
 export const clientScript = "main.js";
@@ -98,6 +105,9 @@ const route = (
       headers: { "content-type": asset.contentType, "cache-control": "no-cache" },
       body: asset.body,
     });
+  }
+  if (isWidgetApiRequest(request)) {
+    return handleWidgetApis(request, widgetApis);
   }
   if (pathname === "/api/layout") {
     switch (request.method) {

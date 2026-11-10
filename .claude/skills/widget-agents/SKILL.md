@@ -1,6 +1,6 @@
 ---
 name: widget-agents
-description: AI-powered widgets — giving a widget its own Claude agent, purpose-built for one task (check grammar, research the web, fix a spreadsheet, triage email), with only the capabilities it declares (web search/fetch, files, its own tools, MCP servers), each auto or ask, answering with data in a declared shape. Use when a widget should use AI, when declaring an agent's capabilities, writing its instructions, tools or output schema, or when touching src/server/widget-agents.ts, the tool server, or the kit's useAgentRun / runWidgetAgent.
+description: AI-powered widgets — giving a widget its own Claude agent, purpose-built for one task (check grammar, research the web, fix a spreadsheet, triage email), with only the capabilities it declares (web search/fetch, files, its own tools, MCP servers), each auto or ask, answering with data in a declared shape. Use when a widget should use AI, when declaring an agent's capabilities, writing its instructions, tools or output schema, or when touching src/server/widget-agents.ts, the tool server, or the kit's useAgentRun / useWidgetAgent.
 ---
 
 # Widget agents
@@ -21,8 +21,11 @@ It's not the assistant:
   sessions.
 
 The assistant service runs agents (`src/server/widget-agents.ts`), reading them from the widget
-registry on each run. Worked examples: `grammar-check/` (no capabilities), `web-researcher/` (web,
-with an ask) and `spreadsheet-fixer/` (files and its own tools).
+registry on each run. Widgets reach them through the `agent-runs` widget API (see the `widget-apis`
+skill), which every widget with agents gets: the page says which widget is calling, so a widget runs
+only its own agents, and reaches only the runs it started. Worked examples: `grammar-check/` (no
+capabilities), `web-researcher/` (web, with an ask) and `spreadsheet-fixer/` (files and its own
+tools).
 
 ## Declaring an agent
 
@@ -87,7 +90,7 @@ For an agent that may ask, or works with files, use a run, with the kit's hook a
 import { useAgentRun } from "../../widget-kit/agent-run.ts";
 import { AgentRunPanel } from "../../widget-kit/agent-run-panel.tsx";
 
-const run = useAgentRun("web-researcher", "research", ResearchReport);
+const run = useAgentRun("research", ResearchReport); // this widget's agent "research"
 // run.start(input, files?) begins a run; files (File[]) go in its in/ folder.
 <AgentRunPanel view={run.view} onAnswer={run.answer} onCancel={run.cancel} fileUrl={run.fileUrl} />;
 // When run.view.is === "done": run.view.output (decoded), .costUsd, .files.
@@ -96,8 +99,15 @@ const run = useAgentRun("web-researcher", "research", ResearchReport);
 The panel shows progress, the ask card (Allow once, Allow for this run, Don't allow), Stop, a
 failure, and links to download files the agent wrote. The widget shows the answer itself.
 
-For an agent with no ask capabilities and no files, the simpler call still works:
-`await runWidgetAgent(widgetType, agentName, input, Output)`.
+For an agent with no ask capabilities and no files, there's a simpler hook:
+
+```tsx
+const check = useWidgetAgent("check", GrammarReport);
+const result = await check({ text }); // { ok, value, costUsd } or { ok: false, errorMessage }
+```
+
+Both hooks work only in the `widget` and `full-screen` views, where the page gives the widget its
+APIs.
 
 - Start runs only from the `widget` or `full-screen` view, on the user's action: never from the
   editor or code that runs when the bundle loads (those run before consent).

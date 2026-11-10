@@ -18,7 +18,9 @@ page on demand. The `micro-frontends` skill explains how that works. This skill 
    user's data to any outside service (an API, a map's tile server), declare each one under
    `permissions` (see "Sending data to outside services" in the `code-vs-data` skill). The page asks
    the user about them before the widget runs; don't build a consent screen of your own. If it uses
-   AI (Claude) for part of its work, give it an agent: see the `widget-agents` skill.
+   AI (Claude) for part of its work, give it an agent: see the `widget-agents` skill. If it uses a
+   widget API (a service the app's server provides, like geocoding), list it under `apis`: see the
+   `widget-apis` skill.
 4. **Put the logic in plain modules with tests** (`<name>.ts` and `<name>.test.ts`), per the
    `functional-core` and `testing` skills. Anything that branches (parsing, formatting, converting,
    deciding) belongs here, not in components. Shape the input as plain data (e.g. a tree, not a DOM
@@ -181,8 +183,9 @@ The config is saved in `data/layout.json`, which the assistant reads. Never put 
 
 ## Limits
 
-- It runs in the browser only. It can call APIs that allow cross-origin requests, and nothing else:
-  there's no proxy for the rest yet.
+- It runs in the browser. It can call outside APIs that allow cross-origin requests, and the app's
+  widget APIs (see the `widget-apis` skill), through `useWidgetApi`, never with `fetch`. If it needs
+  the server for something no widget API does, stop and ask: adding an API is its own task.
 - One bundle per widget. React, Chakra and Effect come from the page, shared by every widget, so
   import them only as `react`, `react/jsx-runtime`, `react-dom`, `react-dom/client`, `effect`,
   `@chakra-ui/react` and `@emotion/react`, never a subpath like `effect/Schema`: the build fails if

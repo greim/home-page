@@ -1,7 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { Schema } from "effect";
 import type { RunEvent } from "../../common/agent-runs.ts";
-import { nextView, runsBase, type RunView, splitLines } from "./agent-run.ts";
+import { nextView, type RunView } from "./agent-run.ts";
 
 const Output = Schema.Struct({ n: Schema.Number });
 type Output = typeof Output.Type;
@@ -67,16 +67,4 @@ Deno.test("events for a run that isn't going change nothing but its end", () => 
     apply([{ is: "ask", askId: "a", capability: "", action: "", detail: "" }], idle),
     idle,
   );
-});
-
-Deno.test("runs are at the assistant service, on the page's host", () => {
-  assertEquals(
-    runsBase({ protocol: "https:", hostname: "localhost" }, "9443"),
-    "https://localhost:9443/api/widget-agent-runs/",
-  );
-});
-
-Deno.test("streamed text splits into whole lines, keeping any partial one", () => {
-  assertEquals(splitLines("", '{"a":1}\n{"b"'), { lines: ['{"a":1}'], pending: '{"b"' });
-  assertEquals(splitLines('{"b"', ":2}\n\n"), { lines: ['{"b":2}'], pending: "" });
 });

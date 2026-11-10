@@ -1,6 +1,8 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Effect, Either, Schema } from "effect";
-import { defineManifest } from "../src/common/widgets.ts";
+import { defineManifest, type Permissions, type WidgetManifest } from "../src/common/widgets.ts";
+import { agentRunsApi } from "../src/common/apis/agent-runs.ts";
+import { defineApi } from "../src/common/widget-apis.ts";
 import {
   BundleError,
   type BundleOutput,
@@ -10,6 +12,7 @@ import {
 } from "./bundle-client.ts";
 import { sharedSpecifiers } from "../src/common/shared-modules.ts";
 import {
+  apiNames,
   BuildIoError,
   buildWidgets,
   type Bytes,
@@ -460,4 +463,49 @@ Deno.test("an agent's MCP server must reach a listed service, and widget tools n
     isDirectory: false,
   }]);
   assertEquals(problems(world), []);
+});
+
+const geocodeApi = defineApi("geocode", "main", {}, { services: ["US Census Geocoder"] });
+const service = {
+  name: "US Census Geocoder",
+  sends: "Addresses",
+  privacyPolicy: "https://example.com/privacy",
+  terms: "https://example.com/terms",
+};
+const toCensus: Permissions = { services: [service] };
+const anthropic: Permissions = { services: [{ ...service, name: "Anthropic (Claude)" }] };
+type Overrides = Omit<Partial<WidgetManifest<unknown, unknown>>, "config">;
+const apisOf = (overrides: Overrides) =>
+  Effect.runSync(Effect.either(apiNames(
+    { ...manifest, ...overrides } as WidgetManifest<unknown, unknown>,
+    [agentRunsApi, geocodeApi],
+  )));
+
+Deno.test("a widget gets the APIs it declares, and agent-runs if it has agents", () => {
+  assertEquals(apisOf({}), Either.right([]));
+  assertEquals(apisOf({ apis: ["geocode"], permissions: toCensus }), Either.right(["geocode"]));
+  assertEquals(
+    apisOf({ permissions: anthropic, agents: { check: agent } }),
+    Either.right(["agent-runs"]),
+  );
+});
+
+Deno.test("a widget's APIs must exist, and have their services listed", () => {
+  const problem = (overrides: Overrides) =>
+    Either.match(apisOf(overrides), { onLeft: (p) => p, onRight: () => "" });
+  assertStringIncludes(problem({ apis: ["nope"] }), `an API "nope" there isn't`);
+  assertStringIncludes(problem({ apis: ["geocode"] }), `must list "US Census Geocoder"`);
+  assertStringIncludes(problem({ apis: ["agent-runs"] }), "by having agents");
+});
+
+Deno.test("the registry carries a widget's APIs", () => {
+  const world = worldWith(["clock"]);
+  world.modules.set("/src/clock/manifest.ts", {
+    manifest: { ...manifest, permissions: toAnthropic, agents: { check: agent } },
+  });
+  const { disk } = run(world);
+  assertEquals(
+    JSON.parse(disk.get("/dist/widgets.next/registry.json") ?? "").widgets[0].apis,
+    ["agent-runs"],
+  );
 });

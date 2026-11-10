@@ -1,68 +1,44 @@
 /**
- * Runs one of a widget's AI agents (declared under `agents` in its manifest) on the
- * assistant service, and decodes the answer with the agent's output schema. The
- * agent has no tools: it's given the input, and answers. See the `widget-agents`
- * skill.
+ * Runs one of this widget's AI agents (declared under `agents` in its manifest) to its
+ * answer, decoded with the agent's output schema: for agents that never ask and take
+ * no files, like the grammar checker. Built on the agent-runs widget API; for runs
+ * that ask, or take files, use `useAgentRun`. See the `widget-agents` skill.
  */
 import { Either, Schema } from "effect";
-import { assistantPortMetaName } from "../../common/assistant.ts";
+import { useCallback } from "react";
+import { agentRunsApi } from "../../common/apis/agent-runs.ts";
+import type { ApiResult } from "../../common/widget-apis.ts";
+import type { AgentInput } from "./agent-run.ts";
+import { useWidgetApi } from "./apis.tsx";
 
 export type AgentResult<A> =
   | { readonly ok: true; readonly value: A; readonly costUsd: number }
   | { readonly ok: false; readonly errorMessage: string };
 
-/** Where an agent runs: the assistant service's port, on the host the page was loaded from. */
-export const agentUrl = (
-  page: { readonly protocol: string; readonly hostname: string },
-  port: string,
-  widgetType: string,
-  agentName: string,
-): string =>
-  `${page.protocol}//${page.hostname}:${port}/api/widget-agents/${encodeURIComponent(widgetType)}/${
-    encodeURIComponent(agentName)
-  }`;
-
-const Answer = Schema.parseJson(Schema.Struct({ output: Schema.Unknown, costUsd: Schema.Number }));
-
-/** What the service's response comes to, the agent's answer decoded with `output`. */
-export const readAgentResponse = <A, I>(
-  status: number,
-  body: string,
+/** What the API's answer comes to, the agent's answer decoded with `output`. */
+export const readAgentResult = <A, I>(
+  result: ApiResult<
+    { readonly output: unknown; readonly costUsd: number },
+    { readonly message: string }
+  >,
   output: Schema.Schema<A, I>,
 ): AgentResult<A> => {
-  if (status !== 200) {
-    return { ok: false, errorMessage: body.trim() || `The assistant service answered ${status}.` };
-  }
-  const answer = Schema.decodeUnknownEither(Answer)(body);
-  if (Either.isLeft(answer)) {
-    return { ok: false, errorMessage: "The assistant service's answer wasn't understood." };
-  }
-  const value = Schema.decodeUnknownEither(output)(answer.right.output);
+  if (!result.ok) return { ok: false, errorMessage: result.error.message };
+  const value = Schema.decodeUnknownEither(output)(result.value.output);
   return Either.isRight(value)
-    ? { ok: true, value: value.right, costUsd: answer.right.costUsd }
+    ? { ok: true, value: value.right, costUsd: result.value.costUsd }
     : { ok: false, errorMessage: `The agent's answer didn't fit: ${value.left.message}` };
 };
 
 /**
- * Runs widget `widgetType`'s agent `agentName` on `input` (any JSON), and decodes its
- * answer with `output`, the schema its manifest declares. Never rejects.
+ * A function that runs this widget's agent `agentName` on `input` (any JSON), and
+ * decodes its answer with `output`, the schema its manifest declares. Never rejects.
  */
-export const runWidgetAgent = async <A, I>(
-  widgetType: string,
-  agentName: string,
-  input: unknown,
-  output: Schema.Schema<A, I>,
-): Promise<AgentResult<A>> => {
-  const port = document.querySelector(`meta[name="${assistantPortMetaName}"]`)
-    ?.getAttribute("content") ?? "";
-  try {
-    const response = await fetch(agentUrl(location, port, widgetType, agentName), {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ input }),
-    });
-    return readAgentResponse(response.status, await response.text(), output);
-  } catch (cause) {
-    return { ok: false, errorMessage: `Couldn't reach the assistant service: ${String(cause)}` };
-  }
+export const useWidgetAgent = <A, I>(agentName: string, output: Schema.Schema<A, I>) => {
+  const runs = useWidgetApi(agentRunsApi);
+  return useCallback(
+    async (input: AgentInput): Promise<AgentResult<A>> =>
+      readAgentResult(await runs.run({ agent: agentName, input }), output),
+    [runs, agentName, output],
+  );
 };

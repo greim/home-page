@@ -38,16 +38,11 @@ import {
   type LoggedRunEvent,
   type OutFile,
   type RunEvent,
-  RunRequest,
+  type RunRequest,
 } from "../common/agent-runs.ts";
+import type { Caller } from "../common/widget-apis.ts";
 import { type AgentEntry, Registry } from "../common/widgets.ts";
 import type { IoError } from "./http.ts";
-
-/** Biggest request body accepted for the simple route: the input, as JSON. */
-export const maxBodyBytes = 200_000;
-
-/** Biggest request body accepted to start a run: the input and its files, base64. */
-export const maxRunBodyBytes = 30_000_000;
 
 /** Most runs going at once. */
 export const maxActiveRuns = 3;
@@ -496,31 +491,43 @@ export type Started =
 /** The runs the assistant service keeps, for its routes. */
 export class WidgetAgentRuns extends Context.Tag("WidgetAgentRuns")<WidgetAgentRuns, Runs>() {}
 
+/**
+ * Runs belong to the widget that started them (`caller`): another widget's requests
+ * for one find no such run.
+ */
 export type Runs = {
-  /** Starts a run of a widget's agent on a `RunRequest` body. */
-  readonly start: (widgetType: string, agentName: string, body: string) => Effect.Effect<Started>;
+  /** Starts a run of the calling widget's agent `agentName`. */
+  readonly start: (
+    caller: Caller,
+    agentName: string,
+    request: RunRequest,
+  ) => Effect.Effect<Started>;
   /** A run's events after `after`, ending with its final one; null for no such run. */
-  readonly events: (runId: string, after: number) => Effect.Effect<
+  readonly events: (caller: Caller, runId: string, after: number) => Effect.Effect<
     Stream.Stream<LoggedRunEvent> | null
   >;
-  /** Answers a run's ask; false if it isn't waiting for that answer. */
-  readonly answer: (runId: string, askId: string, answer: AskAnswer) => Effect.Effect<boolean>;
+  /** Answers a run's ask; null for no such run, false if it isn't waiting for that answer. */
+  readonly answer: (
+    caller: Caller,
+    runId: string,
+    askId: string,
+    answer: AskAnswer,
+  ) => Effect.Effect<boolean | null>;
   /** Stops a run; false if there's no such run going. */
-  readonly cancel: (runId: string) => Effect.Effect<boolean>;
+  readonly cancel: (caller: Caller, runId: string) => Effect.Effect<boolean>;
   /** A file a run wrote, by name; null if there's none. */
-  readonly file: (runId: string, name: string) => Effect.Effect<Uint8Array | null>;
-  /**
-   * Runs an agent that never asks, on `{ "input": ... }`, and waits for its answer:
-   * the simple route, for agents like the grammar checker.
-   */
+  readonly file: (caller: Caller, runId: string, name: string) => Effect.Effect<Uint8Array | null>;
+  /** Runs an agent that never asks, and waits for its answer: for agents like the grammar checker. */
   readonly runToEnd: (
-    widgetType: string,
+    caller: Caller,
     agentName: string,
-    body: string,
+    input: RunRequest["input"],
   ) => Effect.Effect<RunOutcome>;
 };
 
 type Run = {
+  /** The widget that started it. */
+  readonly owner: Caller;
   readonly dir: string;
   readonly log: Ref.Ref<ReadonlyArray<LoggedRunEvent>>;
   readonly live: PubSub.PubSub<LoggedRunEvent>;
@@ -537,7 +544,15 @@ export const makeRuns = (settings: AgentSettings): Effect.Effect<Runs, never, Wi
   Effect.gen(function* () {
     const io = yield* WidgetAgentIo;
     const runs = yield* Ref.make<ReadonlyMap<string, Run>>(new Map());
-    const find = (runId: string) => Effect.map(Ref.get(runs), (all) => all.get(runId));
+    /** The run, if `caller` started it. */
+    const find = (caller: Caller, runId: string) =>
+      Effect.map(Ref.get(runs), (all) => {
+        const run = all.get(runId);
+        return run !== undefined && run.owner.widgetType === caller.widgetType &&
+            run.owner.widgetId === caller.widgetId
+          ? run
+          : undefined;
+      });
 
     const publish = (run: Run, event: RunEvent) =>
       Effect.gen(function* () {
@@ -663,20 +678,18 @@ export const makeRuns = (settings: AgentSettings): Effect.Effect<Runs, never, Wi
 
     const refuse = (status: number, message: string): Started => ({ ok: false, status, message });
 
-    const start = (widgetType: string, agentName: string, body: string): Effect.Effect<Started> =>
+    const start = (
+      caller: Caller,
+      agentName: string,
+      request: RunRequest,
+    ): Effect.Effect<Started> =>
       Effect.gen(function* () {
-        if (body.length > maxRunBodyBytes) {
-          return refuse(413, `That's too much: the most is ${maxRunBodyBytes / 1_000_000} MB.`);
-        }
-        const request = Schema.decodeUnknownEither(Schema.parseJson(RunRequest))(body);
-        if (Either.isLeft(request)) {
-          return refuse(400, 'The body must be JSON: { "input": ..., "files": [...] }');
-        }
+        const { widgetType } = caller;
         const registry = yield* Effect.either(io.readRegistry);
         if (Either.isLeft(registry)) return refuse(500, "The widget registry couldn't be read.");
         const agent = findAgent(registry.right, widgetType, agentName);
         if (Either.isLeft(agent)) return refuse(404, agent.left);
-        const { files } = request.right;
+        const { files } = request;
         if (files.length > 0 && !agent.right.capabilities.some((c) => c.use === "files")) {
           return refuse(400, "This agent doesn't take files.");
         }
@@ -710,6 +723,7 @@ export const makeRuns = (settings: AgentSettings): Effect.Effect<Runs, never, Wi
         }
         const runId = yield* io.newId;
         const run: Run = {
+          owner: caller,
           dir: dir.right,
           log: yield* Ref.make<ReadonlyArray<LoggedRunEvent>>([]),
           live: yield* PubSub.unbounded<LoggedRunEvent>(),
@@ -721,7 +735,7 @@ export const makeRuns = (settings: AgentSettings): Effect.Effect<Runs, never, Wi
         yield* Ref.update(runs, (all) => new Map([...all, [runId, run]]));
         // The run outlives the request that started it; it's kept a while after it ends.
         const fiber = yield* Effect.forkDaemon(
-          execute(run, agent.right, agentPrompt(request.right.input), mcp.right).pipe(
+          execute(run, agent.right, agentPrompt(request.input), mcp.right).pipe(
             Effect.zipRight(Effect.sleep(Duration.minutes(keepMinutes))),
             Effect.ensuring(forget(runId, run)),
           ),
@@ -730,9 +744,9 @@ export const makeRuns = (settings: AgentSettings): Effect.Effect<Runs, never, Wi
         return { ok: true, runId } as const;
       });
 
-    const events = (runId: string, after: number) =>
+    const events = (caller: Caller, runId: string, after: number) =>
       Effect.map(
-        find(runId),
+        find(caller, runId),
         (run) =>
           run === undefined ? null : Stream.unwrapScoped(Effect.gen(function* () {
             // Subscribe before reading what's logged, so nothing falls between the two.
@@ -746,21 +760,18 @@ export const makeRuns = (settings: AgentSettings): Effect.Effect<Runs, never, Wi
           })),
       );
 
-    const runToEnd = (widgetType: string, agentName: string, body: string) =>
+    const runToEnd = (caller: Caller, agentName: string, input: RunRequest["input"]) =>
       Effect.gen(function* () {
-        if (body.length > maxBodyBytes) {
-          return fail(413, `The input is too big: the most is ${maxBodyBytes / 1000} KB.`);
-        }
         const registry = yield* Effect.either(io.readRegistry);
         if (Either.isRight(registry)) {
-          const agent = findAgent(registry.right, widgetType, agentName);
+          const agent = findAgent(registry.right, caller.widgetType, agentName);
           if (Either.isRight(agent) && agent.right.capabilities.some((c) => !traits(c).auto)) {
             return fail(409, "This agent asks the user for things: start it as a run instead.");
           }
         }
-        const started = yield* start(widgetType, agentName, body);
+        const started = yield* start(caller, agentName, { input, files: [] });
         if (!started.ok) return fail(started.status, started.message);
-        const stream = yield* events(started.runId, 0);
+        const stream = yield* events(caller, started.runId, 0);
         const final = stream === null ? undefined : yield* Stream.runLast(stream);
         if (final === undefined || final._tag === "None") {
           return fail(500, "The run ended without an outcome.");
@@ -779,24 +790,25 @@ export const makeRuns = (settings: AgentSettings): Effect.Effect<Runs, never, Wi
     return {
       start,
       events,
-      answer: (runId, askId, answer) =>
+      answer: (caller, runId, askId, answer) =>
         Effect.gen(function* () {
-          const run = yield* find(runId);
-          const waiting = run === undefined ? undefined : (yield* Ref.get(run.asks)).get(askId);
+          const run = yield* find(caller, runId);
+          if (run === undefined) return null;
+          const waiting = (yield* Ref.get(run.asks)).get(askId);
           return waiting === undefined ? false : yield* Deferred.succeed(waiting, answer);
         }),
-      cancel: (runId) =>
+      cancel: (caller, runId) =>
         Effect.gen(function* () {
-          const run = yield* find(runId);
+          const run = yield* find(caller, runId);
           if (run === undefined || (yield* Ref.get(run.finished))) return false;
           const fiber = yield* Ref.get(run.fiber);
           // Interrupting stops Claude Code; the run's events end with "cancelled".
           if (fiber !== null) yield* Effect.fork(Fiber.interrupt(fiber));
           return true;
         }),
-      file: (runId, name) =>
+      file: (caller, runId, name) =>
         Effect.gen(function* () {
-          const run = yield* find(runId);
+          const run = yield* find(caller, runId);
           if (run === undefined || name.includes("/") || name.startsWith(".")) return null;
           return yield* io.readFile(`${run.dir}/out/${name}`).pipe(
             Effect.orElseSucceed(() => null),
