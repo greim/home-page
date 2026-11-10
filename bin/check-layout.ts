@@ -9,7 +9,8 @@
 import { Effect, Either } from "effect";
 import { config } from "../src/server/config.ts";
 import { decodeLayoutJson } from "../src/server/layout-store.ts";
-import { configProblems, loadTypes, typesUsed } from "../tooling/layout-check.ts";
+import { configProblems, typesUsed } from "../src/common/widget-configs.ts";
+import { loadTypes } from "../tooling/layout-check.ts";
 import { WidgetBuildIo, WidgetBuildIoLive } from "../tooling/widget-build.ts";
 
 const check = (path: string) =>

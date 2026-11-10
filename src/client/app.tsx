@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyAction, type LayoutAction } from "../common/layout-ops.ts";
 import { defaultSchedule } from "../common/day-cycle.ts";
 import type { Layout } from "../common/model.ts";
+import { defaultFullScreenSize } from "../common/widgets.ts";
 import { AdminBar } from "./admin-bar.tsx";
 import { Http, loadLayout, saveLayout } from "./api.ts";
 import { adminModeKey, type Board, BoardContext } from "./board-context.ts";
@@ -22,6 +23,7 @@ import {
   useFullScreen,
   type ViewContent,
 } from "./full-screen/full-screen-host.tsx";
+import { modalSize } from "./full-screen/full-screen.ts";
 import { WidgetFullScreen } from "./widget-card.tsx";
 import { widgetLabel } from "./widget-draft.ts";
 import { registeredTypes, useWidgetHost } from "./widget-host.tsx";
@@ -205,8 +207,7 @@ export function App() {
         if (type !== undefined && !allowed(permissionOf(type.id, type.permissions))) return null;
         return {
           title: widgetLabel(widget, registeredTypes(registry)),
-          width: "full",
-          fullHeight: true,
+          ...modalSize(type?.fullScreen ?? defaultFullScreenSize),
           content: (
             <Box
               flex="1"

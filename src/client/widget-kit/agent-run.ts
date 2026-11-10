@@ -117,7 +117,8 @@ export type AgentInput = RunRequest["input"];
 /**
  * Runs of this widget's agent `agentName`, whose answer is decoded with `output`.
  * `start` begins one (replacing any before it); `answer` replies to what it's asking;
- * `cancel` stops it; `fileUrl` is where to download a file it wrote. Built on the
+ * `cancel` stops it; `fileUrl` is where to download a file it wrote, and `fileText`
+ * reads one (a text file) for the widget itself, given the finished run's ID. Built on the
  * agent-runs widget API, so use it in a widget's `widget` or `full-screen` view.
  */
 export const useAgentRun = <A, I>(agentName: string, output: Schema.Schema<A, I>) => {
@@ -186,5 +187,11 @@ export const useAgentRun = <A, I>(agentName: string, output: Schema.Schema<A, I>
     [runs, view],
   );
 
-  return { view, start, answer, cancel, fileUrl };
+  const fileText = useCallback(
+    (runId: string, name: string, options?: { readonly signal?: AbortSignal }) =>
+      runs.fileText({ runId, name }, options),
+    [runs],
+  );
+
+  return { view, start, answer, cancel, fileUrl, fileText };
 };

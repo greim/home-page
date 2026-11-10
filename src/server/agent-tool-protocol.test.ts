@@ -1,8 +1,9 @@
 import { assertEquals } from "@std/assert";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import {
   type CallResult,
   handleMessage,
+  inputSchemaOf,
   type ListedTool,
   resultText,
 } from "./agent-tool-protocol.ts";
@@ -97,4 +98,14 @@ Deno.test("unknown tools, methods and malformed messages are errors", () => {
 Deno.test("a tool's result is text as it is, and anything else as JSON", () => {
   assertEquals(resultText("done"), "done");
   assertEquals(resultText({ rows: 2 }), '{\n  "rows": 2\n}');
+});
+
+Deno.test("a tool's input is an object schema, even when it takes nothing", () => {
+  assertEquals(inputSchemaOf(Schema.Struct({})), {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    type: "object",
+    properties: {},
+  });
+  const counted = inputSchemaOf(Schema.Struct({ n: Schema.Number })) as { type: string };
+  assertEquals(counted.type, "object");
 });

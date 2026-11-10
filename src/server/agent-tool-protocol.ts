@@ -3,13 +3,25 @@
  * 2.0 messages, one per line, for `initialize`, `tools/list` and `tools/call`. This is
  * the functional core; agent-tool-server.ts reads and writes the lines and runs tools.
  */
-import { Effect, Schema } from "effect";
+import { Effect, JSONSchema, Schema } from "effect";
 
 /** A tool, as the agent is told about it. */
 export type ListedTool = {
   readonly name: string;
   readonly description: string;
   readonly inputSchema: unknown;
+};
+
+/**
+ * A tool's input, as JSON Schema for the agent. MCP needs an object schema, but Effect
+ * gives an empty struct (a tool that takes nothing) as "any object or array", which
+ * Claude Code refuses, along with the server's other tools: that's made a plain object.
+ */
+export const inputSchemaOf = (input: Schema.Schema.Any): unknown => {
+  const schema = JSONSchema.make(input);
+  return "anyOf" in schema && !("type" in schema)
+    ? { $schema: schema.$schema, type: "object", properties: {} }
+    : schema;
 };
 
 /** What a tool call came to: text for the agent, and whether it failed. */

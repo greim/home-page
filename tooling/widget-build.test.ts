@@ -498,6 +498,21 @@ Deno.test("a widget's APIs must exist, and have their services listed", () => {
   assertStringIncludes(problem({ apis: ["agent-runs"] }), "by having agents");
 });
 
+Deno.test("the registry carries a widget's full-screen size: the whole window unless it says", () => {
+  const sizes = (fullScreen: unknown) => {
+    const world = worldWith(["clock"]);
+    world.modules.set("/src/clock/manifest.ts", {
+      manifest: fullScreen === null ? manifest : { ...manifest, fullScreen },
+    });
+    const registry = run(world).disk.get("/dist/widgets.next/registry.json");
+    return registry === undefined ? "no registry" : JSON.parse(registry).widgets[0]?.fullScreen;
+  };
+  assertEquals(sizes(null), { width: "full", height: "full" });
+  assertEquals(sizes({ width: 52, height: "fit" }), { width: 52, height: "fit" });
+  // Narrower than 20rem is too narrow to be any use: the manifest is refused.
+  assertEquals(sizes({ width: 5, height: "fit" }), "no registry");
+});
+
 Deno.test("the registry carries a widget's APIs", () => {
   const world = worldWith(["clock"]);
   world.modules.set("/src/clock/manifest.ts", {

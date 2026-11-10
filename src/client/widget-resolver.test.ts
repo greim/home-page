@@ -14,6 +14,7 @@ const registry: Registry = {
     permissions: null,
     agents: {},
     apis: [],
+    fullScreen: { width: "full", height: "full" },
   }],
 };
 

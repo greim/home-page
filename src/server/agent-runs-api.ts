@@ -85,4 +85,16 @@ export const agentRunsServed: ServedApi<WidgetAgentRuns> = serve<
         Effect.map(runs.file(caller, runId, name), (bytes) =>
           bytes === null ? text(404, "There's no such file.") : download(name, bytes)),
     ),
+  fileText: ({ runId, name }, caller) =>
+    Effect.flatMap(
+      WidgetAgentRuns,
+      (runs) =>
+        Effect.map(runs.file(caller, runId, name), (bytes) =>
+          bytes === null
+            ? {
+              ok: false,
+              error: { is: "no-such-file", message: `The run wrote no file named ${name}.` },
+            } as const
+            : { ok: true, value: { text: new TextDecoder().decode(bytes) } } as const),
+    ),
 });

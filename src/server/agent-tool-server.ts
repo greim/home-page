@@ -5,9 +5,14 @@
  *
  *   deno run <permissions> agent-tool-server.ts <the widget's agent-tools.ts> <run folder>
  */
-import { Effect, JSONSchema, Schema } from "effect";
+import { Effect, Schema } from "effect";
 import type { AgentTools, RunFolder } from "../common/agent-tools.ts";
-import { handleMessage, type ListedTool, resultText } from "./agent-tool-protocol.ts";
+import {
+  handleMessage,
+  inputSchemaOf,
+  type ListedTool,
+  resultText,
+} from "./agent-tool-protocol.ts";
 
 const [modulePath = "", dir = ""] = Deno.args;
 const { tools } = (await import(new URL(`file://${modulePath}`).href)) as { tools: AgentTools };
@@ -24,7 +29,7 @@ const folder: RunFolder = {
 const listed: ReadonlyArray<ListedTool> = Object.entries(tools).map(([name, tool]) => ({
   name,
   description: tool.description,
-  inputSchema: JSONSchema.make(tool.input),
+  inputSchema: inputSchemaOf(tool.input),
 }));
 
 const call = (name: string, args: unknown) =>

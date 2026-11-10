@@ -15,6 +15,8 @@ export const NotStarted = apiError("not-started");
 export const AgentFailed = apiError("agent-failed");
 /** There's no such run of this widget's (it may have ended a while ago). */
 export const NoSuchRun = apiError("no-such-run");
+/** The run wrote no such file (or there's no such run). */
+export const NoSuchFile = apiError("no-such-file");
 /** The run isn't waiting for that answer. */
 export const NotWaiting = apiError("not-waiting");
 
@@ -64,6 +66,12 @@ export const agentRunsApi = defineApi("agent-runs", "assistant", {
   }),
   /** A file the agent wrote, in the run's `out/` folder, to download. */
   file: link({ input: Schema.Struct({ runId: RunId, name: Schema.String }) }),
+  /** A text file the agent wrote, in the run's `out/` folder, for the widget to read (as UTF-8). */
+  fileText: operation({
+    input: Schema.Struct({ runId: RunId, name: Schema.String }),
+    output: Schema.Struct({ text: Schema.String }),
+    errors: NoSuchFile,
+  }),
 }, { services: [] });
 
 export type AgentRunsApi = typeof agentRunsApi;

@@ -9,6 +9,7 @@ import {
   type AgentEntry,
   bundleFile,
   decodeManifestModule,
+  defaultFullScreenSize,
   defaultMaxMinutes,
   type Registry,
   type RegistryEntry,
@@ -186,6 +187,7 @@ const buildOne = (
         permissions: manifest.right.permissions ?? null,
         agents,
         apis,
+        fullScreen: manifest.right.fullScreen ?? defaultFullScreenSize,
       },
       files: [
         [bundle, script.contents] as const,

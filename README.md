@@ -127,6 +127,9 @@ that account. Other accounts on the same Mac get a certificate warning if they o
   - **A web researcher**, which has Claude research a topic on the web and write a short report with
     sources, asking you before it reads each page.
   - **A spreadsheet fixer**, which has Claude clean up a messy CSV, and gives you the fixed copy.
+  - **A home page configurator**, a chat where Claude changes the page as you ask (columns, widgets,
+    bookmarks, colors, your day) and lists each change for you to apply. It can edit only the page's
+    layout, not code, and asks before it searches the web or reads a page.
 - **The assistant.** Claude Code, over the page or in a floating window of its own. It can rearrange
   the page for you, write new kinds of widget, or work on any other part of the code, as it would in
   a terminal.

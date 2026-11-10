@@ -414,4 +414,13 @@ Deno.test("the agent-runs API starts runs, streams events, answers, cancels and 
     "A",
   ]);
   assertEquals((await file("nope.csv")).status, 404);
+
+  assertEquals((await answer(await agentRuns("fileText", { runId: "r1", name: "out.csv" })))[1], {
+    ok: true,
+    value: { text: "A" },
+  });
+  assertEquals(
+    (await answer(await agentRuns("fileText", { runId: "r1", name: "nope.csv" })))[1].error.is,
+    "no-such-file",
+  );
 });

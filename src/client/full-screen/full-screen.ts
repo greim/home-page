@@ -15,6 +15,7 @@
  * handle the shell keeps for the PiP window.
  */
 import type { Layout } from "../../common/model.ts";
+import type { FullScreenSize } from "../../common/widgets.ts";
 
 export type FullScreenView =
   | { readonly is: "assistant" }
@@ -111,3 +112,14 @@ export const prune = <W>(state: FullScreenState<W>, layout: Layout): FullScreenS
 
 /** What the PiP window can offer: to come back as a modal, unless one's open. */
 export const canPullBack = <W>(state: FullScreenState<W>): boolean => state.modal === null;
+
+/**
+ * A widget's full-screen view's modal size, from its manifest's: a CSS width (or "full"),
+ * and whether it fills the window's height.
+ */
+export const modalSize = (
+  size: FullScreenSize,
+): { readonly width: string; readonly fullHeight: boolean } => ({
+  width: size.width === "full" ? "full" : `${size.width}rem`,
+  fullHeight: size.height === "full",
+});

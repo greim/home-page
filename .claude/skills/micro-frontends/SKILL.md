@@ -216,9 +216,15 @@ the assistant, the settings and the column editor.
 - **Filling it.** The view is given the whole area under the frame's title bar: give its root
   `h="full"` (not `100vh`, which is the page's height, not the modal's) and let its own parts
   scroll. The frame shows the widget's name as its title, so the view needn't repeat it.
-- **Sizing.** The modal is the page's: 1rem is 1vw. In a PiP window, 1rem is the browser's default
-  16px, and the view reflows as the window is resized. So lay a full-screen view out to reflow
-  (flex, grid, wrapping), not to fixed widths.
+- **Its size.** It opens as big as the window, unless the manifest says otherwise with
+  `fullScreen: { width, height }`: `width` in rem (the page's unit, so 52 is about half the window's
+  width) or `"full"`, and `height` `"full"` or `"fit"` (as tall as its content, at most the
+  window's). Give one when the view doesn't need the whole window: a chat or a single form is hard
+  to read stretched across it. The grammar checker (72, full) and the page configurator (52, full)
+  do. It's the modal's starting size in a PiP window too.
+- **Sizing inside it.** The modal is the page's: 1rem is 1vw. In a PiP window, 1rem is the browser's
+  default 16px, and the view reflows as the window is resized. So lay a full-screen view out to
+  reflow (flex, grid, wrapping), not to fixed widths.
 
 Anything relying on being inside a column doesn't work in a full-screen view: `--column-background`
 and the column's text color aren't there. It's drawn in the page's normal light or dark colors.

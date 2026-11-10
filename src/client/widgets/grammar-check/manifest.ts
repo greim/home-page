@@ -29,6 +29,7 @@ export const manifest = defineManifest({
     "from a button. The text isn't saved. The setting is just a heading.",
   config: GrammarCheckConfig,
   defaultConfig: { heading: "Grammar Check" },
+  fullScreen: { width: 72, height: "full" },
   permissions: {
     services: [{
       name: "Anthropic (Claude)",

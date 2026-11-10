@@ -60,6 +60,24 @@ export type WidgetAgent = {
   readonly input?: InputTraits;
 };
 
+/**
+ * How big a widget's full-screen view opens, as a modal over the page (and so, at
+ * first, its own window if it's torn off).
+ */
+export const FullScreenSize = Schema.Struct({
+  /**
+   * In rem, the page's unit (a hundredth of the window's width, so it scales with the
+   * window), or "full" for the window's width. Never wider than the window.
+   */
+  width: Schema.Union(Schema.Literal("full"), Schema.Number.pipe(Schema.between(20, 100))),
+  /** "full" for the window's height, or "fit" for as tall as the view's content (at most that). */
+  height: Schema.Literal("full", "fit"),
+});
+export type FullScreenSize = typeof FullScreenSize.Type;
+
+/** A full-screen view's size, unless its manifest says otherwise: the whole window. */
+export const defaultFullScreenSize: FullScreenSize = { width: "full", height: "full" };
+
 /** What a widget's `manifest.ts` exports as `manifest`. */
 export type WidgetManifest<A, I> = {
   readonly title: string;
@@ -84,6 +102,11 @@ export type WidgetManifest<A, I> = {
    * agent-runs API without listing it. See the `widget-apis` skill.
    */
   readonly apis?: ReadonlyArray<string>;
+  /**
+   * How big its full-screen view (if it has one) opens. The whole window if left out:
+   * give a narrower one when the view doesn't need it.
+   */
+  readonly fullScreen?: FullScreenSize;
 };
 
 /** Declares a manifest, checking its shape. */
@@ -123,6 +146,7 @@ const ManifestModule = Schema.Struct({
       { exact: true },
     ),
     apis: Schema.optionalWith(Schema.Array(Schema.String), { exact: true }),
+    fullScreen: Schema.optionalWith(FullScreenSize, { exact: true }),
   }),
 });
 
@@ -174,6 +198,8 @@ export const RegistryEntry = Schema.Struct({
    * declares, and agent-runs if it has agents.
    */
   apis: Schema.optionalWith(Schema.Array(Schema.String), { default: () => [] }),
+  /** How big its full-screen view opens. */
+  fullScreen: Schema.optionalWith(FullScreenSize, { default: () => defaultFullScreenSize }),
 });
 export type RegistryEntry = typeof RegistryEntry.Type;
 

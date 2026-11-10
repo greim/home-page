@@ -7,6 +7,7 @@ import {
   closeModal,
   type FullScreenState,
   type FullScreenView,
+  modalSize,
   open,
   pipClosed,
   prune,
@@ -118,4 +119,9 @@ Deno.test("views about a column or widget that's gone are closed", () => {
     }),
     { modal: assistant, pip: null },
   );
+});
+
+Deno.test("a widget's declared size is its modal's", () => {
+  assertEquals(modalSize({ width: "full", height: "full" }), { width: "full", fullHeight: true });
+  assertEquals(modalSize({ width: 52, height: "fit" }), { width: "52rem", fullHeight: false });
 });

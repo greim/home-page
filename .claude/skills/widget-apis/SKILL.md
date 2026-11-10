@@ -46,9 +46,18 @@ page doesn't mount a widget's views until the user agrees to its outside service
 | API          | Server    | What it does                                                    |
 | ------------ | --------- | --------------------------------------------------------------- |
 | `agent-runs` | assistant | Runs the widget's own AI agents (see the `widget-agents` skill) |
+| `layout`     | main      | Reads the page's layout, and applies a new one (see below)      |
 
-`src/common/apis/all.ts` lists them. A widget with `agents` gets `agent-runs` without declaring it;
-the kit's `useAgentRun` and `useWidgetAgent` are built on it.
+`src/common/apis/all.ts` lists them.
+
+The `layout` API is for a widget that changes the page for the user (the page configurator): `get`
+gives the live layout, and `apply({ base, layout })` replaces it if the live one is still `base`,
+failing with `layout-changed` otherwise (the user edited the page meanwhile). It checks the layout's
+shape, as the page's own saves do, not each widget's config. The page hears about each layout
+applied through it (`src/client/layout-applied.ts`) and shows it at once, so its own saves carry on
+from it. It's powerful: a widget that declares it can rewrite the whole page, so let the user see
+and confirm a change before applying it. A widget with `agents` gets `agent-runs` without declaring
+it; the kit's `useAgentRun` and `useWidgetAgent` are built on it.
 
 ## Using one in a widget
 
@@ -138,12 +147,12 @@ Worked example: geocoding, served by the main server, reaching the US Census.
      findPlace: operation({
        input: Schema.Struct({ query: Schema.NonEmptyTrimmedString }),
        output: Place,
-       errors: NoMatch, // several: Schema.Union(NoMatch, TooMany); none: Schema.Never
+       errors: NoMatch, // several: Schema.Union(NoMatch, TooMany)
      }),
      findAddresses: operation({
        input: Schema.Struct({ addresses: Schema.Array(AddressQuery).pipe(Schema.maxItems(1000)) }),
        output: Schema.Struct({ results: Schema.Array(Schema.NullOr(Coordinates)) }),
-       errors: Schema.Never,
+       errors: TooMany, // every operation names at least one: `Schema.Never` doesn't type-check
        maxBytes: 500_000, // the most a request may be; 200,000 if left out
      }),
    }, { services: ["US Census Geocoder"] }); // must match manifests' `permissions` names

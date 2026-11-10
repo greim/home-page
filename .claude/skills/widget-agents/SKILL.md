@@ -24,8 +24,8 @@ The assistant service runs agents (`src/server/widget-agents.ts`), reading them 
 registry on each run. Widgets reach them through the `agent-runs` widget API (see the `widget-apis`
 skill), which every widget with agents gets: the page says which widget is calling, so a widget runs
 only its own agents, and reaches only the runs it started. Worked examples: `grammar-check/` (no
-capabilities), `web-researcher/` (web, with an ask) and `spreadsheet-fixer/` (files and its own
-tools).
+capabilities), `web-researcher/` (web, with an ask), `spreadsheet-fixer/` (files and its own tools)
+and `page-configurator/` (a chat, one run per message, editing the layout with its own tools).
 
 ## Declaring an agent
 
@@ -94,6 +94,7 @@ const run = useAgentRun("research", ResearchReport); // this widget's agent "res
 // run.start(input, files?) begins a run; files (File[]) go in its in/ folder.
 <AgentRunPanel view={run.view} onAnswer={run.answer} onCancel={run.cancel} fileUrl={run.fileUrl} />;
 // When run.view.is === "done": run.view.output (decoded), .costUsd, .files.
+// run.fileText(runId, name) reads a text file it wrote, for the widget itself (not a download).
 ```
 
 The panel shows progress, the ask card (Allow once, Allow for this run, Don't allow), Stop, a
