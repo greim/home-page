@@ -1,7 +1,7 @@
 import { chakra, Stack, Text, Theme } from "@chakra-ui/react";
 import { Effect } from "effect";
 import { Fragment, useState } from "react";
-import { codeBox, hiddenScrollbar, widgetHeading } from "../../surface.ts";
+import { codeBox, codeTextShadow, hiddenScrollbar, widgetHeading } from "../../surface.ts";
 import type { WidgetProps } from "../../widget-kit/views.tsx";
 import type { Snippet, SnippetsConfig } from "./config.ts";
 import { graphemeLines, isCopyableChar } from "./graphemes.ts";
@@ -64,7 +64,7 @@ function CharLines(props: {
         return (
           <chakra.span
             key={col}
-            cursor="copy"
+            cursor="pointer"
             rounded="xs"
             bg={props.flashKey === key ? "green.subtle" : "transparent"}
             _hover={{ bg: "whiteAlpha.300" }}
@@ -101,7 +101,7 @@ function SnippetBox(props: {
       overflowX="auto"
       {...(whole
         ? {
-          cursor: "copy",
+          cursor: "pointer",
           title: "Click to copy",
           outline: ownFlash?.ok ? "2px solid" : "none",
           outlineColor: "green.500",
@@ -117,7 +117,7 @@ function SnippetBox(props: {
         pb="0.4em"
         fontFamily="mono"
         color="fg"
-        textShadow="0.05em 0.05em 0.1em rgba(0, 0, 0, 0.7)"
+        textShadow={codeTextShadow}
         whiteSpace="pre"
       >
         <CommentLine label={snippet.label} flash={ownFlash} />

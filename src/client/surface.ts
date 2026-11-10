@@ -219,6 +219,12 @@ export const codeBox = {
     "-1px -1px 0 rgba(0, 0, 0, 0.7), 1px 1px 0 rgba(255, 255, 255, 0.25), 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.15) inset",
 } as const;
 
+/** Text in a code box, raised off it by a soft shadow below and right. */
+export const codeTextShadow = "0.05em 0.05em 0.1em rgba(0, 0, 0, 0.7)";
+
+/** The outline round a column's text field while it's focused. */
+export const fieldFocusOutline = { outline: "0.2rem solid #ffffff66" } as const;
+
 /** A column's background: its own color by day, and the night gray at night. */
 export const columnBackground = (color: ColumnColor, isNight: boolean): string =>
   isNight ? night.columnColor : columnColorCss(color);

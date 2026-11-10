@@ -2,6 +2,7 @@ import { chakra, Input, SimpleGrid, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import type { WidgetProps } from "../../widget-kit/views.tsx";
 import type { FormField, FormGridConfig } from "./config.ts";
+import { fieldFocusOutline } from "../../surface.ts";
 import { fillUrlTemplate } from "./url-template.ts";
 
 function FieldForm(props: { field: FormField }) {
@@ -40,7 +41,10 @@ function FieldForm(props: { field: FormField }) {
         borderRadius="0.2em"
         boxShadow="-1px -1px 0 #000, 1px 1px 0 rgba(255, 255, 255, 0.25), 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.2) inset"
         opacity={0.8}
-        _focus={{ opacity: 1 }}
+        // The same outline as the column's text boxes, in place of Chakra's focus ring.
+        outline="none"
+        _focus={{ opacity: 1, ...fieldFocusOutline }}
+        _focusVisible={fieldFocusOutline}
         textShadow="none"
         autoComplete="off"
         placeholder={props.field.label}
