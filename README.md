@@ -70,6 +70,10 @@ git clone https://github.com/greim/home-page.git
 cd home-page
 ```
 
+Anywhere in your home folder is fine except `~/Documents`, `~/Desktop`, `~/Downloads` and iCloud
+Drive. macOS guards those folders, so the background services may not be allowed to read the code
+there (see [Troubleshooting](#troubleshooting)). `~/Developer` is a good choice too.
+
 **4. Run setup:**
 
 ```sh
@@ -231,6 +235,24 @@ Start by running `deno task setup` again. Beyond what it finds:
 
 - **The page doesn't load.** Look in `logs/server.log`. If the service keeps restarting, the error
   is there.
+- **The page doesn't load, or loads only sometimes, and the repo is under `~/Documents`,
+  `~/Desktop`, `~/Downloads` or iCloud Drive.** macOS guards those folders. In a terminal, the
+  terminal app's permission covers what you run, but the services run on their own, so `deno` has to
+  be allowed to read the folder itself. macOS asks once. If nobody saw the question (say you'd
+  switched to another account at the time), or it was turned down, the services can't read their
+  code, and `logs/server.log` may show "Operation not permitted". Upgrading Deno can bring the
+  question back. The fix is to move the repo, then run setup again from the new folder, which points
+  the services at it:
+
+  ```sh
+  mkdir -p ~/Developer
+  mv ~/Documents/home-page ~/Developer/home-page   # wherever it is now
+  cd ~/Developer/home-page
+  deno task setup
+  ```
+
+  Your layout and certificate move with it.
+
 - **The assistant doesn't answer.** Look in `logs/assistant.log`, and check `claude` works and is
   signed in from a terminal.
 - **The browser warns the connection isn't private.** Firefox reads trusted certificates from the
