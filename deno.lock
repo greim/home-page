@@ -8,16 +8,22 @@
     "npm:@chakra-ui/react@3.37.0": "3.37.0_@emotion+react@11.14.0_react@19.3.1_react-dom@19.3.1",
     "npm:@emotion/cache@^11.14.0": "11.14.0",
     "npm:@emotion/react@^11.14.0": "11.14.0_react@19.3.1",
+    "npm:@types/hast@3.0.5": "3.0.5",
     "npm:@types/react-dom@^19.2.0": "19.3.0_@types+react@19.3.0",
     "npm:@types/react@^19.2.0": "19.3.0",
     "npm:diff@8.0.4": "8.0.4",
     "npm:effect@3.22.4": "3.22.4",
+    "npm:hast-util-to-html@9.0.5": "9.0.5",
+    "npm:hast-util-to-jsx-runtime@2.3.7": "2.3.7",
     "npm:modern-screenshot@4.7.0": "4.7.0",
     "npm:react-dom@^19.2.0": "19.3.1_react@19.3.1",
     "npm:react-icons@^5.5.0": "5.7.0_react@19.3.1",
     "npm:react-markdown@10.1.0": "10.1.0_@types+react@19.3.0_react@19.3.1",
     "npm:react@^19.2.0": "19.3.1",
-    "npm:remark-gfm@4.0.1": "4.0.1"
+    "npm:remark-gfm@4.0.1": "4.0.1",
+    "npm:remark-parse@11.0.0": "11.0.0",
+    "npm:remark-rehype@11.1.2": "11.1.2",
+    "npm:unified@11.0.5": "11.0.5"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -1560,6 +1566,22 @@
         "function-bind"
       ]
     },
+    "hast-util-to-html@9.0.5": {
+      "integrity": "sha512-OguPdidb+fbHQSU4Q4ZiLKnzWo8Wwsf5bZfbvu7//a9oTYoqD/fWpe96NuHkoS9h0ccGOTe0C4NGXdtS0iObOw==",
+      "dependencies": [
+        "@types/hast",
+        "@types/unist@3.0.3",
+        "ccount",
+        "comma-separated-tokens",
+        "hast-util-whitespace",
+        "html-void-elements",
+        "mdast-util-to-hast",
+        "property-information",
+        "space-separated-tokens",
+        "stringify-entities",
+        "zwitch"
+      ]
+    },
     "hast-util-to-jsx-runtime@2.3.7": {
       "integrity": "sha512-F7DNV2NMcTxA4GqPVHnXzX+mpoPHAIY9rJAVH3CZ1FdBZOcBUEjUuvMkMpHVs/sicEtznh9tMGj5WUR9S4E2rg==",
       "dependencies": [
@@ -1597,6 +1619,9 @@
     },
     "html-url-attributes@3.0.1": {
       "integrity": "sha512-ol6UPyBWqsrO6EJySPz2O7ZSr856WDrEzM5zMqp+FJJLGMW35cLYmmZnl0vztAZxRUoNZJFTCohfjuIJ8I4QBQ=="
+    },
+    "html-void-elements@3.0.0": {
+      "integrity": "sha512-bEqo66MRXsUGxWHV5IP0PUiAWwoEjba4VCzg0LjFJBpchPaTfyfCKTG6bc5F8ucKec3q5y6qOdGyYTSBEvhCrg=="
     },
     "http-errors@2.0.1": {
       "integrity": "sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==",
@@ -2598,16 +2623,22 @@
       "npm:@chakra-ui/react@3.37.0",
       "npm:@emotion/cache@^11.14.0",
       "npm:@emotion/react@^11.14.0",
+      "npm:@types/hast@3.0.5",
       "npm:@types/react-dom@^19.2.0",
       "npm:@types/react@^19.2.0",
       "npm:diff@8.0.4",
       "npm:effect@3.22.4",
+      "npm:hast-util-to-html@9.0.5",
+      "npm:hast-util-to-jsx-runtime@2.3.7",
       "npm:modern-screenshot@4.7.0",
       "npm:react-dom@^19.2.0",
       "npm:react-icons@^5.5.0",
       "npm:react-markdown@10.1.0",
       "npm:react@^19.2.0",
-      "npm:remark-gfm@4.0.1"
+      "npm:remark-gfm@4.0.1",
+      "npm:remark-parse@11.0.0",
+      "npm:remark-rehype@11.1.2",
+      "npm:unified@11.0.5"
     ]
   }
 }
