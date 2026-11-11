@@ -132,9 +132,10 @@ export function App() {
     setNightView(nextNightView(nightView, { night, phase }));
   }
   const nightPace = nightView.quick ? nightStyle.quickTransition : nightStyle.transition;
+  const columnPace = admin ? nightStyle.quickTransition : nightPace;
   const board: Board = useMemo(
-    () => ({ admin, dispatch, open: fullScreen.open, schedule, night, nightPace }),
-    [admin, dispatch, fullScreen.open, schedule, night, nightPace],
+    () => ({ admin, dispatch, open: fullScreen.open, schedule, night, nightPace, columnPace }),
+    [admin, dispatch, fullScreen.open, schedule, night, nightPace, columnPace],
   );
 
   switch (state.is) {

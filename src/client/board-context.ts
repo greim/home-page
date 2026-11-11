@@ -23,6 +23,11 @@ export type Board = {
   readonly night: boolean;
   /** How quickly the page moves between day and night (a CSS transition's duration and easing). */
   readonly nightPace: string;
+  /**
+   * How quickly a column's background changes: at the night pace, except in admin
+   * mode, where its color is being edited and the column is the preview.
+   */
+  readonly columnPace: string;
 };
 
 export const BoardContext = createContext<Board | null>(null);

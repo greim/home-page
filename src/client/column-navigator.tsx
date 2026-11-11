@@ -250,7 +250,7 @@ function ColumnThumbnail(props: {
   onColor: (color: ColumnColor) => void;
 }) {
   const { column, visible, admin } = props;
-  const { night, nightPace } = useBoard();
+  const { night, columnPace } = useBoard();
   const label = column.heading;
   return (
     // White text, as on the column itself.
@@ -265,7 +265,7 @@ function ColumnThumbnail(props: {
       h={thumbHeight}
       {...thumbCorners}
       bgColor={columnBackground(column.color, night)}
-      transition={columnBackgroundTransition(nightPace)}
+      transition={columnBackgroundTransition(columnPace)}
       boxShadow={surface.thumbShadow}
       opacity={column.hidden ? 0.5 : 1}
     >
