@@ -3,10 +3,21 @@
  * answer it gives.
  */
 import { Schema } from "effect";
+import { isSelectableModel } from "../../../common/agent-models.ts";
+
+/** The model the configurator's agent runs under unless the user picks another. */
+export const defaultConfiguratorModel = "claude-sonnet-5-5";
 
 export const PageConfiguratorConfig = Schema.Struct({
   /** Shown above the widget. None when blank. */
   heading: Schema.optionalWith(Schema.String, { default: () => "" }),
+  /** Which Claude model its agent runs under (an ID from agent-models.ts). */
+  model: Schema.optionalWith(
+    Schema.String.pipe(Schema.filter(isSelectableModel, {
+      message: () => "must be a model the app offers",
+    })),
+    { default: () => defaultConfiguratorModel },
+  ),
 });
 export type PageConfiguratorConfig = typeof PageConfiguratorConfig.Type;
 

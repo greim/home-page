@@ -22,6 +22,8 @@ export const NotWaiting = apiError("not-waiting");
 
 const AgentName = Schema.String;
 const RunId = Schema.String;
+/** A model to run under, when the agent offers a choice; null for its default. */
+const Model = Schema.optionalWith(Schema.NullOr(Schema.String), { default: () => null });
 const Input = Schema.Unknown.pipe(Schema.filter((input) => input !== undefined, {
   message: () => "an agent's input can't be undefined",
 }));
@@ -29,14 +31,19 @@ const Input = Schema.Unknown.pipe(Schema.filter((input) => input !== undefined, 
 export const agentRunsApi = defineApi("agent-runs", "assistant", {
   /** Runs an agent that never asks, to its answer: for agents like the grammar checker. */
   run: operation({
-    input: Schema.Struct({ agent: AgentName, input: Input }),
+    input: Schema.Struct({ agent: AgentName, input: Input, model: Model }),
     output: Schema.Struct({ output: Schema.Unknown, costUsd: Schema.Number }),
     errors: Schema.Union(NotStarted, AgentFailed),
     maxBytes: maxInputBytes,
   }),
   /** Starts a run; `files` go in its `in/` folder. */
   start: operation({
-    input: Schema.Struct({ agent: AgentName, input: Input, files: Schema.Array(RunFile) }),
+    input: Schema.Struct({
+      agent: AgentName,
+      input: Input,
+      files: Schema.Array(RunFile),
+      model: Model,
+    }),
     output: Schema.Struct({ runId: RunId }),
     errors: NotStarted,
     maxBytes: maxStartBytes,

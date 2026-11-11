@@ -37,8 +37,9 @@ export const readAgentResult = <A, I>(
 export const useWidgetAgent = <A, I>(agentName: string, output: Schema.Schema<A, I>) => {
   const runs = useWidgetApi(agentRunsApi);
   return useCallback(
-    async (input: AgentInput): Promise<AgentResult<A>> =>
-      readAgentResult(await runs.run({ agent: agentName, input }), output),
+    // `model` runs under a model the agent's manifest offers; its default if left out.
+    async (input: AgentInput, model: string | null = null): Promise<AgentResult<A>> =>
+      readAgentResult(await runs.run({ agent: agentName, input, model }), output),
     [runs, agentName, output],
   );
 };

@@ -30,6 +30,7 @@ const plain: AgentEntry = {
   instructions: "You're a copy editor.",
   outputSchema: { type: "object" },
   model: "claude-sonnet-5-5",
+  models: [],
   maxTurns: 4,
   maxBudgetUsd: 0.5,
   maxMinutes: 3,
@@ -87,6 +88,13 @@ Deno.test("an agent with no capabilities runs with no tools, settings or MCP ser
   assertStringIncludes(options.systemPrompt, "You're a copy editor.");
   assertStringIncludes(options.systemPrompt, "You have no tools");
   assertEquals("model" in agentOptions({ ...plain, model: null }, "/x"), false);
+});
+
+Deno.test("a model override runs under the chosen model, over the agent's default", () => {
+  assertEquals(agentOptions(plain, "/x", {}, "claude-opus-5-5").model, "claude-opus-5-5");
+  // Omitting the model uses the agent's default; an explicit null drops the model entirely.
+  assertEquals(agentOptions(plain, "/x").model, "claude-sonnet-5-5");
+  assertEquals("model" in agentOptions(plain, "/x", {}, null), false);
 });
 
 Deno.test("runs get only the user settings they log in and pick models with", () => {
@@ -246,6 +254,7 @@ const registryText = JSON.stringify({
       research: researcher,
       fix: fixer,
       mail: { ...plain, capabilities: [gmail] },
+      picks: { ...plain, models: ["claude-opus-5-5", "claude-sonnet-5-5"] },
     },
   }],
 });
@@ -502,6 +511,7 @@ Deno.test("a run's files go in, its own come out, and it's removed after a while
         const started = yield* runs.start(me, "fix", {
           input: {},
           files: [{ name: "sheet.csv", base64: btoa("a,b") }],
+          model: null,
         });
         if (!started.ok) return started.message;
         yield* events(runs, started.runId);
@@ -571,6 +581,30 @@ Deno.test("the simple route waits for an agent that never asks, and refuses one 
     () => Stream.make({ type: "result", subtype: "error_max_turns" }),
   );
   assertEquals(failed.ok ? "" : failed.message, "The agent took more than its 4 turns.");
+});
+
+Deno.test("a run may pick only a model its agent offers", async () => {
+  const start = (agent: string, model: string | null) => {
+    const w = world();
+    return withRuns(io(w, () => Stream.make(success({ n: 1 }))), (runs) =>
+      Effect.map(
+        runs.start(me, agent, { input: 1, files: [], model }),
+        (started) => ({ started, options: w.options }),
+      ));
+  };
+  // A model the agent offers is the one it runs under.
+  const chosen = await start("picks", "claude-opus-5-5");
+  assertEquals(chosen.started.ok, true);
+  assertEquals(chosen.options.at(0)?.model, "claude-opus-5-5");
+  // No choice runs under the agent's default.
+  assertEquals((await start("picks", null)).options.at(0)?.model, "claude-sonnet-5-5");
+  // A model the agent doesn't offer is refused, and never reaches the SDK.
+  const denied = await start("picks", "claude-haiku-5-5");
+  assertEquals(denied.started.ok, false);
+  assertStringIncludes(denied.started.ok ? "" : denied.started.message, "claude-haiku-5-5");
+  assertEquals(denied.options.length, 0);
+  // An agent that offers no choice refuses any requested model.
+  assertEquals((await start("check", "claude-opus-5-5")).started.ok, false);
 });
 
 const init = (servers: ReadonlyArray<{ name: string; status: string }>) => ({

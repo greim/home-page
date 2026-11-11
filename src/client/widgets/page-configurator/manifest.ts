@@ -1,5 +1,6 @@
 import { defineManifest } from "../../../common/widgets.ts";
-import { ConfiguratorAnswer, PageConfiguratorConfig } from "./config.ts";
+import { selectableModelIds } from "../../../common/agent-models.ts";
+import { ConfiguratorAnswer, defaultConfiguratorModel, PageConfiguratorConfig } from "./config.ts";
 
 const instructions = `You're the page configurator built into the user's personal home page: a
 web portal of columns holding widgets. You change the page for the user, as they ask, by editing its
@@ -61,7 +62,7 @@ export const manifest = defineManifest({
     "message for the assistant. The user types a request in the column, and the chat opens " +
     "over the page and starts on it. The setting is just a heading.",
   config: PageConfiguratorConfig,
-  defaultConfig: { heading: "Configure the page" },
+  defaultConfig: { heading: "Configure the page", model: defaultConfiguratorModel },
   apis: ["layout"],
   fullScreen: { width: 52, height: "full" },
   permissions: {
@@ -79,7 +80,9 @@ export const manifest = defineManifest({
       title: "Change the page",
       instructions,
       output: ConfiguratorAnswer,
-      model: "claude-sonnet-5-5",
+      model: defaultConfiguratorModel,
+      // The user picks among these in the widget's settings; the run is held to this list.
+      models: selectableModelIds,
       maxTurns: 30,
       maxBudgetUsd: 1,
       maxMinutes: 10,

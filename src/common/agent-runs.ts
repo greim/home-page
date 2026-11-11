@@ -25,6 +25,11 @@ export type RunFile = typeof RunFile.Type;
 export const RunRequest = Schema.Struct({
   input: Schema.Unknown.pipe(Schema.filter((input) => input !== undefined)),
   files: Schema.optionalWith(Schema.Array(RunFile), { default: () => [] }),
+  /**
+   * A model to run under, for an agent whose manifest offers a choice. The run starts
+   * only if the agent offers this model; left out, it runs under the agent's default.
+   */
+  model: Schema.optionalWith(Schema.NullOr(Schema.String), { default: () => null }),
 });
 export type RunRequest = typeof RunRequest.Type;
 

@@ -38,6 +38,7 @@ agents: {
     instructions, // the whole system prompt: a const string in the manifest
     output: ResearchReport, // an Effect Schema, usually in config.ts
     model: "claude-sonnet-5-5", // optional; the user's default otherwise
+    models: ["claude-opus-5-5", "claude-sonnet-5-5"], // optional; let a run pick among these
     maxTurns: 40, // 1 to 100
     maxBudgetUsd: 1.5, // 0.01 to 10
     maxMinutes: 10, // 1 to 30, waiting for the user included; 3 if left out
@@ -65,6 +66,15 @@ manifest's `permissions`), what it `reads` (`private`, `untrusted` or `public`),
 data anywhere, and what it `does`, in plain words. The server must be in the user's Claude Code
 config (`claude mcp add`); its credentials stay there.
 
+### Letting the user pick the model
+
+To let the user choose which model an agent runs under, list the choices in the agent's `models`
+(IDs from `src/common/agent-models.ts`, which also gives their labels); `model` stays the default and
+must be one of them. Store the chosen ID in the widget's config (a `model` field), show a picker in
+the editor (see `page-configurator`), and pass it when starting the run: `run.start(input, files,
+config.model)` or `check(input, config.model)`. The server runs only a model the agent's `models`
+lists, so a run can never ask for any other; an agent with no `models` has its model fixed.
+
 ### The rule: no automatic way out for private data near untrusted content
 
 An agent with all three of **private data** (its input, files, or a capability that reads the user's
@@ -91,7 +101,7 @@ import { useAgentRun } from "../../widget-kit/agent-run.ts";
 import { AgentRunPanel } from "../../widget-kit/agent-run-panel.tsx";
 
 const run = useAgentRun("research", ResearchReport); // this widget's agent "research"
-// run.start(input, files?) begins a run; files (File[]) go in its in/ folder.
+// run.start(input, files?, model?) begins a run; files (File[]) go in its in/ folder.
 <AgentRunPanel view={run.view} onAnswer={run.answer} onCancel={run.cancel} fileUrl={run.fileUrl} />;
 // When run.view.is === "done": run.view.output (decoded), .costUsd, .files.
 // run.fileText(runId, name) reads a text file it wrote, for the widget itself (not a download).

@@ -167,6 +167,8 @@ export const agentOptions = (
   agent: AgentEntry,
   cwd: string,
   mcpServers: Readonly<Record<string, McpConfig>> = {},
+  /** The model to run under; the agent's default (`agent.model`) if left out. */
+  model: string | null = agent.model,
 ): AgentOptions => {
   const all = agent.capabilities.map(traits);
   const builtIn = [...new Set(all.flatMap((t) => t.builtIn))];
@@ -195,7 +197,7 @@ export const agentOptions = (
     outputFormat: { type: "json_schema", schema: agent.outputSchema },
     maxTurns: agent.maxTurns,
     maxBudgetUsd: agent.maxBudgetUsd,
-    ...(agent.model === null ? {} : { model: agent.model }),
+    ...(model === null ? {} : { model }),
   };
 };
 
@@ -522,6 +524,8 @@ export type Runs = {
     caller: Caller,
     agentName: string,
     input: RunRequest["input"],
+    /** A model to run under, if the agent offers a choice; its default otherwise. */
+    model?: string | null,
   ) => Effect.Effect<RunOutcome>;
 };
 
@@ -620,11 +624,12 @@ export const makeRuns = (settings: AgentSettings): Effect.Effect<Runs, never, Wi
       agent: AgentEntry,
       prompt: string,
       mcp: Readonly<Record<string, McpConfig>>,
+      model: string | null,
     ) =>
       Effect.gen(function* () {
         const needed = Object.keys(mcp);
         const messages = yield* io.query(
-          agentOptions(agent, run.dir, mcp),
+          agentOptions(agent, run.dir, mcp, model),
           prompt,
           decide(run, agent.capabilities),
         ).pipe(
@@ -689,6 +694,13 @@ export const makeRuns = (settings: AgentSettings): Effect.Effect<Runs, never, Wi
         if (Either.isLeft(registry)) return refuse(500, "The widget registry couldn't be read.");
         const agent = findAgent(registry.right, widgetType, agentName);
         if (Either.isLeft(agent)) return refuse(404, agent.left);
+        // A run may pick a model only from the ones the agent's manifest offers; anything
+        // else is refused, so a request can never reach the SDK with a model of its choosing.
+        const requested = request.model ?? null;
+        if (requested !== null && !agent.right.models.includes(requested)) {
+          return refuse(400, `This agent can't run under the model "${requested}".`);
+        }
+        const model = requested ?? agent.right.model;
         const { files } = request;
         if (files.length > 0 && !agent.right.capabilities.some((c) => c.use === "files")) {
           return refuse(400, "This agent doesn't take files.");
@@ -735,7 +747,7 @@ export const makeRuns = (settings: AgentSettings): Effect.Effect<Runs, never, Wi
         yield* Ref.update(runs, (all) => new Map([...all, [runId, run]]));
         // The run outlives the request that started it; it's kept a while after it ends.
         const fiber = yield* Effect.forkDaemon(
-          execute(run, agent.right, agentPrompt(request.input), mcp.right).pipe(
+          execute(run, agent.right, agentPrompt(request.input), mcp.right, model).pipe(
             Effect.zipRight(Effect.sleep(Duration.minutes(keepMinutes))),
             Effect.ensuring(forget(runId, run)),
           ),
@@ -760,7 +772,12 @@ export const makeRuns = (settings: AgentSettings): Effect.Effect<Runs, never, Wi
           })),
       );
 
-    const runToEnd = (caller: Caller, agentName: string, input: RunRequest["input"]) =>
+    const runToEnd = (
+      caller: Caller,
+      agentName: string,
+      input: RunRequest["input"],
+      model: string | null = null,
+    ) =>
       Effect.gen(function* () {
         const registry = yield* Effect.either(io.readRegistry);
         if (Either.isRight(registry)) {
@@ -769,7 +786,7 @@ export const makeRuns = (settings: AgentSettings): Effect.Effect<Runs, never, Wi
             return fail(409, "This agent asks the user for things: start it as a run instead.");
           }
         }
-        const started = yield* start(caller, agentName, { input, files: [] });
+        const started = yield* start(caller, agentName, { input, files: [], model });
         if (!started.ok) return fail(started.status, started.message);
         const stream = yield* events(caller, started.runId, 0);
         const final = stream === null ? undefined : yield* Stream.runLast(stream);

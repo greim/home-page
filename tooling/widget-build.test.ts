@@ -386,6 +386,28 @@ Deno.test("an agent's limits must be sensible", () => {
   assertStringIncludes(problems(world).join(), "maxTurns");
 });
 
+Deno.test("an agent may offer only models the app knows, including its default", () => {
+  const world = worldWith(["clock"]);
+  const withAgent = (a: unknown) =>
+    world.modules.set("/src/clock/manifest.ts", {
+      manifest: { ...manifest, permissions: toAnthropic, agents: { check: a } },
+    });
+  withAgent({ ...agent, models: ["claude-made-up"] });
+  assertStringIncludes(problems(world).join(), "isn't one the app knows");
+  withAgent({ ...agent, model: "claude-haiku-5-5", models: ["claude-opus-5-5"] });
+  assertStringIncludes(problems(world).join(), "isn't among the models it offers");
+  withAgent({
+    ...agent,
+    model: "claude-opus-5-5",
+    models: ["claude-opus-5-5", "claude-sonnet-5-5"],
+  });
+  const registry = JSON.parse(run(world).disk.get("/dist/widgets.next/registry.json") ?? "");
+  assertEquals(registry.widgets[0].agents.check.models, [
+    "claude-opus-5-5",
+    "claude-sonnet-5-5",
+  ]);
+});
+
 Deno.test("the registry carries an agent's capabilities, input traits and time limit", () => {
   const world = worldWith(["clock"]);
   world.modules.set("/src/clock/manifest.ts", {

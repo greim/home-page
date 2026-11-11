@@ -45,6 +45,12 @@ export type WidgetAgent = {
   readonly output: Schema.Schema.AnyNoContext;
   /** A model ID, e.g. "claude-sonnet-5-5"; the user's default if left out. */
   readonly model?: string;
+  /**
+   * The models a run may be let choose from (IDs from agent-models.ts), for a widget
+   * whose config lets the user pick one. The server runs only a model listed here, so
+   * a run can't ask for any other. Left out (the default) fixes the model to `model`.
+   */
+  readonly models?: ReadonlyArray<string>;
   /** Most turns a run may take (structured output can take a retry or two). */
   readonly maxTurns: number;
   /** Most a run may cost, in US dollars. */
@@ -134,6 +140,7 @@ const ManifestModule = Schema.Struct({
           instructions: Schema.NonEmptyTrimmedString,
           output: AnySchema,
           model: Schema.optionalWith(Schema.NonEmptyTrimmedString, { exact: true }),
+          models: Schema.optionalWith(Schema.Array(Schema.NonEmptyTrimmedString), { exact: true }),
           maxTurns: Schema.Int.pipe(Schema.between(1, 100)),
           maxBudgetUsd: Schema.Number.pipe(Schema.between(0.01, 10)),
           maxMinutes: Schema.optionalWith(Schema.Number.pipe(Schema.between(1, 30)), {
@@ -166,6 +173,8 @@ export const AgentEntry = Schema.Struct({
   outputSchema: Schema.Unknown,
   /** null for the user's default. */
   model: Schema.NullOr(Schema.String),
+  /** The models a run may be let choose from; empty fixes the model to `model`. */
+  models: Schema.optionalWith(Schema.Array(Schema.String), { default: () => [] }),
   maxTurns: Schema.Number,
   maxBudgetUsd: Schema.Number,
   maxMinutes: Schema.optionalWith(Schema.Number, { default: () => defaultMaxMinutes }),

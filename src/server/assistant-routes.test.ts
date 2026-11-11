@@ -363,7 +363,7 @@ Deno.test("the agent-runs API starts runs, streams events, answers, cancels and 
       { ok: true, value: { runId: "r1" } },
     ],
   );
-  assertEquals(log, ['start grammar-check w1 check {"input":1,"files":[]}']);
+  assertEquals(log, ['start grammar-check w1 check {"input":1,"files":[],"model":null}']);
   assertEquals((await answer(await agentRuns("start", { agent: "x", input: 1, files: [] })))[1], {
     ok: false,
     error: { is: "not-started", message: "No agent" },

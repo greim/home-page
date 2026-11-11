@@ -19,6 +19,7 @@ import {
   type WidgetManifest,
 } from "../src/common/widgets.ts";
 import { defaultInputTraits, riskyCombination } from "../src/common/agent-capabilities.ts";
+import { isSelectableModel } from "../src/common/agent-models.ts";
 import {
   bundledSharedPackages,
   dynamicRequireMarker,
@@ -248,6 +249,25 @@ const capabilityProblem = (
 };
 
 /**
+ * Why an agent's selectable `models` aren't valid, or null if they are: every model
+ * offered must be one the app knows (agent-models.ts), and the default `model`, if set,
+ * must be among the models offered, so a run never falls back to a model not on offer.
+ */
+const modelsProblem = (name: string, agent: WidgetAgent): string | null => {
+  const models = agent.models ?? [];
+  if (models.length === 0) return null;
+  const unknown = models.find((m) => !isSelectableModel(m));
+  if (unknown !== undefined) {
+    return `its agent "${name}" offers the model "${unknown}", which isn't one the app knows ` +
+      `(see src/common/agent-models.ts)`;
+  }
+  if (agent.model !== undefined && !models.includes(agent.model)) {
+    return `its agent "${name}"'s default model "${agent.model}" isn't among the models it offers`;
+  }
+  return null;
+};
+
+/**
  * A manifest's agents as the registry has them. What a widget sends its agents goes to
  * Anthropic, so a widget with agents must say so under `permissions`; and each agent's
  * capabilities must pass the checks in `capabilityProblem`.
@@ -268,7 +288,8 @@ export const agentEntries = (
     }
     const services = (manifest.permissions?.services ?? []).map((s) => s.name);
     for (const [name, agent] of agents) {
-      const problem = capabilityProblem(name, agent, services, hasAgentTools);
+      const problem = capabilityProblem(name, agent, services, hasAgentTools) ??
+        modelsProblem(name, agent);
       if (problem !== null) return yield* Effect.fail(problem);
     }
     const entries = yield* Effect.forEach(agents, ([name, agent]) =>
@@ -278,6 +299,7 @@ export const agentEntries = (
           instructions: agent.instructions,
           outputSchema: JSONSchema.make(agent.output),
           model: agent.model ?? null,
+          models: agent.models ?? [],
           maxTurns: agent.maxTurns,
           maxBudgetUsd: agent.maxBudgetUsd,
           maxMinutes: agent.maxMinutes ?? defaultMaxMinutes,

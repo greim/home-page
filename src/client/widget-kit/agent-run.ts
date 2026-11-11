@@ -151,7 +151,12 @@ export const useAgentRun = <A, I>(agentName: string, output: Schema.Schema<A, I>
     }
   }, [runs, output]);
 
-  const start = useCallback(async (input: AgentInput, files: ReadonlyArray<File> = []) => {
+  const start = useCallback(async (
+    input: AgentInput,
+    files: ReadonlyArray<File> = [],
+    // A model to run under, for an agent whose manifest offers a choice; its default otherwise.
+    model: string | null = null,
+  ) => {
     reading.current?.abort();
     const controller = new AbortController();
     reading.current = controller;
@@ -159,6 +164,7 @@ export const useAgentRun = <A, I>(agentName: string, output: Schema.Schema<A, I>
     const started = await runs.start({
       agent: agentName,
       input,
+      model,
       files: await Promise.all(
         files.map(async (f) => ({ name: f.name, base64: await fileBase64(f) })),
       ),

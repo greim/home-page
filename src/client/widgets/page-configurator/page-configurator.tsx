@@ -175,7 +175,9 @@ function ChangeCard(props: {
 
 const layoutFile = "layout.json";
 
-export function PageConfiguratorFullScreen({ widgetId }: FullScreenProps<PageConfiguratorConfig>) {
+export function PageConfiguratorFullScreen(
+  { widgetId, config }: FullScreenProps<PageConfiguratorConfig>,
+) {
   const layouts = useWidgetApi(layoutApi);
   const run = useAgentRun("configure", ConfiguratorAnswer);
   const [conversation, setConversation] = useConversation(widgetId);
@@ -207,7 +209,7 @@ export function PageConfiguratorFullScreen({ widgetId }: FullScreenProps<PageCon
       return;
     }
     base.current = live.value;
-    await run.start(input, [new File([layoutFileText(live.value)], layoutFile)]);
+    await run.start(input, [new File([layoutFileText(live.value)], layoutFile)], config.model);
   };
 
   // What's typed in the column is sent as soon as the view shows; if it's busy, or has a

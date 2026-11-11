@@ -29,11 +29,11 @@ export const agentRunsServed: ServedApi<WidgetAgentRuns> = serve<
   typeof agentRunsApi,
   WidgetAgentRuns
 >(agentRunsApi, {
-  run: ({ agent, input }, caller) =>
+  run: ({ agent, input, model }, caller) =>
     Effect.flatMap(
       WidgetAgentRuns,
       (runs) =>
-        Effect.map(runs.runToEnd(caller, agent, input), (outcome) =>
+        Effect.map(runs.runToEnd(caller, agent, input, model), (outcome) =>
           outcome.ok
             ? { ok: true, value: { output: outcome.output, costUsd: outcome.costUsd } } as const
             // 502s are the agent's own failures; anything else kept it from starting.
@@ -45,11 +45,11 @@ export const agentRunsServed: ServedApi<WidgetAgentRuns> = serve<
               },
             } as const),
     ),
-  start: ({ agent, input, files }, caller) =>
+  start: ({ agent, input, files, model }, caller) =>
     Effect.flatMap(
       WidgetAgentRuns,
       (runs) =>
-        Effect.map(runs.start(caller, agent, { input, files }), (started) =>
+        Effect.map(runs.start(caller, agent, { input, files, model }), (started) =>
           started.ok
             ? { ok: true, value: { runId: started.runId } } as const
             : { ok: false, error: { is: "not-started", message: started.message } } as const),
