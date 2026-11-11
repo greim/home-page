@@ -264,46 +264,66 @@ function Entry(props: { entry: ChatEntry; assistant: Assistant }) {
   }
 }
 
-/** The conversation so far, following its end while the user is there. */
+/**
+ * The conversation so far. It opens at its end and, while the user is there, stays
+ * there: whenever the view or what's in it changes size (new output, a block opening,
+ * the window being laid out or resized), not just when entries arrive. Scrolling up
+ * lets go; scrolling back to the end takes hold again.
+ */
 function Transcript(props: { chat: Chat; assistant: Assistant }) {
   const { chat } = props;
   const scroller = useRef<HTMLDivElement>(null);
-  // Whether the view is at (or near) the end, so new output should keep it there.
+  const content = useRef<HTMLDivElement>(null);
+  // Whether the view is at (or near) the end, so it should stay there.
   const atEnd = useRef(true);
   useEffect(() => {
     const el = scroller.current;
-    if (el !== null && atEnd.current) el.scrollTop = el.scrollHeight;
-  }, [chat.entries, chat.draft, chat.busy]);
+    const inner = content.current;
+    if (el === null || inner === null) return;
+    const pin = () => {
+      if (atEnd.current) el.scrollTop = el.scrollHeight;
+    };
+    const observer = new ResizeObserver(pin);
+    observer.observe(el);
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <Stack
+    <Box
       ref={scroller}
       flex="1"
       minH="0"
       overflowY="auto"
-      px="4"
-      py="3"
-      gap="3"
       onScroll={(e) => {
         const el = e.currentTarget;
+        // A view with no size yet (not laid out) counts as at the end.
         atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
       }}
     >
-      {chat.entries.length === 0 && (
-        <Text fontSize="sm" color="fg.muted">
-          This is Claude Code, working in your home page's repo, with your own settings and skills.
-          Ask it to change your page (“add a column of news bookmarks”), write a new kind of widget,
-          fix a bug, or commit your work.
-        </Text>
-      )}
-      {chat.entries.map((entry, i) => <Entry key={i} entry={entry} assistant={props.assistant} />)}
-      {chat.draft !== "" && <MarkdownText text={chat.draft} />}
-      {chat.busy && chat.draft === "" && !waitingOnUser(chat) && (
-        <HStack gap="2" fontSize="sm" color="fg.muted">
-          <Spinner size="xs" /> Working…
-        </HStack>
-      )}
-    </Stack>
+      <Stack ref={content} px="4" py="3" gap="3">
+        {chat.entries.length === 0 && (
+          <Text fontSize="sm" color="fg.muted">
+            This is Claude Code, working in your home page's repo, with your own settings and
+            skills. Ask it to change your page (“add a column of news bookmarks”), write a new kind
+            of widget, fix a bug, or commit your work.
+          </Text>
+        )}
+        {chat.entries.map((entry, i) => (
+          <Entry
+            key={i}
+            entry={entry}
+            assistant={props.assistant}
+          />
+        ))}
+        {chat.draft !== "" && <MarkdownText text={chat.draft} />}
+        {chat.busy && chat.draft === "" && !waitingOnUser(chat) && (
+          <HStack gap="2" fontSize="sm" color="fg.muted">
+            <Spinner size="xs" /> Working…
+          </HStack>
+        )}
+      </Stack>
+    </Box>
   );
 }
 
