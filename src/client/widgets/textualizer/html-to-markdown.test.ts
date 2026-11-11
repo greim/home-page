@@ -152,6 +152,14 @@ Deno.test("a list nested straight inside a list belongs to the item before it", 
   assertEquals(md(h("ul", h("style", "x"))), "");
 });
 
+Deno.test("keeps text put loose in a list, not in an item", () => {
+  assertEquals(
+    md(h("ul", "Customers can now, see ", h("a", { href: "https://x.test/" }, "here"))),
+    "Customers can now, see [here](https://x.test/)",
+  );
+  assertEquals(md(h("ul", h("li", "a"), "loose after")), "- a\n  loose after");
+});
+
 Deno.test("keeps buttons' text, as in this page's bookmark headings", () => {
   assertEquals(
     md(

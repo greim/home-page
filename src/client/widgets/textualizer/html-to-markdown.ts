@@ -174,20 +174,29 @@ const list = (el: HtmlElement): ReadonlyArray<Block> => {
   let n = Number.isNaN(start) ? 1 : start;
   let previousMarker = "- ";
   const lines: Array<string> = [];
+  // Content not in an item (a list nested straight inside a list, or text put
+  // loose in the list, which some pages do): it belongs to the item before it.
+  const loose: Array<HtmlNode> = [];
+  const flushLoose = () => {
+    const content = joinBlocks(blocks(loose), true);
+    loose.length = 0;
+    if (content === "") return;
+    const nested = " ".repeat(previousMarker.length) + indent(content, previousMarker.length);
+    lines.push(lines.length === 0 ? content : nested);
+  };
   for (const child of el.children) {
-    if (!isElement(child) || skippedTags.has(child.tag)) continue;
-    const content = joinBlocks(child.tag === "li" ? blocks(child.children) : blocks([child]), true);
-    if (child.tag !== "li") {
-      // Not an item (e.g. a list nested straight inside a list): it belongs to the item before.
-      if (content === "") continue;
-      const nested = " ".repeat(previousMarker.length) + indent(content, previousMarker.length);
-      lines.push(lines.length === 0 ? content : nested);
+    if (isElement(child) && skippedTags.has(child.tag)) continue;
+    if (!isElement(child) || child.tag !== "li") {
+      loose.push(child);
       continue;
     }
+    flushLoose();
+    const content = joinBlocks(blocks(child.children), true);
     const marker = ordered ? `${n++}. ` : "- ";
     previousMarker = marker;
     lines.push(content === "" ? marker.trimEnd() : marker + indent(content, marker.length));
   }
+  flushLoose();
   return lines.length === 0 ? [] : [{ is: "list", text: lines.join("\n") }];
 };
 
