@@ -41,13 +41,14 @@ const workdayIcon = (is: WorkdayState["is"]): ReactNode => {
 const fillTransition = "2s ease-in-out";
 
 /**
- * The bar's fill: the column's own color, lighter and more vivid so it stands
- * out from the column. A gray column (e.g. at night) gives a gray fill. Before
- * the column sets its color, the default column color stands in.
+ * The bar's fill: the column's own color, at its own chroma and hue but
+ * lighter, so it stands out from the column yet matches it. A gray column
+ * (e.g. at night) gives a gray fill. Before the column sets its color, the
+ * default column color stands in.
  */
 const fillColor = `oklch(from var(${columnBackgroundVar}, ${
   columnColorCss(defaultColumnColor)
-}) calc(l + 0.085) min(calc(c * 6), calc(c + 0.08)) h)`;
+}) calc(l + 0.085) c h)`;
 
 /** Diagonal stripes, one tile of which repeats; the animation rolls them one tile along. */
 const stripeTile = "2rem";
