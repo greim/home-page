@@ -69,11 +69,13 @@ config (`claude mcp add`); its credentials stay there.
 ### Letting the user pick the model
 
 To let the user choose which model an agent runs under, list the choices in the agent's `models`
-(IDs from `src/common/agent-models.ts`, which also gives their labels); `model` stays the default and
-must be one of them. Store the chosen ID in the widget's config (a `model` field), show a picker in
-the editor (see `page-configurator`), and pass it when starting the run: `run.start(input, files,
-config.model)` or `check(input, config.model)`. The server runs only a model the agent's `models`
-lists, so a run can never ask for any other; an agent with no `models` has its model fixed.
+(IDs from `src/common/agent-models.ts`, which also gives their labels); `model` stays the default
+and must be one of them. Store the chosen ID in the widget's config (a `model` field), show a picker
+in the editor (see `page-configurator`), and pass it when starting the run:
+`run.start(input, files,
+config.model)` or `check(input, config.model)`. The server runs only a
+model the agent's `models` lists, so a run can never ask for any other; an agent with no `models`
+has its model fixed.
 
 ### The rule: no automatic way out for private data near untrusted content
 

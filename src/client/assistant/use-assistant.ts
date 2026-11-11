@@ -56,8 +56,17 @@ export const browserChatStorage: ChatStorage = {
   },
 };
 
-/** The page as the user sees it, for the agent to look at; null if that fails. */
-const screenshot = () => {
+/** Resolves once the browser has painted what's been rendered so far. */
+const afterPaint = () =>
+  new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+
+/**
+ * The page as the user sees it, for the agent to look at; null if that fails. Taking it
+ * keeps the main thread busy for a while, so it waits until the page has painted (the
+ * user's message shown and the box cleared) before starting.
+ */
+const screenshot = async () => {
+  await afterPaint();
   const surface = document.getElementById(screenshotRootId);
   return Effect.runPromise(
     surface === null ? Effect.succeed(null) : captureScreenshot(surface).pipe(

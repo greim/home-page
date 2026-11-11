@@ -474,7 +474,7 @@ function Composer(props: { assistant: Assistant; commands: ReadonlyArray<Command
         />
         {chat.busy
           ? (
-            <Button size="sm" colorPalette="red" variant="subtle" onClick={props.assistant.stop}>
+            <Button size="sm" variant="subtle" onClick={props.assistant.stop}>
               <LuCircleStop /> Stop
             </Button>
           )

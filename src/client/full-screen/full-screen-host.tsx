@@ -270,7 +270,11 @@ export function FullScreenHost(props: {
                 maxH={`calc(100dvh - 2 * ${modalMargin})`}
                 my="0"
                 overflow="hidden"
-                ref={(content: HTMLDivElement | null) => content?.append(slot)}
+                // Only once: moving the slot again (as this runs on every render, e.g. when
+                // the tab comes back into view) would reset the scroll of everything in it.
+                ref={(content: HTMLDivElement | null) => {
+                  if (content !== null && slot.parentNode !== content) content.append(slot);
+                }}
               >
                 <span ref={focusStart} tabIndex={-1} />
               </Dialog.Content>
