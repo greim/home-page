@@ -29,7 +29,10 @@ page on demand. The `micro-frontends` skill explains how that works. This skill 
 6. **Write `main.tsx`**: the editor, and the `registerMfe` call. If the widget needs more room than
    a column gives, add a `full-screen` view too (see "Full-screen views" in the `micro-frontends`
    skill), and say how big it opens with the manifest's `fullScreen`, unless it needs the whole
-   window.
+   window. Even then, don't leave the column view as just an "Open" button: it's what users see
+   every time they look at the page. Put something useful there: summary data (counts, the latest
+   item, a status), a mini-map or preview of what the full-screen view shows, or the inputs to start
+   the task right from the column. There's almost always something worth showing.
 7. **Run `deno task build`**: check, lint, test (90% coverage), then the widget build. Fix anything
    it reports. The widget build alone is `deno task build-widgets`.
 8. **Add it to the layout.** Developers do it in admin mode (the column editor's "Add widget"). The
