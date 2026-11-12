@@ -76,6 +76,9 @@
     "hast-util-to-html": "npm:hast-util-to-html@9.0.5",
     "hast-util-to-jsx-runtime": "npm:hast-util-to-jsx-runtime@2.3.7",
     "hast": "npm:@types/hast@3.0.5",
-    "diff": "npm:diff@8.0.4"
+    "diff": "npm:diff@8.0.4",
+    "fast-xml-parser": "npm:fast-xml-parser@5.11.2",
+    "sanitize-html": "npm:sanitize-html@2.18.1",
+    "@types/sanitize-html": "npm:@types/sanitize-html@2.16.1"
   }
 }

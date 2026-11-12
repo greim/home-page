@@ -168,6 +168,7 @@ const harness = (options: {
     writeLayoutTempFile: (text) => Effect.sync(() => void (files.temp = text)),
     commitLayoutTempFile: Effect.sync(() => void (files.stored = files.temp)),
     readWidgetFile: () => Effect.die("unused"),
+    httpGet: () => Effect.die("unused"),
   });
 
   /** A fresh assistant over these pipes. */

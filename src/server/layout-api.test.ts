@@ -25,6 +25,7 @@ const store = (stored: string | null, failWrites = false) => {
       disk.stored = disk.temp;
     }),
     readWidgetFile: () => Effect.die("unused"),
+    httpGet: () => Effect.die("unused"),
   });
   return { disk, io };
 };

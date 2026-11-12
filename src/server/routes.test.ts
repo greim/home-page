@@ -40,6 +40,7 @@ const noIo = ServerIo.of({
   writeLayoutTempFile: () => unused,
   commitLayoutTempFile: unused,
   readWidgetFile: () => unused,
+  httpGet: () => unused,
 });
 
 const run = (req: HttpRequest, io = noIo): Promise<HttpResponse> =>

@@ -29,6 +29,7 @@ const serverIo = ServerIo.of({
   ),
   readWidgetFile: () =>
     Effect.fail(new IoError({ cause: "The assistant service serves no widgets" })),
+  httpGet: () => Effect.fail(new IoError({ cause: "The assistant service reads no feeds" })),
 });
 
 const toHttpRequest = (request: Request): HttpRequest => ({

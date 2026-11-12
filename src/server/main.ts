@@ -5,12 +5,65 @@
 import { Effect } from "effect";
 import { bundleClient, BundlerIo, BundlerIoLive } from "../../tooling/bundle-client.ts";
 import { config } from "./config.ts";
-import { type HttpRequest, type HttpResponse, IoError, ServerIo } from "./http.ts";
+import {
+  type Bytes,
+  type HttpGot,
+  type HttpRequest,
+  type HttpResponse,
+  IoError,
+  maxHttpGetBytes,
+  ServerIo,
+} from "./http.ts";
 import { handle } from "./routes.ts";
+import { ttlCache } from "./ttl-cache.ts";
 
 /** Wraps a promise-returning call as an Effect that fails with IoError. */
 const attempt = <A>(fn: () => Promise<A>) =>
   Effect.tryPromise({ try: fn, catch: (cause) => new IoError({ cause }) });
+
+/** A body, read up to `max` bytes: null if there's more. */
+const readCapped = async (body: ReadableStream<Uint8Array> | null, max: number) => {
+  if (body === null) return new Uint8Array(0);
+  const chunks: Array<Uint8Array> = [];
+  let size = 0;
+  for await (const chunk of body) {
+    size += chunk.length;
+    if (size > max) {
+      await body.cancel();
+      return null;
+    }
+    chunks.push(chunk);
+  }
+  const all: Bytes = new Uint8Array(size);
+  let at = 0;
+  for (const chunk of chunks) {
+    all.set(chunk, at);
+    at += chunk.length;
+  }
+  return all;
+};
+
+/** One GET, not following redirects, given 15 seconds. */
+const get = async (url: string): Promise<HttpGot> => {
+  const response = await fetch(url, {
+    redirect: "manual",
+    signal: AbortSignal.timeout(15_000),
+    headers: {
+      "user-agent": "home-page-feeds/1",
+      accept: "application/rss+xml, application/atom+xml, application/feed+json, " +
+        "application/xml;q=0.9, text/xml;q=0.9, application/json;q=0.8, */*;q=0.5",
+    },
+  });
+  return {
+    status: response.status,
+    location: response.headers.get("location"),
+    contentType: response.headers.get("content-type"),
+    body: await readCapped(response.body, maxHttpGetBytes),
+  };
+};
+
+// Every widget and tab showing a feed asks for it; this asks its site once in five minutes.
+const cachedGet = ttlCache<HttpGot>(5 * 60_000, 200);
 
 const io = ServerIo.of({
   readLayoutFile: Effect.tryPromise({
@@ -27,6 +80,7 @@ const io = ServerIo.of({
     catch: (cause) => new IoError({ cause }),
   }),
   readWidgetFile: (path) => attempt(() => Deno.readFile(`${config.widgetsOutDir}/${path}`)),
+  httpGet: (url) => attempt(() => cachedGet(url, () => get(url))),
 });
 
 const toHttpRequest = (request: Request): HttpRequest => ({

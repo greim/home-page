@@ -26,8 +26,26 @@ export class ServerIo extends Context.Tag("ServerIo")<
     readonly commitLayoutTempFile: Effect.Effect<void, IoError>;
     /** Reads a file from the widget build's output, by its path there. */
     readonly readWidgetFile: (path: string) => Effect.Effect<Bytes, IoError>;
+    /**
+     * GETs a URL from the web (for the feeds API), without following redirects.
+     * Fails when it can't be reached; its answer may be cached for a few minutes.
+     */
+    readonly httpGet: (url: string) => Effect.Effect<HttpGot, IoError>;
   }
 >() {}
+
+/** What a URL answered with. */
+export type HttpGot = {
+  readonly status: number;
+  /** The Location header (a redirect's target), as given. */
+  readonly location: string | null;
+  readonly contentType: string | null;
+  /** The body, or null when it was more than the most read (see maxHttpGetBytes). */
+  readonly body: Bytes | null;
+};
+
+/** The most of a body httpGet reads. */
+export const maxHttpGetBytes = 5_000_000;
 
 export type Asset = {
   readonly contentType: string;

@@ -127,6 +127,8 @@ that account. Other accounts on the same Mac get a certificate warning if they o
   - **Copyable snippets**, such as shell commands or special characters.
   - **A clock**.
   - **A workday bar** showing how far you are through your working week.
+  - **A news feed** (RSS, Atom or JSON Feed), showing its latest headlines. Click one to read the
+    story on the page, when the feed includes it.
   - **A grammar checker**, which has Claude check a block of text and suggest fixes.
   - **A web researcher**, which has Claude research a topic on the web and write a short report with
     sources, asking you before it reads each page.

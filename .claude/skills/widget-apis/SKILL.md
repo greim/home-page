@@ -47,6 +47,7 @@ page doesn't mount a widget's views until the user agrees to its outside service
 | ------------ | --------- | --------------------------------------------------------------- |
 | `agent-runs` | assistant | Runs the widget's own AI agents (see the `widget-agents` skill) |
 | `layout`     | main      | Reads the page's layout, and applies a new one (see below)      |
+| `feeds`      | main      | Reads an RSS, Atom or JSON Feed (see below)                     |
 
 `src/common/apis/all.ts` lists them.
 
@@ -58,6 +59,14 @@ applied through it (`src/client/layout-applied.ts`) and shows it at once, so its
 from it. It's powerful: a widget that declares it can rewrite the whole page, so let the user see
 and confirm a change before applying it. A widget with `agents` gets `agent-runs` without declaring
 it; the kit's `useAgentRun` and `useWidgetAgent` are built on it.
+
+The `feeds` API's `read({ feedUrl, limit })` fetches a feed on the server (few allow cross-origin
+requests), follows redirects to http(s) URLs only, and answers with it parsed: plain-text titles,
+absolute links, an icon, and each item's body as sanitized HTML. It answers only with feeds, never
+the raw text of what answered, so it can't be used to read other pages. Fetches are cached for five
+minutes, across every widget and tab. Render a body as a checked tree, not with
+`dangerouslySetInnerHTML` (the lint forbids it): see `widgets/rss-feed/story-tree.ts`. The RSS feed
+widget uses it.
 
 ## Using one in a widget
 

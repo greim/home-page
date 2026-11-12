@@ -19,6 +19,7 @@ import { assistantPortMetaName } from "../common/assistant.ts";
 import { widgetAssetsPath } from "../common/widgets.ts";
 import { importMap } from "../common/shared-modules.ts";
 import { serveWidgetFile } from "./widget-files.ts";
+import { feedsServed } from "./feeds-api.ts";
 import { layoutServed } from "./layout-api.ts";
 import { handleWidgetApis, isWidgetApiRequest, type ServedApi } from "./widget-api-routes.ts";
 
@@ -26,7 +27,7 @@ import { handleWidgetApis, isWidgetApiRequest, type ServedApi } from "./widget-a
  * The widget APIs this server serves (the assistant service serves its own). Add an
  * API's `serve(...)` here. See the `widget-apis` skill.
  */
-const widgetApis: ReadonlyArray<ServedApi<ServerIo>> = [layoutServed];
+const widgetApis: ReadonlyArray<ServedApi<ServerIo>> = [layoutServed, feedsServed];
 
 /** File name the bundler gives the client entry point (src/client/main.tsx). */
 export const clientScript = "main.js";
