@@ -17,7 +17,8 @@ import { RssFeed } from "./rss-feed.tsx";
 function RssFeedEditor({ config, reportDraft }: EditorProps<RssFeedConfig>) {
   const [url, setUrl] = useState(config.feedUrl);
   const [count, setCount] = useState(String(config.count));
-  const report = (nextUrl: string, nextCount: string) => {
+  const [heading, setHeading] = useState(config.heading);
+  const report = (nextUrl: string, nextCount: string, nextHeading: string) => {
     const checked = checkFeedUrl(nextUrl);
     const n = Number(nextCount);
     if (!checked.ok) return reportDraft({ ok: false, errorMessage: checked.errorMessage });
@@ -27,10 +28,13 @@ function RssFeedEditor({ config, reportDraft }: EditorProps<RssFeedConfig>) {
         errorMessage: `Show between 1 and ${maxCount} headlines.`,
       });
     }
-    reportDraft({ ok: true, config: { feedUrl: checked.url, count: n } });
+    reportDraft({
+      ok: true,
+      config: { feedUrl: checked.url, count: n, heading: nextHeading.trim() },
+    });
   };
   // Report on open too, even with nothing changed, or Save can't apply it.
-  useEffect(() => report(url, count), []);
+  useEffect(() => report(url, count, heading), []);
   return (
     <Stack gap="4">
       <Box>
@@ -41,11 +45,27 @@ function RssFeedEditor({ config, reportDraft }: EditorProps<RssFeedConfig>) {
           placeholder="https://example.com/feed.xml"
           onChange={(e) => {
             setUrl(e.target.value);
-            report(e.target.value, count);
+            report(e.target.value, count, heading);
           }}
         />
         <Text fontSize="xs" color="fg.muted" mt="1">
           The feed's own address (RSS, Atom or JSON Feed), not its site's home page.
+        </Text>
+      </Box>
+      <Box>
+        <Label>Heading</Label>
+        <Input
+          size="sm"
+          value={heading}
+          placeholder="The feed's own title"
+          onChange={(e) => {
+            setHeading(e.target.value);
+            report(url, count, e.target.value);
+          }}
+        />
+        <Text fontSize="xs" color="fg.muted" mt="1">
+          Shown in place of the feed's title, still linked to its site. Leave it blank for the
+          feed's title.
         </Text>
       </Box>
       <Box>
@@ -59,7 +79,7 @@ function RssFeedEditor({ config, reportDraft }: EditorProps<RssFeedConfig>) {
           value={count}
           onChange={(e) => {
             setCount(e.target.value);
-            report(url, e.target.value);
+            report(url, e.target.value, heading);
           }}
         />
       </Box>

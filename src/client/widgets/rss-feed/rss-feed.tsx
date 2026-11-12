@@ -49,8 +49,8 @@ const row = {
   pe: "1rem",
   py: "calc(0.1rem + 0.1em)",
   // A little more room inside the list's top and bottom edges.
-  _first: { pt: "calc(0.1rem + 0.25em)" },
-  _last: { pb: "calc(0.1rem + 0.25em)" },
+  _first: { pt: "calc(0.1rem + 0.45em)" },
+  _last: { pb: "calc(0.1rem + 0.45em)" },
   // Between rows, a groove: a dark line, then a light one right below it.
   _notLast: { borderBottom: darkLine },
   "& + &": { borderTop: lightLine },
@@ -117,18 +117,22 @@ function Headline(props: { item: FeedItem; now: Date; onRead: () => void }) {
 export function RssFeed({ config, widgetId, openFullScreen }: WidgetProps<RssFeedConfig>) {
   const state = useFeed(config.feedUrl, config.count);
   const now = useNow();
-  const heading = (title: string, link: string | null) => (
-    <chakra.h3 {...widgetHeading} display="flex" alignItems="center" gap="0.35em">
-      <chakra.span display="flex" flex="none" aria-hidden>
-        <LuRss />
-      </chakra.span>
-      <chakra.span minW="0" truncate>
-        {link === null
-          ? title
-          : <Link {...plainLink} href={link} target="_blank" rel="noreferrer">{title}</Link>}
-      </chakra.span>
-    </chakra.h3>
-  );
+  // A heading of its own, if it has one, stands in for the feed's title.
+  const heading = (feedTitle: string, link: string | null) => {
+    const title = config.heading === "" ? feedTitle : config.heading;
+    return (
+      <chakra.h3 {...widgetHeading} display="flex" alignItems="center" gap="0.35em">
+        <chakra.span display="flex" flex="none" aria-hidden>
+          <LuRss />
+        </chakra.span>
+        <chakra.span minW="0" truncate>
+          {link === null
+            ? title
+            : <Link {...plainLink} href={link} target="_blank" rel="noreferrer">{title}</Link>}
+        </chakra.span>
+      </chakra.h3>
+    );
+  };
   switch (state.is) {
     case "unset":
       return (

@@ -8,9 +8,10 @@ export const manifest = defineManifest({
     "opens it to read full screen. Settings: feedUrl, the feed's own URL, not its site's home " +
     'page (a site\'s page names its feed in a <link rel="alternate" ' +
     'type="application/rss+xml"> or "application/atom+xml" tag; /feed, /rss and /feed.xml are ' +
-    `common); and count, how many headlines to show (1 to ${maxCount}).`,
+    `common); count, how many headlines to show (1 to ${maxCount}); and heading, shown in place ` +
+    "of the feed's own title (still linked to its site), blank for the feed's title.",
   config: RssFeedConfig,
-  defaultConfig: { feedUrl: "", count: 10 },
+  defaultConfig: { feedUrl: "", count: 10, heading: "" },
   apis: ["feeds"],
   fullScreen: { width: 52, height: "full" },
   // Its headlines end in an edge of their own.
