@@ -184,6 +184,8 @@ The config is saved in `data/layout.json`, which the assistant reads. Never put 
 - Size in `rem` and `em`, never `px` except hairlines (`viewport-relative-design` skill).
 - The page draws no heading or card. Draw your own heading with `widgetHeading`, from a `heading`
   config field (admin mode also names the widget by it).
+- The page draws a rule between widgets. If yours ends in an edge of its own (a full-width list with
+  its own bottom line, say), set `ruleBelow: false` in the manifest to leave out the rule under it.
 
 ## Limits
 

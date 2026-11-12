@@ -4,7 +4,7 @@ import type { Widget } from "../common/model.ts";
 import { adminButton } from "./admin-button.ts";
 import { useBoard } from "./board-context.ts";
 import { MfeView } from "./mfe/mfe-view.tsx";
-import { widgetSection } from "./surface.ts";
+import { noRuleBelowAttribute, widgetSection } from "./surface.ts";
 import {
   fullScreenViewName,
   type FullScreenViewProps,
@@ -97,6 +97,7 @@ export function WidgetCard(props: { columnId: string; widget: Widget }) {
   return (
     <Box
       {...widgetSection}
+      {...(type?.ruleBelow === false ? { [noRuleBelowAttribute]: "" } : {})}
       {...adminButton(admin, `Edit widget ${name}`)}
       onClick={admin
         ? (e) => {

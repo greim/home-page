@@ -144,6 +144,9 @@ export const columnHeadingBand = {
   boxShadow: "0 1px 0 rgba(255, 255, 255, 0.25), 0 0 2rem rgba(255, 255, 255, 0.15)",
 } as const;
 
+/** Marks a widget's section when the page draws no rule below it. */
+export const noRuleBelowAttribute = "data-no-rule-below";
+
 /**
  * Each widget in a column: a section, divided from the one above it by a groove
  * (a light line over a dark one) that runs the column's full width. The first
@@ -157,6 +160,8 @@ export const widgetSection = {
   borderTop: "1px solid rgba(255, 255, 255, 0.25)",
   boxShadow: "0 -1px 0 rgba(0, 0, 0, 0.3)",
   _first: { mt: "0", pt: "0", borderTop: "none", boxShadow: "none" },
+  // Below a widget that ends in an edge of its own (its manifest's `ruleBelow: false`).
+  [`[${noRuleBelowAttribute}] + &`]: { borderTop: "none", boxShadow: "none" },
 } as const;
 
 /** Text style for a widget's own heading (e.g. bookmarks'), for widgets that have one. */

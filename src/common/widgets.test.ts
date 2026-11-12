@@ -73,6 +73,7 @@ Deno.test("widgetBundleUrl versions the URL from the registry", () => {
       agents: {},
       apis: [],
       fullScreen: { width: "full", height: "full" },
+      ruleBelow: true,
     }],
   };
   assertEquals(

@@ -189,6 +189,7 @@ const buildOne = (
         agents,
         apis,
         fullScreen: manifest.right.fullScreen ?? defaultFullScreenSize,
+        ruleBelow: manifest.right.ruleBelow ?? true,
       },
       files: [
         [bundle, script.contents] as const,

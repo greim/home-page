@@ -13,4 +13,6 @@ export const manifest = defineManifest({
   defaultConfig: { feedUrl: "", count: 10 },
   apis: ["feeds"],
   fullScreen: { width: 52, height: "full" },
+  // Its headlines end in an edge of their own.
+  ruleBelow: false,
 });

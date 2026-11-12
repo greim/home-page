@@ -535,6 +535,20 @@ Deno.test("the registry carries a widget's full-screen size: the whole window un
   assertEquals(sizes({ width: 5, height: "fit" }), "no registry");
 });
 
+Deno.test("the registry says whether a rule is drawn below a widget: yes unless it says", () => {
+  const rules = (ruleBelow: unknown) => {
+    const world = worldWith(["clock"]);
+    world.modules.set("/src/clock/manifest.ts", {
+      manifest: ruleBelow === null ? manifest : { ...manifest, ruleBelow },
+    });
+    const registry = run(world).disk.get("/dist/widgets.next/registry.json");
+    return registry === undefined ? "no registry" : JSON.parse(registry).widgets[0]?.ruleBelow;
+  };
+  assertEquals(rules(null), true);
+  assertEquals(rules(false), false);
+  assertEquals(rules("no"), "no registry");
+});
+
 Deno.test("the registry carries a widget's APIs", () => {
   const world = worldWith(["clock"]);
   world.modules.set("/src/clock/manifest.ts", {

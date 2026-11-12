@@ -113,6 +113,11 @@ export type WidgetManifest<A, I> = {
    * give a narrower one when the view doesn't need it.
    */
   readonly fullScreen?: FullScreenSize;
+  /**
+   * False when the widget ends in an edge of its own (a list sunk into the column,
+   * say), so the page draws no rule between it and the widget below. True if left out.
+   */
+  readonly ruleBelow?: boolean;
 };
 
 /** Declares a manifest, checking its shape. */
@@ -154,6 +159,7 @@ const ManifestModule = Schema.Struct({
     ),
     apis: Schema.optionalWith(Schema.Array(Schema.String), { exact: true }),
     fullScreen: Schema.optionalWith(FullScreenSize, { exact: true }),
+    ruleBelow: Schema.optionalWith(Schema.Boolean, { exact: true }),
   }),
 });
 
@@ -209,6 +215,8 @@ export const RegistryEntry = Schema.Struct({
   apis: Schema.optionalWith(Schema.Array(Schema.String), { default: () => [] }),
   /** How big its full-screen view opens. */
   fullScreen: Schema.optionalWith(FullScreenSize, { default: () => defaultFullScreenSize }),
+  /** Whether the page draws a rule between it and the widget below it. */
+  ruleBelow: Schema.optionalWith(Schema.Boolean, { default: () => true }),
 });
 export type RegistryEntry = typeof RegistryEntry.Type;
 

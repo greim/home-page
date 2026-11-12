@@ -189,6 +189,9 @@ Build views with `src/client/widget-kit/`, not with bare components:
 - The page draws no heading. A widget that wants one draws it from its config, conventionally a
   `heading` string (which admin mode also names the widget by), styled with `widgetHeading` from
   `src/client/surface.ts` so headings match.
+- The page draws a rule (a groove) between widgets in a column. A widget that ends in an edge of its
+  own, like the RSS feed's sunk list of headlines, says `ruleBelow: false` in its manifest, and the
+  page leaves out the rule under it (the space stays). It can't drop the rule above it.
 
 ### Full-screen views
 
