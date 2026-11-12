@@ -5,7 +5,7 @@
  * it's the link.
  */
 import { chakra, Link, Text } from "@chakra-ui/react";
-import { LuExternalLink, LuRss } from "react-icons/lu";
+import { LuExternalLink, LuRefreshCw, LuRss } from "react-icons/lu";
 import type { FeedItem } from "../../../common/apis/feeds.ts";
 import { surface, widgetHeading } from "../../surface.ts";
 import { useNow } from "../../widget-kit/now.ts";
@@ -115,7 +115,7 @@ function Headline(props: { item: FeedItem; now: Date; onRead: () => void }) {
 }
 
 export function RssFeed({ config, widgetId, openFullScreen }: WidgetProps<RssFeedConfig>) {
-  const state = useFeed(config.feedUrl, config.count);
+  const { state, refresh, refreshing } = useFeed(config.feedUrl, config.count);
   const now = useNow();
   // A heading of its own, if it has one, stands in for the feed's title.
   const heading = (feedTitle: string, link: string | null) => {
@@ -125,11 +125,36 @@ export function RssFeed({ config, widgetId, openFullScreen }: WidgetProps<RssFee
         <chakra.span display="flex" flex="none" aria-hidden>
           <LuRss />
         </chakra.span>
-        <chakra.span minW="0" truncate>
+        {/* One line: a long title ends in an ellipsis. */}
+        <chakra.span flex="1" minW="0" truncate title={title}>
           {link === null
             ? title
             : <Link {...plainLink} href={link} target="_blank" rel="noreferrer">{title}</Link>}
         </chakra.span>
+        {state.is !== "unset" && (
+          <chakra.button
+            type="button"
+            onClick={refresh}
+            disabled={refreshing}
+            aria-label="Refresh the feed"
+            title="Refresh"
+            flex="none"
+            display="flex"
+            ms="0.3em"
+            color="inherit"
+            bg="transparent"
+            border="none"
+            p="0"
+            cursor="pointer"
+            opacity={0.6}
+            _hover={{ opacity: 1 }}
+            _disabled={{ cursor: "default", opacity: 0.6 }}
+          >
+            <chakra.span display="flex" animation={refreshing ? "spin 1s linear infinite" : "none"}>
+              <LuRefreshCw />
+            </chakra.span>
+          </chakra.button>
+        )}
       </chakra.h3>
     );
   };

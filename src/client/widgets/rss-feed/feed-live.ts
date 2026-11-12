@@ -3,36 +3,55 @@
  * handing the item clicked to the full-screen reader. Both views run in this bundle,
  * so the handoff is just memory, kept per widget until the page reloads.
  */
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { type FeedItem, feedsApi } from "../../../common/apis/feeds.ts";
 import { useWidgetApi } from "../../widget-kit/apis.tsx";
 import { type FeedState, nextState, refreshMs } from "./feed-view.ts";
 
-/** The feed at `feedUrl`, read now and every `refreshMs` after, while it shows. */
-export const useFeed = (feedUrl: string, count: number): FeedState => {
+/** The feed, how to read it again now, and whether a read is under way. */
+export type LiveFeed = {
+  readonly state: FeedState;
+  readonly refresh: () => void;
+  readonly refreshing: boolean;
+};
+
+/** The feed at `feedUrl`, read now and every `refreshMs` after while it shows, or on `refresh`. */
+export const useFeed = (feedUrl: string, count: number): LiveFeed => {
   const feeds = useWidgetApi(feedsApi);
   const [state, setState] = useState<FeedState>(
     feedUrl === "" ? { is: "unset" } : { is: "loading" },
   );
+  const [refreshing, setRefreshing] = useState(false);
+  const readNow = useRef<() => void>(() => {});
   useEffect(() => {
     if (feedUrl === "") {
       setState({ is: "unset" });
+      readNow.current = () => {};
       return;
     }
     setState({ is: "loading" });
     const stop = new AbortController();
+    let timer = 0;
+    // Reads it, then again `refreshMs` after: a manual refresh restarts the wait.
     const read = async () => {
+      clearTimeout(timer);
+      setRefreshing(true);
       const result = await feeds.read({ feedUrl, limit: count }, { signal: stop.signal });
-      if (!stop.signal.aborted) setState((prev) => nextState(prev, result));
+      if (stop.signal.aborted) return;
+      setState((prev) => nextState(prev, result));
+      setRefreshing(false);
+      timer = setTimeout(() => void read(), refreshMs);
     };
+    readNow.current = () => void read();
     void read();
-    const timer = setInterval(() => void read(), refreshMs);
     return () => {
       stop.abort();
-      clearInterval(timer);
+      clearTimeout(timer);
+      setRefreshing(false);
     };
   }, [feeds, feedUrl, count]);
-  return state;
+  const refresh = useCallback(() => readNow.current(), []);
+  return { state, refresh, refreshing };
 };
 
 const reading = new Map<string, FeedItem>();
