@@ -6,7 +6,6 @@ import { gapToIndex } from "../common/arrays.ts";
 import type { Column } from "../common/model.ts";
 import { useBoard } from "./board-context.ts";
 import {
-  columnsPerView,
   type DropTarget,
   inView,
   nearestGap,
@@ -40,7 +39,7 @@ type Spacing = {
   readonly outsideShift: string;
 };
 
-const spacingFor = (admin: boolean): Spacing => {
+const spacingFor = (admin: boolean, columnsPerView: number): Spacing => {
   const thumbGap = admin ? gap : `(${gap} / 2)`;
   return {
     thumbGap,
@@ -348,13 +347,14 @@ export function ColumnNavigator(props: {
   slots: ReadonlyArray<Slot>;
   columnCount: number;
   offset: number;
+  columnsPerView: number;
   onSlide: (offset: number) => void;
   /** Adds a column before the column at `index` (or at the end). */
   onAdd: (index: number) => void;
 }) {
   const { admin, dispatch } = useBoard();
-  const { offset, slots, columnCount } = props;
-  const { thumbGap, viewWidth, outsideShift } = spacingFor(admin);
+  const { offset, slots, columnCount, columnsPerView } = props;
+  const { thumbGap, viewWidth, outsideShift } = spacingFor(admin, columnsPerView);
   const [drag, setDrag] = useState<Drag | null>(null);
   const row = useRef<HTMLDivElement>(null);
   const targeted = (gap: number) => drag?.gap === gap;
@@ -423,7 +423,7 @@ export function ColumnNavigator(props: {
           </Box>
         )}
         {slots.map((slot, i) => {
-          const side = sideOf(offset, i);
+          const side = sideOf(offset, i, columnsPerView);
           const prev = i === 0 ? undefined : slots.at(i - 1);
           return (
             <Place
@@ -437,9 +437,9 @@ export function ColumnNavigator(props: {
                   gap={slot.index}
                   // The space between this thumbnail and the one before it.
                   space={`(${thumbGap} + ${
-                    sideShift(side) - sideShift(sideOf(offset, i - 1))
+                    sideShift(side) - sideShift(sideOf(offset, i - 1, columnsPerView))
                   } * ${outsideShift})`}
-                  onOutline={side !== sideOf(offset, i - 1)}
+                  onOutline={side !== sideOf(offset, i - 1, columnsPerView)}
                   targeted={targeted(slot.index)}
                   onClick={() => props.onAdd(slot.index)}
                 />
@@ -449,9 +449,9 @@ export function ColumnNavigator(props: {
                   <ColumnThumbnail
                     column={slot.column}
                     admin={admin}
-                    visible={inView(offset, i)}
+                    visible={inView(offset, i, columnsPerView)}
                     moveHandle={moveHandle(slot.column, slot.index)}
-                    onClick={() => props.onSlide(revealOffset(offset, i))}
+                    onClick={() => props.onSlide(revealOffset(offset, i, columnsPerView))}
                     onDelete={() =>
                       confirm(`Delete "${slot.column.heading}" and all its widgets?`) &&
                       dispatch({ is: "remove-column", columnId: slot.column.id })}
@@ -477,12 +477,13 @@ export function ColumnNavigator(props: {
           );
         })}
         {admin && endsWithColumn && (
-          <Place side={sideOf(offset, slots.length)} shift={outsideShift}>
+          <Place side={sideOf(offset, slots.length, columnsPerView)} shift={outsideShift}>
             <AddThumbnail
               label="Add column at end"
               gap={columnCount}
               targeted={targeted(columnCount)}
-              onClick={() => props.onAdd(columnCount)}
+              onClick={() =>
+                props.onAdd(columnCount)}
             />
           </Place>
         )}

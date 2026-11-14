@@ -1,19 +1,25 @@
 ---
 name: viewport-relative-design
-description: This app's viewport-relative design (root font size 1vw, everything sized in rem so the page scales with window width) and its one exception, px hairlines. Use when writing any CSS, styles or Chakra props, sizing an element, or building a widget's UI.
+description: This app's adaptable viewport-relative design (layout regimes: a whole number of columns per window width, root font size a fixed fraction of the width within each regime, everything sized in rem) and its one exception, px hairlines. Use when writing any CSS, styles or Chakra props, sizing an element, or building a widget's UI.
 ---
 
-# Viewport-relative design
+# Adaptable viewport-relative design
 
-The whole page scales with the width of the window, text included. Resizing the window enlarges or
-shrinks everything uniformly, so text never re-wraps and a layout looks the same at every width.
+Within a layout regime the whole page scales with the width of the window, text included, so text
+never re-wraps and the layout looks the same at every width in that regime. Crossing a regime
+boundary changes the number of columns and the size of `1rem`.
 
 ## How it works
 
-The root font size is `1vw` (`rootFontSize` in `src/client/surface.ts`), so `1rem` is 16px (the
-browser default) in a window 1600px wide. Chakra is built with this root in
-`src/client/chakra-system.ts` (`makeSystem`), and the shell and every widget bundle make their
-system from it.
+A regime is a range of window widths showing a whole number of columns (`src/client/regimes.ts`). A
+column is 24rem and a gap 1rem, so `n` columns span `25n + 1` rem. The root font size is
+`calc(100vw / (25n + 1))`, set per regime by media queries (`regimeRootFontSizes`, used by
+`makeSystem` in `src/client/chakra-system.ts`; the shell and every widget bundle make their system
+from it). At `500n + 20` px wide (the middle of the regime) columns are 480px, gaps 20px and `1rem`
+is 20px. Boundaries sit midway between neighbouring optimal widths (770px, 1270px, 1770px, ...), up
+to 12 columns. `useColumnsPerView` re-reads the regime on resize; the carousel functions take
+`columnsPerView` as an argument. Browser zoom works: zooming in narrows the CSS viewport, which
+moves it to a regime with fewer columns.
 
 Chakra v3 sizes its own spacing, sizes, font sizes, line heights and radii in rem, so its components
 (buttons, inputs, menus) scale with no overrides. react-icons default to `1em`, so icons follow the
@@ -29,7 +35,7 @@ effect.
   fine where they mean what you want.
 - **Never** use `px`, `pt` or other absolute units for widths, heights, padding, margins, gaps, font
   sizes, radii, positions or the blur and offset of a shadow that occupies visual space.
-- Think in the 1600px reference: a design at 24px is `1.5rem`.
+- Think in the 20px reference (`1rem` at the middle of a regime): a design at 30px is `1.5rem`.
 - Put shared page lengths in `surface` in `src/client/surface.ts` instead of repeating literals.
 - Set `line-height` unitless (e.g. `textSpacing` in `surface.ts`), never in rem or %.
 
@@ -52,7 +58,5 @@ about 8px). Borders and rings are hairlines and are fine. If a shadow, blur or g
 doesn't scale, override it: shadows and blurs through theme tokens, gutters with
 `positioning={{ gutter }}`.
 
-## Known caveat
-
-With the root font size in `vw`, browser zoom has almost no effect. If zoom ever matters, add a user
-scale factor, e.g. `calc(1vw * var(--user-scale))`.
+The picture-in-picture window is the exception to regimes: it uses a fixed 16px root
+(`windowRootFontSize`) and reflows instead of scaling.

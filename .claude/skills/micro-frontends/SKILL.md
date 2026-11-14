@@ -225,9 +225,10 @@ the assistant, the settings and the column editor.
   window's). Give one when the view doesn't need the whole window: a chat or a single form is hard
   to read stretched across it. The grammar checker (72, full) and the page configurator (52, full)
   do. It's the modal's starting size in a PiP window too.
-- **Sizing inside it.** The modal is the page's: 1rem is 1vw. In a PiP window, 1rem is the browser's
-  default 16px, and the view reflows as the window is resized. So lay a full-screen view out to
-  reflow (flex, grid, wrapping), not to fixed widths.
+- **Sizing inside it.** The modal is the page's: 1rem is a fixed fraction of the window's width
+  within the current layout regime. In a PiP window, 1rem is the browser's default 16px, and the
+  view reflows as the window is resized. So lay a full-screen view out to reflow (flex, grid,
+  wrapping), not to fixed widths.
 
 Anything relying on being inside a column doesn't work in a full-screen view: `--column-background`
 and the column's text color aren't there. It's drawn in the page's normal light or dark colors.

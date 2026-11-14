@@ -3,11 +3,17 @@
  * from this, so a widget's Chakra tokens and styles match the shell's.
  */
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
-import { rootFontSize } from "./surface.ts";
+import { regimeRootFontSizes } from "./regimes.ts";
 
 /**
- * By default, viewport-relative design: every rem (Chakra's included) scales with the
- * window's width. A separate window (the assistant's) passes its own root size instead.
+ * By default, adaptable viewport-relative design: every rem (Chakra's included) scales with
+ * the window's width within a layout regime (see regimes.ts). A separate window (the
+ * assistant's) passes its own fixed root size instead.
  */
-export const makeSystem = (root: string = rootFontSize) =>
-  createSystem(defaultConfig, defineConfig({ globalCss: { html: { fontSize: root } } }));
+export const makeSystem = (root?: string) =>
+  createSystem(
+    defaultConfig,
+    defineConfig({
+      globalCss: { html: root === undefined ? regimeRootFontSizes() : { fontSize: root } },
+    }),
+  );

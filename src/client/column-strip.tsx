@@ -5,7 +5,6 @@ import { adminModeKey, useBoard } from "./board-context.ts";
 import { adminButtonStyles } from "./admin-button.ts";
 import {
   carousel,
-  columnsPerView,
   frameHeight,
   leadingColumnId,
   offsetOfColumn,
@@ -16,6 +15,8 @@ import {
 import { ColumnNavigator, navigatorHeight } from "./column-navigator.tsx";
 import { AddColumnSlot, ColumnView } from "./column-view.tsx";
 import { randomIcon } from "./icon-set.ts";
+import { columnRem } from "./regimes.ts";
+import { useColumnsPerView } from "./use-columns-per-view.ts";
 import { screenshotRootId } from "./screenshot.ts";
 import { Starfield } from "./starfield-view.tsx";
 import {
@@ -42,8 +43,11 @@ const belowHint = `(${hint.bottom} + ${hint.paddingY})`;
  */
 const bottomGap = `calc(2 * ${belowHint} + ${hint.fontSize})`;
 
-/** Width of one column: the view's width, minus the gaps between columns, split evenly. */
-const slotWidth = `calc((100% - ${columnsPerView - 1} * ${gap}) / ${columnsPerView})`;
+/**
+ * Width of one column. The layout regime's root font size (see regimes.ts) is chosen so
+ * exactly this many columns, with their gaps, fill the view.
+ */
+const slotWidth = `${columnRem}rem`;
 
 /** Where the column at the left edge of the view is remembered, so a reload keeps the view. */
 const leadingColumnKey = "home-page.leading-column";
@@ -78,9 +82,10 @@ export function ColumnStrip(props: {
   adminBar: ReactNode;
 }) {
   const { admin, dispatch, night, nightPace } = useBoard();
-  const slots = stripSlots(props.columns, admin);
+  const columnsPerView = useColumnsPerView();
+  const slots = stripSlots(props.columns, admin, columnsPerView);
   const [rawOffset, setOffset] = useState(() => offsetOfColumn(loadLeadingColumn(), slots));
-  const view = carousel(rawOffset, slots);
+  const view = carousel(rawOffset, slots, columnsPerView);
   const leadingId = leadingColumnId(view.offset, slots);
   useEffect(() => storeLeadingColumn(leadingId), [leadingId]);
   // When columns are removed, the view slides left to stay full. Keep that as the
@@ -97,7 +102,7 @@ export function ColumnStrip(props: {
     setNewColumnId(column.id);
     // The navigator only adds columns in admin mode, where every column has a
     // slot, so the new column's slot index is its column index.
-    setOffset(revealOffset(view.offset, index));
+    setOffset(revealOffset(view.offset, index, columnsPerView));
   };
 
   // Columns hang from the top of the window. In admin mode they sit below the
@@ -181,6 +186,7 @@ export function ColumnStrip(props: {
           slots={slots}
           columnCount={props.columns.length}
           offset={view.offset}
+          columnsPerView={columnsPerView}
           onSlide={setOffset}
           onAdd={addColumn}
         />

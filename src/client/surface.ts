@@ -1,13 +1,10 @@
 import { type ColumnColor, columnColorCss } from "../common/column-color.ts";
+import { gapRem } from "./regimes.ts";
 import { columnBackgroundVar } from "./widget-kit/contract.ts";
 
-/**
- * The root font size, which every rem on the page is relative to. Tying it to
- * the viewport's width scales the whole page with the window, so text never
- * re-wraps as it resizes. At 1vw, 1rem is 16px (the browser default) in a
- * window 1600px wide. Everything else must be sized in rem (or em) to scale.
- */
-export const rootFontSize = "1vw";
+// The root font size, which every rem on the page is relative to, is set per layout
+// regime (see regimes.ts): within one, the page scales with the window's width, so text
+// never re-wraps as it resizes. Everything must be sized in rem (or em) to scale.
 
 /**
  * The root font size in a picture-in-picture window: the browser's default. A window
@@ -43,7 +40,7 @@ export const surface = {
    */
   ink: "var(--surface-ink)",
   /** Space around and between columns. */
-  gap: "1rem",
+  gap: `${gapRem}rem`,
   cornerRadius,
   /** Left/right padding inside each column. */
   columnPaddingX: "1.3rem",
