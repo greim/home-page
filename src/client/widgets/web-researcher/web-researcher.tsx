@@ -32,7 +32,7 @@ export function WebResearcher(
         mb="0.6rem"
         minH="5rem"
         aria-label="What to research on the web"
-        placeholder="What should it look into? e.g. What changed in Deno 2.9?"
+        placeholder="What do you want to learn about today?"
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
@@ -109,7 +109,7 @@ export function WebResearcherFullScreen({ widgetId }: FullScreenProps<WebResearc
           <Text fontWeight="medium" mb="2">What should it look into?</Text>
           <Textarea
             rows={4}
-            placeholder="e.g. What changed in Deno 2.9?"
+            placeholder="e.g. How does a transistor work?"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
           />
