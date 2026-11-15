@@ -8,20 +8,43 @@ import { LuGlobe, LuSearch } from "react-icons/lu";
 import { widgetHeading } from "../../surface.ts";
 import { useAgentRun } from "../../widget-kit/agent-run.ts";
 import { AgentRunPanel } from "../../widget-kit/agent-run-panel.tsx";
+import { TextBox } from "../../widget-kit/text-box.tsx";
+import { TextBoxButton } from "../../widget-kit/text-box-button.tsx";
 import type { FullScreenProps, WidgetProps } from "../../widget-kit/views.tsx";
+import { requestTopic, useTopicRequests } from "./request-live.ts";
 import { isWebLink, ResearchReport, siteOf, type WebResearcherConfig } from "./config.ts";
 
-export function WebResearcher({ config, openFullScreen }: WidgetProps<WebResearcherConfig>) {
+export function WebResearcher(
+  { config, widgetId, openFullScreen }: WidgetProps<WebResearcherConfig>,
+) {
   const heading = config.heading.trim();
+  const [text, setText] = useState("");
+  const go = () => {
+    const topic = text.trim();
+    if (topic !== "") requestTopic(widgetId, topic);
+    setText("");
+    openFullScreen();
+  };
   return (
     <>
       {heading !== "" && <chakra.h3 {...widgetHeading}>{heading}</chakra.h3>}
-      <Text fontSize="0.9rem" mb="0.6rem">
-        Research a topic on the web, and get a short report with sources.
-      </Text>
-      <Button size="sm" variant="outline" color="inherit" onClick={openFullScreen}>
-        <LuGlobe /> Research something
-      </Button>
+      <TextBox
+        mb="0.6rem"
+        minH="5rem"
+        aria-label="What to research on the web"
+        placeholder="What should it look into? e.g. What changed in Deno 2.9?"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            go();
+          }
+        }}
+      />
+      <TextBoxButton onClick={go}>
+        <LuGlobe /> {text.trim() === "" ? "Research something" : "Research it"}
+      </TextBoxButton>
     </>
   );
 }
@@ -67,10 +90,17 @@ function Report(props: { report: ResearchReport }) {
   );
 }
 
-export function WebResearcherFullScreen(_props: FullScreenProps<WebResearcherConfig>) {
+export function WebResearcherFullScreen({ widgetId }: FullScreenProps<WebResearcherConfig>) {
   const [topic, setTopic] = useState("");
   const run = useAgentRun("research", ResearchReport);
   const busy = run.view.is === "starting" || run.view.is === "running";
+
+  // A topic typed in the column starts the research as soon as the view shows; if it's
+  // busy, it goes in the box instead, to start when the user is ready.
+  useTopicRequests(widgetId, (asked) => {
+    setTopic(asked);
+    if (!busy) run.start({ topic: asked });
+  });
 
   return (
     <Box display="flex" h="full" w="full" bg="bg" color="fg">
