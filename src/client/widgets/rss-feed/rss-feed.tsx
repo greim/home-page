@@ -5,6 +5,7 @@
  * it's the link.
  */
 import { chakra, Link, Text } from "@chakra-ui/react";
+import { useState } from "react";
 import { LuExternalLink, LuRefreshCw, LuRss } from "react-icons/lu";
 import type { FeedItem } from "../../../common/apis/feeds.ts";
 import { surface, widgetHeading } from "../../surface.ts";
@@ -114,16 +115,32 @@ function Headline(props: { item: FeedItem; now: Date; onRead: () => void }) {
   );
 }
 
+/** The feed's own icon, or the generic feed icon when it has none or it won't load. */
+function FeedIcon({ src }: { src: string | null }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (src === null || src === failedSrc) return <LuRss />;
+  return (
+    <chakra.img
+      src={src}
+      alt=""
+      w="1em"
+      h="1em"
+      objectFit="contain"
+      onError={() => setFailedSrc(src)}
+    />
+  );
+}
+
 export function RssFeed({ config, widgetId, openFullScreen }: WidgetProps<RssFeedConfig>) {
   const { state, refresh, refreshing } = useFeed(config.feedUrl, config.count);
   const now = useNow();
   // A heading of its own, if it has one, stands in for the feed's title.
-  const heading = (feedTitle: string, link: string | null) => {
+  const heading = (feedTitle: string, link: string | null, icon: string | null = null) => {
     const title = config.heading === "" ? feedTitle : config.heading;
     return (
       <chakra.h3 {...widgetHeading} display="flex" alignItems="center" gap="0.35em">
         <chakra.span display="flex" flex="none" aria-hidden>
-          <LuRss />
+          <FeedIcon src={icon} />
         </chakra.span>
         {/* One line: a long title ends in an ellipsis. */}
         <chakra.span flex="1" minW="0" truncate title={title}>
@@ -186,7 +203,7 @@ export function RssFeed({ config, widgetId, openFullScreen }: WidgetProps<RssFee
       const { feed } = state;
       return (
         <>
-          {heading(feed.title, feed.link)}
+          {heading(feed.title, feed.link, feed.icon)}
           {state.stale !== null && (
             <Text fontSize="0.85em" opacity={0.7} mb="0.5rem">
               Not updated: {state.stale}
