@@ -31,7 +31,7 @@ function Clock({ schedule }: WidgetProps<ClockConfig>) {
       display="flex"
       alignItems="center"
       gap="0.6em"
-      // Sized to fit "2026 / Nov / 30 / 10:59 pm" on one line in a column.
+      // Sized to fit "2026 / Nov 30 / 10:59 pm" on one line in a column.
       fontSize="1.25rem"
       lineHeight="1.2"
       whiteSpace="nowrap"
