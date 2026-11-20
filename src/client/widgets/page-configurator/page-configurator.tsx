@@ -190,7 +190,6 @@ export function PageConfiguratorFullScreen(
   const base = useRef<Layout | null>(null);
   // The last run view taken in, so each run's end is taken in once.
   const handled = useRef<typeof run.view | null>(null);
-  const bottom = useRef<HTMLDivElement | null>(null);
 
   const busy = run.view.is === "starting" || run.view.is === "running";
   const note = useCallback(
@@ -264,11 +263,6 @@ export function PageConfiguratorFullScreen(
     });
   }, [run.view]);
 
-  // A block body: Chrome's scrollIntoView returns a promise, which React would take as a cleanup.
-  useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "end" });
-  }, [conversation, pending]);
-
   const apply = async (change: Pending) => {
     setApplying(true);
     const applied = await layouts.apply({ base: change.base, layout: change.layout });
@@ -304,8 +298,9 @@ export function PageConfiguratorFullScreen(
           New conversation
         </Button>
       </HStack>
-      <Box flex="1" minH="0" overflowY="auto" px="5" py="4">
-        <Stack maxW="48rem" mx="auto" gap="4">
+      <Box flex="1" minH="0" overflowY="auto" display="flex" flexDirection="column-reverse">
+        {/* column-reverse makes the browser keep the view pinned to the end, like a terminal. */}
+        <Stack maxW="48rem" w="full" mx="auto" px="5" py="4" gap="4" flexShrink="0" mb="auto">
           {conversation.entries.length === 0 && (
             <Text color="fg.muted" fontSize="sm">
               Ask for changes to your page: "add a column of news sites", "make the Music column
@@ -332,7 +327,6 @@ export function PageConfiguratorFullScreen(
               onDiscard={() => discard(pending)}
             />
           )}
-          <div ref={bottom} />
         </Stack>
       </Box>
       <Box borderTopWidth="1px" px="5" py="3">

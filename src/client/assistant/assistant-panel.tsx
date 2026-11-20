@@ -21,7 +21,7 @@ import {
   Textarea,
 } from "@chakra-ui/react";
 import { Either } from "effect";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LuCheck,
   LuCircleStop,
@@ -265,43 +265,16 @@ function Entry(props: { entry: ChatEntry; assistant: Assistant }) {
 }
 
 /**
- * The conversation so far. It opens at its end and, while the user is there, stays
- * there: whenever the view or what's in it changes size (new output, a block opening,
- * the window being laid out or resized), not just when entries arrive. Scrolling up
- * lets go; scrolling back to the end takes hold again.
+ * The conversation so far. The scroller is a column-reverse flex box, so the browser
+ * itself pins the view to the end while the user is there, and holds the view still
+ * once they scroll away, with no scripting to race the layout. Its one child sits at
+ * the bottom and, with auto margin, at the top when it's shorter than the view.
  */
 function Transcript(props: { chat: Chat; assistant: Assistant }) {
   const { chat } = props;
-  const scroller = useRef<HTMLDivElement>(null);
-  const content = useRef<HTMLDivElement>(null);
-  // Whether the view is at (or near) the end, so it should stay there.
-  const atEnd = useRef(true);
-  useEffect(() => {
-    const el = scroller.current;
-    const inner = content.current;
-    if (el === null || inner === null) return;
-    const pin = () => {
-      if (atEnd.current) el.scrollTop = el.scrollHeight;
-    };
-    const observer = new ResizeObserver(pin);
-    observer.observe(el);
-    observer.observe(inner);
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <Box
-      ref={scroller}
-      flex="1"
-      minH="0"
-      overflowY="auto"
-      onScroll={(e) => {
-        const el = e.currentTarget;
-        // A view with no size yet (not laid out) counts as at the end.
-        atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-      }}
-    >
-      <Stack ref={content} px="4" py="3" gap="3">
+    <Box flex="1" minH="0" overflowY="auto" display="flex" flexDirection="column-reverse">
+      <Stack px="4" py="3" gap="3" flexShrink="0" mb="auto">
         {chat.entries.length === 0 && (
           <Text fontSize="sm" color="fg.muted">
             This is Claude Code, working in your home page's repo, with your own settings and
