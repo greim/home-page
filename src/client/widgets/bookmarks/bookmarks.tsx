@@ -19,6 +19,7 @@ const marker = (content: string) => ({
   content: `"${content}"`,
   whiteSpace: "pre",
   flexShrink: 0,
+  fontFamily: "mono",
 });
 
 const topLevelLink = { _before: marker("▪ ") } as const;
@@ -73,7 +74,7 @@ export function Bookmarks(props: WidgetProps<BookmarksConfig>) {
             color="inherit"
             cursor="pointer"
             textAlign="start"
-            _before={{ content: open ? `"⏷ "` : `"⏵ "`, whiteSpace: "pre" }}
+            _before={{ content: open ? `"⏷ "` : `"⏵ "`, whiteSpace: "pre", fontFamily: "mono" }}
             aria-expanded={open}
             onClick={() => saveConfig(toggleCollapsed(config))}
           >

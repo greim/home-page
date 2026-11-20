@@ -99,24 +99,25 @@ export const night = {
 } as const;
 
 /**
- * Everything on the page is monospace. Chakra's fonts are CSS variables, so
- * pointing them at monospace restyles every use of them, in the shell and in
- * widgets alike. Dialogs and menus render outside the surface, so keep Chakra's
- * own fonts.
+ * The page's text is Google Sans (loaded by the page's HTML), and code,
+ * copyable text and the like are monospace, as the "mono" font. Chakra's fonts
+ * are CSS variables, so pointing them at these restyles every use of them, in
+ * the shell and in widgets alike. Dialogs and menus render outside the surface,
+ * so keep Chakra's own fonts.
  */
-const monospaceFonts = {
-  "--chakra-fonts-body": "monospace",
-  "--chakra-fonts-heading": "monospace",
+const pageFonts = {
+  "--chakra-fonts-body": '"Google Sans", sans-serif',
+  "--chakra-fonts-heading": '"Google Sans", sans-serif',
   "--chakra-fonts-mono": "monospace",
 } as const;
 
 /** Typography for the surface's root: inherited by everything on it. */
 export const pageTypography = {
   lineHeight: String(textSpacing),
-  fontFamily: "monospace",
-  ...monospaceFonts,
+  fontFamily: "body",
+  ...pageFonts,
   // Chakra's Theme (used by columns) declares all of Chakra's tokens afresh.
-  "& .chakra-theme": monospaceFonts,
+  "& .chakra-theme": pageFonts,
 } as const;
 
 /** Text style for column headings (also used while renaming one in admin mode). */

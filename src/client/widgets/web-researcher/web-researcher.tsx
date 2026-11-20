@@ -29,6 +29,7 @@ export function WebResearcher(
     <>
       {heading !== "" && <chakra.h3 {...widgetHeading}>{heading}</chakra.h3>}
       <TextBox
+        fontFamily="body"
         mb="0.6rem"
         minH="5rem"
         aria-label="What to research on the web"

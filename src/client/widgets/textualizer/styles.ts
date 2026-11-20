@@ -1,11 +1,9 @@
 /** How formatted content is styled, in the card's miniature preview and full screen. */
 
 /**
- * The card's preview, set in miniature so more of it fits in the box. Sans-serif,
- * unlike the rest of the page, so that `code` stands out in monospace.
+ * The card's preview, set in miniature so more of it fits in the box.
  */
 export const miniatureFont = {
-  fontFamily: 'system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif',
   fontSize: "0.62rem",
 } as const;
 

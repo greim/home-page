@@ -43,6 +43,7 @@ export function GrammarCheck(
     <>
       {heading !== "" && <chakra.h3 {...widgetHeading}>{heading}</chakra.h3>}
       <TextBox
+        fontFamily="body"
         mb="0.6rem"
         aria-label="Text to check"
         placeholder="Paste text to check its grammar, wording and readability"
