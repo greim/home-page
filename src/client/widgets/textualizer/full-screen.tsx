@@ -231,6 +231,11 @@ export function TextualizerFullScreen({ widgetId }: FullScreenProps<TextualizerC
     }
   }, [selection, tab]);
 
+  // Switching to the source puts the cursor in it (unless a selection is about to).
+  useEffect(() => {
+    if (tab === "source" && selection === null) sourceBox.current?.focus({ preventScroll: true });
+  }, [tab]);
+
   if (source === null) {
     return (
       <Center h="full" w="full" bg="bg" color="fg.muted" p="5">
