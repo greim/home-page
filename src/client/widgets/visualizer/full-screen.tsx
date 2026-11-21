@@ -15,12 +15,14 @@ import {
   Textarea,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { LuChevronLeft, LuChevronRight, LuSend, LuTrash2 } from "react-icons/lu";
+import { LuChevronDown, LuChevronLeft, LuChevronRight, LuSend, LuTrash2 } from "react-icons/lu";
 import type { FullScreenProps } from "../../widget-kit/views.tsx";
 import { ChartSvg } from "./chart-view.tsx";
 import { type Chart, describeData, type Entry, latest } from "./charts.ts";
 import type { VisualizerConfig } from "./config.ts";
+import { CopyFlash, CopyMenu, useCopy } from "./copy-menu.tsx";
 import { palette } from "./palette.ts";
+import { chartAspect } from "./spec.ts";
 import { deleteChart, showInCard, useCharts, useShownInCard, useWorking } from "./store-live.ts";
 import { useVisualize } from "./visualize-live.ts";
 
@@ -59,15 +61,15 @@ function ChartListItem(props: {
       {version !== null
         ? (
           <ChartSvg
-            svg={version.columnSvg}
+            svg={version.svg}
             label={chart.title}
-            aspectRatio="408 / 260"
+            aspectRatio={chartAspect}
             rounded="sm"
           />
         )
         : (
           <Box
-            aspectRatio="408 / 260"
+            aspectRatio={chartAspect}
             rounded="sm"
             bg={palette.surface}
             display="grid"
@@ -155,6 +157,7 @@ export function VisualizerFullScreen({ widgetId }: FullScreenProps<VisualizerCon
 
   const progress = chart === null ? undefined : working.get(chart.id);
   const version = chart?.versions.at(versionIndex) ?? null;
+  const { flash, copy } = useCopy(chart, version);
   const canSend = chart !== null && progress === undefined && message.trim() !== "";
 
   const send = () => {
@@ -198,6 +201,15 @@ export function VisualizerFullScreen({ widgetId }: FullScreenProps<VisualizerCon
               <Text fontSize="lg" fontWeight="medium" lineClamp={1}>{chart.title}</Text>
               <Text fontSize="sm" color="fg.muted">{describeData(chart.data)}</Text>
             </Box>
+            <CopyMenu
+              portalled={false}
+              onCopy={copy}
+              trigger={
+                <Button size="xs" variant="outline" disabled={version === null}>
+                  Copy as <LuChevronDown />
+                </Button>
+              }
+            />
             {versions > 1 && (
               <HStack gap="1">
                 <IconButton
@@ -224,11 +236,12 @@ export function VisualizerFullScreen({ widgetId }: FullScreenProps<VisualizerCon
           </HStack>
         )}
         <Box flex="1" minH="0" display="grid" placeItems="center" position="relative">
+          <CopyFlash flash={flash} />
           {version !== null && (
             <ChartSvg
-              svg={version.fullSvg}
+              svg={version.svg}
               label={chart?.title ?? "Chart"}
-              aspectRatio="960 / 600"
+              aspectRatio={chartAspect}
               w="full"
               maxH="full"
               maxW="calc((100vh - 8rem) * 1.6)"

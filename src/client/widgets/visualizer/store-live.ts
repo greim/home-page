@@ -1,8 +1,9 @@
 /**
  * Where the visualizer keeps its charts: in this browser's IndexedDB (dumps can be
  * megabytes, too big for localStorage), and in memory, shared by the widget's card
- * and its full-screen view (both run in this bundle). Also, in memory only: which
- * chart each card shows, and which charts an agent is working on.
+ * and its full-screen view (both run in this bundle). Also which chart each card shows
+ * (in localStorage, so a cleared card stays clear), and, in memory only, which charts
+ * an agent is working on.
  *
  * If the browser won't keep them, charts last until the page reloads.
  */
@@ -17,6 +18,40 @@ let charts: ReadonlyArray<Chart> = [];
 let loaded = false;
 /** Per widget: the chart its card shows, or null for an empty box. */
 const shown = new Map<string, string | null>();
+
+const shownKey = (widgetId: string) => `visualizer:${widgetId}:card`;
+
+/** A widget's card's chart: as chosen this session, or as kept; undefined if never chosen. */
+const shownIn = (widgetId: string): string | null | undefined => {
+  if (!shown.has(widgetId)) {
+    // Kept as the chart's ID, or "" for an empty box.
+    const kept = readKept(shownKey(widgetId));
+    if (kept !== null) shown.set(widgetId, kept === "" ? null : kept);
+  }
+  return shown.has(widgetId) ? shown.get(widgetId) : undefined;
+};
+
+const setShown = (widgetId: string, chartId: string | null): void => {
+  shown.set(widgetId, chartId);
+  keep(shownKey(widgetId), chartId ?? "");
+};
+
+/** localStorage, which may be unavailable or full: then the choice lasts the session. */
+const readKept = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const keep = (key: string, value: string): void => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Not kept: it lasts until the page reloads.
+  }
+};
 /** The charts an agent is working on, and what it last said it was doing. */
 let working: ReadonlyMap<string, string> = new Map();
 
@@ -53,6 +88,10 @@ const write = async (f: (store: IDBObjectStore) => IDBRequest): Promise<void> =>
     .catch(() => undefined);
 };
 
+/** A version's full-screen SVG, from when each was drawn at two sizes. */
+const oldFullSvg = (version: object): string =>
+  "fullSvg" in version && typeof version.fullSvg === "string" ? version.fullSvg : "";
+
 const load = async () => {
   if (loaded) return;
   loaded = true;
@@ -62,7 +101,15 @@ const load = async () => {
     opened.transaction(storeName).objectStore(storeName).getAll() as IDBRequest<Array<Chart>>,
   ).catch(() => []);
   const known = new Set(charts.map((c) => c.id));
-  charts = [...charts, ...stored.filter((c) => !known.has(c.id))];
+  // Charts kept before `original` and `image` were have neither.
+  const fresh = stored.filter((c) => !known.has(c.id)).map((c) => ({
+    ...c,
+    original: c.original ?? "",
+    image: c.image ?? null,
+    // Charts kept when each version was drawn twice: the full-screen drawing.
+    versions: c.versions.map((v) => ({ spec: v.spec, svg: v.svg ?? oldFullSvg(v) })),
+  }));
+  charts = [...charts, ...fresh];
   changed();
 };
 
@@ -83,14 +130,14 @@ export const updateChart = (id: string, f: (chart: Chart) => Chart): void => {
 
 export const deleteChart = (id: string): void => {
   charts = charts.filter((c) => c.id !== id);
-  for (const [widgetId, chartId] of shown) if (chartId === id) shown.set(widgetId, null);
+  for (const [widgetId, chartId] of shown) if (chartId === id) setShown(widgetId, null);
   changed();
   void write((store) => store.delete(id));
 };
 
 /** Shows a chart in a widget's card (null for the empty box). */
 export const showInCard = (widgetId: string, chartId: string | null): void => {
-  shown.set(widgetId, chartId);
+  setShown(widgetId, chartId);
   changed();
 };
 
@@ -124,7 +171,7 @@ export const useCharts = (widgetId: string): ReadonlyArray<Chart> => {
  * user hasn't chosen (the card shows the latest chart).
  */
 export const useShownInCard = (widgetId: string): string | null | undefined =>
-  useSyncExternalStore(subscribe, () => shown.has(widgetId) ? shown.get(widgetId) : undefined);
+  useSyncExternalStore(subscribe, () => shownIn(widgetId));
 
 /** The charts an agent is working on, with what it's doing. */
 export const useWorking = (): ReadonlyMap<string, string> =>

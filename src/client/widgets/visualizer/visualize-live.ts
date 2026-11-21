@@ -7,7 +7,15 @@
 import { Either, Schema } from "effect";
 import { useEffect, useRef } from "react";
 import { useAgentRun } from "../../widget-kit/agent-run.ts";
-import { type Chart, inputFor, rowsText, type Version, withAnswer, withEntry } from "./charts.ts";
+import {
+  type Chart,
+  imageName,
+  inputFor,
+  rowsText,
+  type Version,
+  withAnswer,
+  withEntry,
+} from "./charts.ts";
 import { VisualizeAnswer } from "./config.ts";
 import { type Rows, type Value } from "./data.ts";
 import { setWorking, updateChart } from "./store-live.ts";
@@ -73,17 +81,15 @@ export const useVisualize = () => {
     let version: Version | null = null;
     let rows: Rows | null = null;
     if (answer.rendered && files.includes("spec.json")) {
-      const [spec, columnSvg, fullSvg, data] = await Promise.all([
+      const [spec, svg, data] = await Promise.all([
         read(runId, "spec.json"),
-        read(runId, "column.svg"),
-        read(runId, "full.svg"),
+        read(runId, "chart.svg"),
         files.includes("data.json") ? read(runId, "data.json") : Promise.resolve(null),
       ]);
-      if (spec !== null && columnSvg !== null && fullSvg !== null) {
+      if (spec !== null && svg !== null) {
         version = {
           spec: Either.getOrNull(Schema.decodeEither(Schema.parseJson())(spec)),
-          columnSvg,
-          fullSvg,
+          svg,
         };
       }
       if (data !== null) {
@@ -109,6 +115,8 @@ export const useVisualize = () => {
     if (request !== "") updateChart(chart.id, (c) => withEntry(c, { is: "user", text: request }));
     const files = chart.data.is === "rows"
       ? [new File([rowsText(chart.data.rows)], "data.json", { type: "application/json" })]
+      : chart.data.is === "image" && chart.image !== null
+      ? [new File([chart.image], imageName(chart.data.type), { type: chart.data.type })]
       : [];
     void run.start(inputFor(chart, request, versionIndex), files);
   };

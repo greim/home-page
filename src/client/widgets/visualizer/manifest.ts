@@ -3,8 +3,8 @@ import { VisualizeAnswer, VisualizerConfig } from "./config.ts";
 
 const instructions = `You turn a data dump someone pasted into the chart that shows it best, and
 then refine it as they ask. You write Vega-Lite (v6) specs; the render_chart tool renders them in
-the page's own look, at two sizes: a small one for a narrow column (about 400 × 260) and a large
-one for full screen (about 960 × 600).
+the page's own look, at 960 × 600, and the page scales it: down to a thumbnail in a narrow
+column, or up to fill a full-screen view.
 
 You're given:
 - request: what the user asked for. Empty for a first chart: then choose the chart yourself.
@@ -12,6 +12,11 @@ You're given:
 - hasRows: whether in/data.json holds the data as rows. Call data_overview to see it.
 - text: when it couldn't be read as rows, the pasted text. Read the rows from it yourself, and
   pass them to render_chart as rows. If it holds nothing you can chart, say so and don't render.
+- image: when the data came as an image (a screenshot of a table or spreadsheet, or a chart),
+  its file name in in/. Look at it with the Read tool, read the data off it as rows, and pass
+  them to render_chart as rows. Copy values exactly as written, with their labels. Off a chart
+  with no values written on it, estimate them from its axes, and say in your reply that they're
+  estimates. If the image holds no data, say so and don't render.
 - current: when refining, the chart's spec and title so far. Change what's asked, keep the rest.
 - history: what you and the user said about this chart before.
 
@@ -41,9 +46,10 @@ shows and why you chose that form, or what you changed. Plain text, no Markdown.
 
 export const manifest = defineManifest({
   title: "Visualizer",
-  description: "A box to paste a data dump into (JSON, CSV or TSV, or a table copied from a web " +
-    "page or spreadsheet). Claude works out the chart that shows it best (bars, lines, pie, " +
-    "scatter, heatmap and so on), drawn in the page's style, and the box shows it. Full screen, " +
+  description: "A box to paste a data dump into (JSON, CSV or TSV, a table copied from a web " +
+    "page or spreadsheet, or a screenshot of a table or chart), or to type data or a " +
+    "description of it, with a request. Claude works out the chart that shows it best (bars, " +
+    "lines, pie, scatter, heatmap and so on), drawn in the page's style, and the box shows it. Full screen, " +
     "past charts can be browsed, deleted, and refined by asking in a chat. Charts are kept in " +
     "this browser. The setting is just a heading.",
   config: VisualizerConfig,
@@ -73,7 +79,7 @@ export const manifest = defineManifest({
         {
           use: "widget-tools",
           policy: "auto",
-          does: "Summarizes the data you pasted, and draws the chart from it",
+          does: "Summarizes the data you gave it, and draws the chart from it",
         },
       ],
     },

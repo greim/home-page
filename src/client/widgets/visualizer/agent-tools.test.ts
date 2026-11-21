@@ -20,8 +20,7 @@ Deno.test("the tools summarize the data and render the chart into out/", async (
   assertEquals(summary.rows, 2);
   const result = await tools.render_chart.run({ spec: bar }, folder);
   assertEquals(result, { rendered: true, rows: 2, warnings: [] });
-  assert((await Deno.readTextFile(folder.path("out/column.svg"))).startsWith("<svg"));
-  assert((await Deno.readTextFile(folder.path("out/full.svg"))).startsWith("<svg"));
+  assert((await Deno.readTextFile(folder.path("out/chart.svg"))).startsWith("<svg"));
   assertEquals(JSON.parse(await Deno.readTextFile(folder.path("out/spec.json"))), bar);
   await assertRejects(() => tools.render_chart.run({ spec: { mark: "image" } }, folder));
   // A spec sent as JSON text is parsed.

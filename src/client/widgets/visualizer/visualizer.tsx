@@ -1,11 +1,11 @@
 /**
- * The visualizer's card: a box to paste a data dump into. On a paste, its agent works
- * out a chart (the box shows it thinking), then the box shows the chart, with buttons
+ * The visualizer's card: a box to paste a data dump into, or type it (or describe it)
+ * with a request. On a paste into the empty box, or Chart it, its agent works out a chart (the box shows it thinking), then the box shows the chart, with buttons
  * to clear it and open it full screen, where past charts can be browsed and refined.
  */
 import { Box, chakra, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { type ClipboardEvent, type ReactNode, useState } from "react";
-import { LuMaximize2, LuSquare } from "react-icons/lu";
+import { LuChartColumn, LuChevronDown, LuMaximize2, LuSquare } from "react-icons/lu";
 import { codeTextShadow, widgetHeading } from "../../surface.ts";
 import { TextBox } from "../../widget-kit/text-box.tsx";
 import { TextBoxButton } from "../../widget-kit/text-box-button.tsx";
@@ -13,8 +13,10 @@ import type { WidgetProps } from "../../widget-kit/views.tsx";
 import { ChartSvg } from "./chart-view.tsx";
 import { type Chart, latest, newChart, tooBig } from "./charts.ts";
 import type { VisualizerConfig } from "./config.ts";
-import { type Clip, readDump } from "./data.ts";
+import { CopyFlash, CopyMenu, useCopy } from "./copy-menu.tsx";
+import { type Clip, type Dump, readDump, readTyped } from "./data.ts";
 import { palette } from "./palette.ts";
+import { chartAspect } from "./spec.ts";
 import {
   deleteChart,
   putChart,
@@ -25,8 +27,8 @@ import {
 } from "./store-live.ts";
 import { useVisualize } from "./visualize-live.ts";
 
-/** The box's height: a column chart's shape (408 × 260) at the column's width. */
-const boxAspect = "408 / 260";
+/** The box's height: a column chart's shape at the column's width. */
+const boxAspect = chartAspect;
 
 /** The cells of the first table in some HTML, if it has one. */
 const firstTable = (html: string): ReadonlyArray<ReadonlyArray<string>> | null => {
@@ -37,14 +39,25 @@ const firstTable = (html: string): ReadonlyArray<ReadonlyArray<string>> | null =
     .filter((row) => row.length > 0);
 };
 
-const clipOf = (event: ClipboardEvent): Clip => {
+/** What's on the clipboard, and the image file on it, if any. */
+const clipOf = (event: ClipboardEvent): { clip: Clip; image: File | null } => {
   const data = event.clipboardData;
+  const image = Array.from(data.items)
+    .find((item) => item.kind === "file" && item.type.startsWith("image/"))
+    ?.getAsFile() ?? null;
   return {
-    types: Array.from(data.types),
-    table: firstTable(data.getData("text/html")),
-    text: data.getData("text/plain"),
+    clip: {
+      types: Array.from(data.types),
+      table: firstTable(data.getData("text/html")),
+      text: data.getData("text/plain"),
+      imageType: image?.type ?? null,
+    },
+    image,
   };
 };
+
+const unsupported = "That can't be charted. Paste data as text or a table, or an image of " +
+  "it (PNG, JPEG, GIF or WebP).";
 
 /** A message (and buttons) in the middle of the box. */
 function Overlay(props: { children: ReactNode }) {
@@ -75,25 +88,59 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
   const working = useWorking();
   const agent = useVisualize();
   const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
   const chart = chosen === undefined
     ? charts.at(0) ?? null
     : charts.find((c) => c.id === chosen) ?? null;
   const progress = chart === null ? undefined : working.get(chart.id);
   const version = chart === null ? null : latest(chart);
+  const { flash, copy } = useCopy(chart, version);
 
-  const paste = (event: ClipboardEvent) => {
-    event.preventDefault();
-    const dump = readDump(clipOf(event));
-    if (dump === null) return;
-    const problem = tooBig(dump);
+  const start = (dump: Dump, original: string, request: string, image: Blob | null = null) => {
+    const problem = tooBig(dump, original, image);
     if (problem !== null) {
       setError(problem);
       return;
     }
-    const created = newChart(crypto.randomUUID(), widgetId, dump, Date.now());
+    const created = newChart({
+      id: crypto.randomUUID(),
+      widgetId,
+      data: dump,
+      original,
+      image,
+      now: Date.now(),
+    });
     putChart(created);
     showInCard(widgetId, created.id);
-    agent.visualize(created, "");
+    setDraft("");
+    agent.visualize(created, request);
+  };
+
+  // A paste into the empty box is charted at once. Into text already typed, it's just
+  // pasted, to chart with the rest; unless it's an image, which is charted at once, with
+  // what's typed as the request.
+  const paste = (event: ClipboardEvent) => {
+    const { clip, image } = clipOf(event);
+    const typed = draft.trim();
+    if (typed !== "") {
+      const dump = clip.text.trim() === "" ? readDump(clip) : null;
+      if (dump?.is !== "image") return;
+      event.preventDefault();
+      start(dump, "", typed, image);
+      return;
+    }
+    event.preventDefault();
+    const dump = readDump(clip);
+    if (dump === null) {
+      if (clip.types.length > 0) setError(unsupported);
+      return;
+    }
+    start(dump, dump.is === "image" ? "" : clip.text, "", dump.is === "image" ? image : null);
+  };
+
+  const chartTyped = () => {
+    const typed = readTyped(draft);
+    if (typed !== null) start(typed.dump, typed.original, typed.request);
   };
 
   const clear = () => {
@@ -116,11 +163,18 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
               aspectRatio={boxAspect}
               textShadow={codeTextShadow}
               spellCheck={false}
-              value=""
-              onChange={() => {}}
-              onDrop={(e) => e.preventDefault()}
-              placeholder="Paste data to chart: JSON, CSV, a table from a page or spreadsheet"
-              aria-label="Paste data here"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault();
+                  chartTyped();
+                }
+              }}
+              placeholder={"Paste data to chart: JSON, CSV, a table from a page or spreadsheet, " +
+                "or a screenshot of one. Or type it, or describe it, with what you'd like " +
+                "(⌘/Ctrl+Enter to chart)."}
+              aria-label="Data to chart"
               readOnly={error !== null}
               onPaste={paste}
             />
@@ -128,7 +182,7 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
           : version !== null && progress === undefined
           ? (
             <ChartSvg
-              svg={version.columnSvg}
+              svg={version.svg}
               label={chart.title}
               aspectRatio={boxAspect}
               borderRadius="0.2125rem"
@@ -163,6 +217,7 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
             <TextBoxButton size="xs" onClick={() => setError(null)}>OK</TextBoxButton>
           </Overlay>
         )}
+        <CopyFlash flash={flash} />
       </Box>
       {chart !== null && (
         <Text fontSize="0.8rem" mt="0.4rem" lineClamp={1} title={chart.title}>
@@ -170,7 +225,29 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
         </Text>
       )}
       <HStack mt="0.6rem" gap="0.5rem">
-        <TextBoxButton disabled={chart === null} onClick={clear}>Clear</TextBoxButton>
+        <TextBoxButton
+          disabled={chart === null && draft === ""}
+          onClick={chart === null ? () => setDraft("") : clear}
+        >
+          Clear
+        </TextBoxButton>
+        {chart === null
+          ? (
+            <TextBoxButton disabled={draft.trim() === ""} onClick={chartTyped}>
+              <LuChartColumn /> Chart it
+            </TextBoxButton>
+          )
+          : (
+            <CopyMenu
+              portalled
+              onCopy={copy}
+              trigger={
+                <TextBoxButton disabled={version === null}>
+                  Copy as <LuChevronDown />
+                </TextBoxButton>
+              }
+            />
+          )}
         <TextBoxButton ms="auto" disabled={charts.length === 0} onClick={openFullScreen}>
           <LuMaximize2 /> {charts.length > 1 ? `All charts (${charts.length})` : "Full screen"}
         </TextBoxButton>

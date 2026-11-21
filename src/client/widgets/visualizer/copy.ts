@@ -1,0 +1,65 @@
+/**
+ * What "Copy as" puts on the clipboard for a chart: a picture of it (PNG, made in the
+ * page: see copy-live.ts), its SVG, its Vega-Lite spec whole (data, size and look
+ * included, so it renders the same anywhere Vega-Lite does), or the data as pasted.
+ */
+import type { Chart, Version } from "./charts.ts";
+import { palette } from "./palette.ts";
+import { prepareSpec } from "./spec.ts";
+import { Either } from "effect";
+
+export const copyFormats = ["png", "svg", "vega-lite", "data"] as const;
+export type CopyFormat = (typeof copyFormats)[number];
+
+export const copyFormatLabels: Readonly<Record<CopyFormat, string>> = {
+  png: "PNG",
+  svg: "SVG",
+  "vega-lite": "Vega-Lite",
+  data: "Original data",
+};
+
+/** The chart's SVG, standing alone: on the charts' surface, as it's shown. */
+export const standaloneSvg = (svg: string): string =>
+  svg.replace(
+    /<svg\b[^>]*>/,
+    (open) => `${open}<rect width="100%" height="100%" fill="${palette.surface}"/>`,
+  );
+
+/** The version's spec, whole: its data inline, at the chart's size, in the widget's look. */
+export const standaloneSpec = (chart: Chart, version: Version): string => {
+  const prepared = Either.getOrElse(
+    prepareSpec(version.spec),
+    () => ({}) as Record<string, unknown>,
+  );
+  const values = chart.data.is === "rows" ? chart.data.rows : [];
+  const config = (prepared["config"] ?? {}) as Record<string, unknown>;
+  return JSON.stringify(
+    {
+      $schema: "https://vega.github.io/schema/vega-lite/v6.json",
+      title: chart.title,
+      ...prepared,
+      data: { values },
+      config: { ...config, background: palette.surface },
+    },
+    null,
+    2,
+  );
+};
+
+/**
+ * The data as it was pasted; as JSON rows (or the text) for charts kept before that
+ * was, and charts made from an image (whose image is copied instead, when there is one).
+ */
+export const originalData = (chart: Chart): string => {
+  if (chart.original !== "") return chart.original;
+  switch (chart.data.is) {
+    case "rows":
+      return JSON.stringify(chart.data.rows, null, 2);
+    case "text":
+      return chart.data.text;
+    case "image":
+      return "";
+    default:
+      return chart.data satisfies never;
+  }
+};

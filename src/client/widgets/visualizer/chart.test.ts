@@ -1,6 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { Either } from "effect";
-import { deepMerge, forbidden, isComposite, prepareSpec, renderChart } from "./chart.ts";
+import { renderChart } from "./chart.ts";
+import { deepMerge, forbidden, isComposite, prepareSpec } from "./spec.ts";
 
 const rows = [
   { month: "2024-01-01", sales: 3, region: "north" },
@@ -36,28 +37,25 @@ Deno.test("composite specs are recognized", () => {
   assert(!isComposite(bar));
 });
 
-Deno.test("a spec is prepared with the dump, the variant's size and the widget's look", () => {
+Deno.test("a spec is prepared with the dump, the chart's size and the widget's look", () => {
   const ok = Either.getOrThrow(
-    prepareSpec({ ...bar, title: "x", config: { axis: { grid: false } } }, "column"),
+    prepareSpec({ ...bar, title: "x", config: { axis: { grid: false } } }),
   );
-  assertEquals([ok["data"], ok["width"], ok["title"]], [{ name: "dump" }, 408, undefined]);
+  assertEquals([ok["data"], ok["width"], ok["title"]], [{ name: "dump" }, 960, undefined]);
   assertEquals((ok["config"] as { axis: { grid: boolean } }).axis.grid, false);
-  assertEquals("width" in Either.getOrThrow(prepareSpec({ facet: {}, spec: bar }, "full")), false);
-  assert(Either.isLeft(prepareSpec([], "full")));
+  assertEquals("width" in Either.getOrThrow(prepareSpec({ facet: {}, spec: bar })), false);
+  assert(Either.isLeft(prepareSpec([])));
 });
 
-Deno.test("a spec renders as SVG at each size, and a bad one says why", async () => {
-  const column = Either.getOrThrow(await renderChart(bar, rows, "column"));
-  assert(column.svg.startsWith("<svg"));
-  assert(column.svg.includes('width="408"'));
-  assert(column.svg.includes("north"));
-  const full = Either.getOrThrow(await renderChart(bar, rows, "full"));
-  assert(full.svg.includes('width="960"'));
+Deno.test("a spec renders as SVG at the chart's size, and a bad one says why", async () => {
+  const chart = Either.getOrThrow(await renderChart(bar, rows));
+  assert(chart.svg.startsWith("<svg"));
+  assert(chart.svg.includes('width="960"'));
+  assert(chart.svg.includes("north"));
   const bad = await renderChart(
     { mark: "bar", encoding: { x: { field: "a", type: "x" } } },
     rows,
-    "column",
   );
   assert(Either.isLeft(bad));
-  assert(Either.isLeft(await renderChart({ ...bar, data: { url: "a" } }, rows, "column")));
+  assert(Either.isLeft(await renderChart({ ...bar, data: { url: "a" } }, rows)));
 });

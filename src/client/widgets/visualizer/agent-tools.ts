@@ -1,7 +1,7 @@
 /**
  * The visualizer agent's own tools. They run in Deno, sandboxed to the run's folder
  * (see src/common/agent-tools.ts), never in the page: the user's data is in
- * in/data.json, and the chart goes in out/ (spec.json, column.svg, full.svg, and
+ * in/data.json, and the chart goes in out/ (spec.json, chart.svg, and
  * data.json when the agent read the rows from text itself).
  */
 import { Either, Schema } from "effect";
@@ -32,7 +32,9 @@ export const tools = defineAgentTools({
     input: Schema.Struct({}),
     run: async (_input, folder) => {
       const rows = await readRows(folder);
-      if (rows === null) throw new Error("There's no in/data.json: the data came as text.");
+      if (rows === null) {
+        throw new Error("There's no in/data.json: the data came as text or an image.");
+      }
       return overview(rows);
     },
   }),
@@ -41,36 +43,32 @@ export const tools = defineAgentTools({
       'it as the chart\'s new version. The data is always the dataset named "dump" (set for ' +
       "you); leave out data, title, width, height, autosize and colors' config. Returns what " +
       "Vega warned about; throws with Vega's message when the spec can't be rendered. Pass rows " +
-      "only when the data came as text and you read the rows from it yourself.",
+      "only when the data came as text or an image and you read the rows from it yourself.",
     input: Schema.Struct({
       // Typed as an object for the agent: with no type, it sends the spec as a JSON string.
       spec: Schema.Unknown.annotations({
         jsonSchema: { type: "object", description: "The Vega-Lite spec (v6), as a JSON object" },
       }),
       rows: Schema.optionalWith(RowsInput, { exact: true }).annotations({
-        description: "Rows you read from the text, when there's no in/data.json",
+        description: "Rows you read from the text or image, when there's no in/data.json",
       }),
     }),
     run: async ({ spec: sent, rows: given }, folder) => {
       const spec = specObject(sent);
       const rows = given ?? await readRows(folder);
       if (rows === null) {
-        throw new Error("There's no in/data.json: pass the rows you read from the text.");
+        throw new Error("There's no in/data.json: pass the rows you read from the text or image.");
       }
       if (rows.length > maxRows) throw new Error(`At most ${maxRows} rows can be charted.`);
-      const column = await renderChart(spec, rows, "column");
-      if (Either.isLeft(column)) throw new Error(column.left);
-      const full = await renderChart(spec, rows, "full");
-      if (Either.isLeft(full)) throw new Error(full.left);
+      const rendered = await renderChart(spec, rows);
+      if (Either.isLeft(rendered)) throw new Error(rendered.left);
       await Deno.mkdir(folder.path("out"), { recursive: true });
       await Deno.writeTextFile(folder.path("out/spec.json"), JSON.stringify(spec));
-      await Deno.writeTextFile(folder.path("out/column.svg"), column.right.svg);
-      await Deno.writeTextFile(folder.path("out/full.svg"), full.right.svg);
+      await Deno.writeTextFile(folder.path("out/chart.svg"), rendered.right.svg);
       if (given !== undefined) {
         await Deno.writeTextFile(folder.path("out/data.json"), JSON.stringify(given));
       }
-      const warnings = [...new Set([...column.right.warnings, ...full.right.warnings])];
-      return { rendered: true, rows: rows.length, warnings };
+      return { rendered: true, rows: rows.length, warnings: rendered.right.warnings };
     },
   }),
 });

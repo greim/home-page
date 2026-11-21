@@ -13,13 +13,27 @@ export type Rows = ReadonlyArray<Row>;
 /** What a paste came to. `format` names what it looked like, for the agent and the user. */
 export type Dump =
   | { readonly is: "rows"; readonly format: string; readonly rows: Rows }
-  | { readonly is: "text"; readonly format: string; readonly text: string };
+  | { readonly is: "text"; readonly format: string; readonly text: string }
+  /** An image (a screenshot of a table, say), for the agent to read; kept as the chart's `image`. */
+  | { readonly is: "image"; readonly format: string; readonly type: string };
 
-/** What was on the clipboard: its types, the first HTML table's cells (if any), and its text. */
+/**
+ * What was on the clipboard: its types, the first HTML table's cells (if any), its text,
+ * and the type of the image on it (if any, and one the agent can read).
+ */
 export type Clip = {
   readonly types: ReadonlyArray<string>;
   readonly table: ReadonlyArray<ReadonlyArray<string>> | null;
   readonly text: string;
+  readonly imageType: string | null;
+};
+
+/** The image types the agent can read, and what each is called. */
+export const imageFormats: Readonly<Record<string, string>> = {
+  "image/png": "a PNG image",
+  "image/jpeg": "a JPEG image",
+  "image/gif": "a GIF image",
+  "image/webp": "a WebP image",
 };
 
 /** The most rows kept: more than any chart can show, and small enough to send. */
@@ -122,20 +136,16 @@ const delimiters = [
 ] as const;
 
 /**
- * The delimiter the text is split by, if any: the first (tabs first) that splits most
- * of its lines into the same number of cells (two or more), over two lines or more.
+ * The delimiter the text is split by, if any: the first (tabs first) that splits every
+ * line into the same number of cells (two or more), over two lines or more. Strict, so
+ * prose with a comma or two isn't taken for CSV.
  */
-export const detectDelimiter = (text: string): (typeof delimiters)[number] | null => {
-  for (const d of delimiters) {
+export const detectDelimiter = (text: string): (typeof delimiters)[number] | null =>
+  delimiters.find((d) => {
     const rows = splitDelimited(text, d.char).filter((r) => r.some((c) => c.trim() !== ""));
-    if (rows.length < 2) continue;
-    const counts = new Map<number, number>();
-    for (const r of rows) counts.set(r.length, (counts.get(r.length) ?? 0) + 1);
-    const [width, often] = [...counts].sort((a, b) => b[1] - a[1]).at(0) ?? [0, 0];
-    if (width >= 2 && often / rows.length >= 0.8) return d;
-  }
-  return null;
-};
+    const width = rows.at(0)?.length ?? 0;
+    return rows.length >= 2 && width >= 2 && rows.every((r) => r.length === width);
+  }) ?? null;
 
 const isRecord = (u: unknown): u is Record<string, unknown> =>
   typeof u === "object" && u !== null && !Array.isArray(u);
@@ -206,29 +216,46 @@ export const jsonRows = (json: unknown): Rows | null => {
   return null;
 };
 
-/** What a paste comes to, using its types as a hint; null when there's nothing in it. */
+/** The rows text holds, as JSON or delimited text, and what it looked like; null if none. */
+const textRows = (
+  text: string,
+  types: ReadonlyArray<string>,
+): { readonly format: string; readonly rows: Rows | null } => {
+  if (text.startsWith("{") || text.startsWith("[") || types.includes("application/json")) {
+    const json = parseJson(text);
+    if (json.ok) {
+      const rows = jsonRows(json.value);
+      return { format: "JSON", rows: rows !== null && rows.length > 0 ? rows : null };
+    }
+  }
+  const delimiter = detectDelimiter(text);
+  if (delimiter !== null) {
+    const rows = gridRows(splitDelimited(text, delimiter.char));
+    if (rows.length > 0) return { format: delimiter.format, rows };
+  }
+  return { format: "text", rows: null };
+};
+
+/**
+ * What a paste comes to, using its types as a hint; null when there's nothing in it to
+ * chart. A table, or text that reads as rows, comes first: spreadsheets copy cells as
+ * text and as a picture of them. Then an image, then any other text.
+ */
 export const readDump = (clip: Clip): Dump | null => {
   if (clip.table !== null) {
     const rows = gridRows(clip.table);
     if (rows.length > 0) return { is: "rows", format: "an HTML table", rows };
   }
   const text = clip.text.trim();
-  if (text === "") return null;
-  if (text.startsWith("{") || text.startsWith("[") || clip.types.includes("application/json")) {
-    const json = parseJson(text);
-    if (json.ok) {
-      const rows = jsonRows(json.value);
-      return rows !== null && rows.length > 0
-        ? { is: "rows", format: "JSON", rows }
-        : { is: "text", format: "JSON", text };
-    }
+  const read = text === "" ? null : textRows(text, clip.types);
+  if (read !== null && read.rows !== null) {
+    return { is: "rows", format: read.format, rows: read.rows };
   }
-  const delimiter = detectDelimiter(text);
-  if (delimiter !== null) {
-    const rows = gridRows(splitDelimited(text, delimiter.char));
-    if (rows.length > 0) return { is: "rows", format: delimiter.format, rows };
+  const imageFormat = clip.imageType === null ? undefined : imageFormats[clip.imageType];
+  if (clip.imageType !== null && imageFormat !== undefined) {
+    return { is: "image", format: imageFormat, type: clip.imageType };
   }
-  return { is: "text", format: "text", text };
+  return read === null ? null : { is: "text", format: read.format, text };
 };
 
 const parseJson = (text: string) =>
@@ -236,3 +263,48 @@ const parseJson = (text: string) =>
     onLeft: () => ({ ok: false } as const),
     onRight: (value) => ({ ok: true, value } as const),
   });
+
+/** What was typed (or pasted into text already typed): the data in it, and what's asked. */
+export type Typed = {
+  /** What the user asked for: the text around the data. Empty if it's all data. */
+  readonly request: string;
+  readonly dump: Dump;
+  /** The data's own text, as typed. */
+  readonly original: string;
+};
+
+/**
+ * Whether a line reads as a sentence, not a row of data: it ends like one, or has a
+ * cell of more than five words. So a sentence with a comma isn't taken for a CSV row.
+ */
+export const isProse = (line: string): boolean =>
+  /[.?:!]["')]?$/.test(line.trim()) ||
+  line.split(/[,\t;|]/).some((cell) => cell.trim().split(/\s+/).length > 5);
+
+/** How many lines of prose, before the data and after it, are looked through. */
+const maxProseLines = 20;
+
+/**
+ * The data in typed text, and the request around it: the largest run of lines (after up
+ * to 20 lines of prose, and before up to 20 more) that reads as rows, starting and
+ * ending with lines that aren't sentences. All of it goes as
+ * text, for the agent to make sense of, if no run does. Null if there's nothing.
+ */
+export const readTyped = (text: string): Typed | null => {
+  const trimmed = text.trim();
+  if (trimmed === "") return null;
+  const lines = trimmed.split(/\r?\n/);
+  const n = lines.length;
+  for (let start = 0; start <= Math.min(maxProseLines, n - 1); start++) {
+    for (let end = n; end > start && end >= n - maxProseLines; end--) {
+      const original = lines.slice(start, end).join("\n").trim();
+      const edges = original.split("\n");
+      if (original === "" || isProse(edges.at(0) ?? "") || isProse(edges.at(-1) ?? "")) continue;
+      const dump = readDump({ types: [], table: null, text: original, imageType: null });
+      if (dump?.is !== "rows") continue;
+      const request = [...lines.slice(0, start), "", ...lines.slice(end)].join("\n").trim();
+      return { request, dump, original };
+    }
+  }
+  return { request: "", dump: { is: "text", format: "text", text: trimmed }, original: trimmed };
+};

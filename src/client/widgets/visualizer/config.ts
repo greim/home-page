@@ -28,6 +28,8 @@ export const VisualizeInput = Schema.Struct({
   hasRows: Schema.Boolean,
   /** The pasted text, when it couldn't be read as rows; null when it could. */
   text: Schema.NullOr(Schema.String),
+  /** When the data came as an image, its file name in in/; null otherwise. */
+  image: Schema.NullOr(Schema.String),
   /** The chart's current Vega-Lite spec and title, when refining one. */
   current: Schema.NullOr(Schema.Struct({ title: Schema.String, spec: Schema.Unknown })),
   /** The conversation about this chart before this request, oldest first. */
