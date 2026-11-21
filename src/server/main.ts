@@ -14,6 +14,8 @@ import {
   maxHttpGetBytes,
   ServerIo,
 } from "./http.ts";
+import { LayoutHistoryService, LayoutRepo, makeLayoutHistory } from "./layout-history.ts";
+import { layoutRepoIn } from "./layout-history-live.ts";
 import { handle } from "./routes.ts";
 import { ttlCache } from "./ttl-cache.ts";
 
@@ -117,6 +119,15 @@ const bundle = await Effect.runPromise(
   ),
 );
 
+// The layout's versions are kept by git, so the server needs it: this fails, saying why, without it.
+const layoutHistory = await Effect.runPromise(
+  Effect.gen(function* () {
+    const history = yield* makeLayoutHistory;
+    yield* history.available;
+    return history;
+  }).pipe(Effect.provideService(LayoutRepo, layoutRepoIn(config.dataDir))),
+);
+
 const site = {
   hosts: config.hosts,
   buildId: bundle.buildId,
@@ -136,6 +147,7 @@ Deno.serve(
     Effect.runPromise(
       handle(toHttpRequest(request), site).pipe(
         Effect.provideService(ServerIo, io),
+        Effect.provideService(LayoutHistoryService, layoutHistory),
         Effect.map(toResponse),
       ),
     ),

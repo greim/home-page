@@ -6,8 +6,15 @@ import type { AnyApi } from "../widget-apis.ts";
 import { agentRunsApi } from "./agent-runs.ts";
 import { feedsApi } from "./feeds.ts";
 import { layoutApi } from "./layout.ts";
+import { layoutHistoryApi } from "./layout-history.ts";
 
-export const allApis: ReadonlyArray<AnyApi> = [agentRunsApi, layoutApi, feedsApi];
+export const allApis: ReadonlyArray<AnyApi> = [
+  agentRunsApi,
+  layoutApi,
+  layoutHistoryApi,
+  commitMessageApi,
+  feedsApi,
+];
 
 /** The API every widget with agents gets, without declaring it. */
 export const agentsApiName = agentRunsApi.name;

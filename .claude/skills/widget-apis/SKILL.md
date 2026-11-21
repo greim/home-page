@@ -43,11 +43,12 @@ page doesn't mount a widget's views until the user agrees to its outside service
 
 ## The APIs there are
 
-| API          | Server    | What it does                                                    |
-| ------------ | --------- | --------------------------------------------------------------- |
-| `agent-runs` | assistant | Runs the widget's own AI agents (see the `widget-agents` skill) |
-| `layout`     | main      | Reads the page's layout, and applies a new one (see below)      |
-| `feeds`      | main      | Reads an RSS, Atom or JSON Feed (see below)                     |
+| API              | Server    | What it does                                                               |
+| ---------------- | --------- | -------------------------------------------------------------------------- |
+| `agent-runs`     | assistant | Runs the widget's own AI agents (see the `widget-agents` skill)            |
+| `layout`         | main      | Reads the page's layout, and applies a new one (see below)                 |
+| `layout-history` | main      | The page's own: the layout's versions, kept in git (no widget declares it) |
+| `feeds`          | main      | Reads an RSS, Atom or JSON Feed (see below)                                |
 
 `src/common/apis/all.ts` lists them.
 

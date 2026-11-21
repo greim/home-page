@@ -10,6 +10,7 @@ import {
   ServerIo,
   type Site,
 } from "./http.ts";
+import { LayoutHistoryService } from "./layout-history.ts";
 import { handle, page } from "./routes.ts";
 
 const site: Site = {
@@ -43,10 +44,22 @@ const noIo = ServerIo.of({
   httpGet: () => unused,
 });
 
+const noHistory = LayoutHistoryService.of({
+  available: unused,
+  status: unused,
+  diff: unused,
+  changes: () => unused,
+  versions: () => unused,
+  accept: () => unused,
+  discard: unused,
+  restore: () => unused,
+});
+
 const run = (req: HttpRequest, io = noIo): Promise<HttpResponse> =>
   Effect.runPromise(
     handle(req, site).pipe(
       Effect.provideService(ServerIo, io),
+      Effect.provideService(LayoutHistoryService, noHistory),
     ),
   );
 

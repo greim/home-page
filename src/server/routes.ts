@@ -10,7 +10,6 @@ import {
   json,
   methodNotAllowed,
   type RouteError,
-  ServerIo,
   type Site,
   text,
 } from "./http.ts";
@@ -21,13 +20,18 @@ import { importMap } from "../common/shared-modules.ts";
 import { serveWidgetFile } from "./widget-files.ts";
 import { feedsServed } from "./feeds-api.ts";
 import { layoutServed } from "./layout-api.ts";
+import { type LayoutHistoryNeeds, layoutHistoryServed } from "./layout-history-api.ts";
 import { handleWidgetApis, isWidgetApiRequest, type ServedApi } from "./widget-api-routes.ts";
 
 /**
  * The widget APIs this server serves (the assistant service serves its own). Add an
  * API's `serve(...)` here. See the `widget-apis` skill.
  */
-const widgetApis: ReadonlyArray<ServedApi<ServerIo>> = [layoutServed, feedsServed];
+const widgetApis: ReadonlyArray<ServedApi<LayoutHistoryNeeds>> = [
+  layoutServed,
+  layoutHistoryServed,
+  feedsServed,
+];
 
 /** File name the bundler gives the client entry point (src/client/main.tsx). */
 export const clientScript = "main.js";
@@ -73,7 +77,7 @@ const putLayout = (request: HttpRequest) =>
 const route = (
   request: HttpRequest,
   site: Site,
-): Effect.Effect<HttpResponse, RouteError, ServerIo> => {
+): Effect.Effect<HttpResponse, RouteError, LayoutHistoryNeeds> => {
   const { pathname } = request.url;
   const isRead = request.method === "GET" || request.method === "HEAD";
 
@@ -130,7 +134,7 @@ const route = (
 export const handle = (
   request: HttpRequest,
   site: Site,
-): Effect.Effect<HttpResponse, never, ServerIo> => {
+): Effect.Effect<HttpResponse, never, LayoutHistoryNeeds> => {
   if (!site.hosts.has(request.url.host)) {
     return Effect.succeed(text(421, "Misdirected request"));
   }
