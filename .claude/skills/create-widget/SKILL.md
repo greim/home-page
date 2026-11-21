@@ -149,10 +149,11 @@ uses it, read `bookmarks/`.
 
 ## What a widget can use
 
-- **Props** (`WidgetProps`): `config` (decoded), `saveConfig(config)` to save a change made on the
-  page itself, `widgetId`, and `schedule` (when the user's day starts and ends, and their weekend;
-  with `useNow` from the kit and `src/common/day-cycle.ts`, for anything time-of-day). And
-  `openFullScreen()`, to open the widget's `full-screen` view from a click, if it has one.
+- **Props** (`WidgetProps`): `config` (decoded), `saveConfig(config)` to save a deliberate setting
+  changed on the page itself (never ephemeral state: see `ephemeral-state`), `widgetId`, and
+  `schedule` (when the user's day starts and ends, and their weekend; with `useNow` from the kit and
+  `src/common/day-cycle.ts`, for anything time-of-day). And `openFullScreen()`, to open the widget's
+  `full-screen` view from a click, if it has one.
 - **Chakra UI** components, set up as the page has it.
 - **Shared styles** in `src/client/surface.ts`: `widgetHeading` for headings, so they match other
   widgets; `codeBox` for monospace boxes; `hatching`.
@@ -164,13 +165,14 @@ uses it, read `bookmarks/`.
 
 ## Where state goes
 
-| What                                               | Where                                                               |
-| -------------------------------------------------- | ------------------------------------------------------------------- |
-| Settings the user edits in the column editor       | `config`, through the editor's `reportDraft`                        |
-| State changed on the page that should be kept      | `config`, through `saveConfig` (e.g. a folder opened)               |
-| Per-browser working state (drafts, pasted text)    | `localStorage`, under a key naming the widget and its `widgetId`    |
-| Secrets: API keys, tokens                          | `localStorage` only, prompted for when missing (see `code-vs-data`) |
-| Anything else that must persist, or uploaded files | Not supported yet: needs a server route under `data/`; ask first    |
+| What                                               | Where                                                                |
+| -------------------------------------------------- | -------------------------------------------------------------------- |
+| Settings the user edits in the column editor       | `config`, through the editor's `reportDraft`                         |
+| A setting the user chose on the page on purpose    | `config`, through `saveConfig`                                       |
+| Ephemeral UI state (open/closed, tab, sort)        | `localStorage` by `widgetId`, never `config` (see `ephemeral-state`) |
+| Per-browser working state (drafts, pasted text)    | `localStorage`, under a key naming the widget and its `widgetId`     |
+| Secrets: API keys, tokens                          | `localStorage` only, prompted for when missing (see `code-vs-data`)  |
+| Anything else that must persist, or uploaded files | Not supported yet: needs a server route under `data/`; ask first     |
 
 The config is saved in `data/layout.json`, which the assistant reads. Never put secrets in it.
 

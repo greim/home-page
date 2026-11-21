@@ -11,11 +11,10 @@ const items: ReadonlyArray<BookmarkNode> = [
   { is: "link", id: "id1", label: "Mail", url: "https://mail.test/" },
   {
     is: "folder",
-    id: "id2",
+    id: "dev",
     label: "Dev",
-    expanded: true,
     children: [
-      { is: "link", id: "id3", label: "Repo | main", url: "https://git.test/" },
+      { is: "link", id: "id2", label: "Repo | main", url: "https://git.test/" },
     ],
   },
 ];
@@ -30,8 +29,17 @@ Deno.test("serializeOutline writes links and indented folder children", () => {
   assertEquals(serializeOutline(items), text);
 });
 
-Deno.test("parseOutline round-trips and preserves folder expansion", () => {
+Deno.test("parseOutline round-trips, keeping the ids of folders it already had", () => {
   assertEquals(parseOutline(text, items, counter()), { ok: true, items });
+});
+
+Deno.test("parseOutline gives folders sharing a label their old ids in order", () => {
+  const twins: ReadonlyArray<BookmarkNode> = [
+    { is: "folder", id: "a", label: "F", children: [] },
+    { is: "folder", id: "b", label: "F", children: [] },
+  ];
+  const parsed = parseOutline("F\nF\nF", twins, counter());
+  assertEquals(parsed.ok && parsed.items.map((n) => n.id), ["a", "b", "id1"]);
 });
 
 Deno.test("parseOutline rejects invalid URLs", () => {
@@ -41,14 +49,13 @@ Deno.test("parseOutline rejects invalid URLs", () => {
   });
 });
 
-Deno.test("parseOutline collapses new folders and skips blank lines", () => {
+Deno.test("parseOutline gives new folders new ids and skips blank lines", () => {
   assertEquals(parseOutline("\nNew\n\n\tA | https://a.test", [], counter()), {
     ok: true,
     items: [{
       is: "folder",
       id: "id1",
       label: "New",
-      expanded: false,
       children: [{ is: "link", id: "id2", label: "A", url: "https://a.test" }],
     }],
   });

@@ -31,8 +31,9 @@ const isRecord = (u: unknown): u is Readonly<Record<string, unknown>> =>
  * - Briefly, MFE widgets were `{ is: "mfe", mfe: "<type>", config, ... }`.
  * - Until a recent redesign, the page gave every widget a heading
  *   (`subheading`) that collapsed it (`collapsed`). Now a widget shows its own
- *   heading, if any, so they move into `config` as `heading` and `collapsed`
- *   (unless it already has them). Widget types that don't use them ignore them.
+ *   heading, if any, so `subheading` moves into `config` as `heading` (unless it
+ *   already has one). Whether a widget is open is ephemeral, so `collapsed` is
+ *   dropped (see the `ephemeral-state` skill).
  * Anything else is left for the schema to judge.
  */
 export const migrateWidget = (stored: unknown): unknown => {
@@ -48,11 +49,8 @@ export const migrateWidget = (stored: unknown): unknown => {
     return migrateWidget({ id, is, subheading, collapsed, config });
   }
   if ("subheading" in stored || "collapsed" in stored) {
-    const { subheading, collapsed, config, ...rest } = stored;
-    const moved = {
-      ...(typeof subheading === "string" ? { heading: subheading } : {}),
-      ...(typeof collapsed === "boolean" ? { collapsed } : {}),
-    };
+    const { subheading, collapsed: _collapsed, config, ...rest } = stored;
+    const moved = typeof subheading === "string" ? { heading: subheading } : {};
     return { ...rest, config: isRecord(config) ? { ...moved, ...config } : config };
   }
   return stored;

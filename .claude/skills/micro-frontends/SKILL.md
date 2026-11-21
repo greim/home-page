@@ -163,8 +163,9 @@ Build views with `src/client/widget-kit/`, not with bare components:
 ### The contract (`src/client/widget-kit/contract.ts`)
 
 - **`widget` view** props: `{ widgetId, config, saveConfig, schedule }`. Call `saveConfig` to save a
-  changed config (e.g. a bookmark folder opened). `schedule` is when the user's day starts and ends,
-  and their weekend; `src/common/day-cycle.ts` says what any moment is by it.
+  deliberately changed setting, never ephemeral state like a folder opened (see `ephemeral-state`).
+  `schedule` is when the user's day starts and ends, and their weekend; `src/common/day-cycle.ts`
+  says what any moment is by it.
 - **`widget` view** also gets `openFullScreen()`, which opens its `full-screen` view (if it has one)
   as a modal. Call it only from a user action, such as a button's click.
 - **`full-screen` view** props: the `widget` view's, less `openFullScreen`.

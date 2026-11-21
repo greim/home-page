@@ -1,12 +1,9 @@
 import { chakra, Link } from "@chakra-ui/react";
 import { widgetHeading } from "../../surface.ts";
 import type { WidgetProps } from "../../widget-kit/views.tsx";
-import {
-  type BookmarksConfig,
-  type Link as LinkModel,
-  toggleCollapsed,
-  toggleFolder,
-} from "./config.ts";
+import type { BookmarksConfig, Link as LinkModel } from "./config.ts";
+import { isExpanded, toggleCollapsed, toggleFolder } from "./open-state.ts";
+import { changeOpenState, useOpenState } from "./open-state-live.ts";
 
 /*
  * List markers are box-drawing characters, added in CSS: "▪" before a top-level
@@ -55,10 +52,11 @@ function LinkItem(props: { link: LinkModel; inFolder: boolean }) {
 const list = { listStyle: "none", m: "0", p: "0" } as const;
 
 export function Bookmarks(props: WidgetProps<BookmarksConfig>) {
-  const { config, saveConfig } = props;
+  const { config, widgetId } = props;
+  const openState = useOpenState(widgetId);
   const heading = config.heading.trim();
   // Without a heading there's nothing to open it with, so it's always open.
-  const open = heading === "" || !config.collapsed;
+  const open = heading === "" || !openState.collapsed;
   return (
     <>
       {heading !== "" && (
@@ -76,7 +74,7 @@ export function Bookmarks(props: WidgetProps<BookmarksConfig>) {
             textAlign="start"
             _before={{ content: open ? `"⏷ "` : `"⏵ "`, whiteSpace: "pre", fontFamily: "mono" }}
             aria-expanded={open}
-            onClick={() => saveConfig(toggleCollapsed(config))}
+            onClick={() => changeOpenState(widgetId, toggleCollapsed)}
           >
             {heading}
           </chakra.button>
@@ -88,19 +86,21 @@ export function Bookmarks(props: WidgetProps<BookmarksConfig>) {
             switch (node.is) {
               case "link":
                 return <LinkItem key={node.id} link={node} inFolder={false} />;
-              case "folder":
+              case "folder": {
+                const expanded = isExpanded(openState, node.id);
                 return (
                   <chakra.li key={node.id}>
                     <chakra.button
                       cursor="pointer"
                       textAlign="start"
-                      _before={marker(node.expanded ? "- " : "+ ")}
-                      onClick={() => saveConfig(toggleFolder(config, node.id))}
-                      aria-expanded={node.expanded}
+                      _before={marker(expanded ? "- " : "+ ")}
+                      onClick={() =>
+                        changeOpenState(widgetId, (state) => toggleFolder(state, node.id))}
+                      aria-expanded={expanded}
                     >
                       {node.label}
                     </chakra.button>
-                    {node.expanded && (
+                    {expanded && (
                       <chakra.ul {...list} ps="1em" mb="0.6em">
                         {node.children.map((link) => (
                           <LinkItem key={link.id} link={link} inFolder />
@@ -109,6 +109,7 @@ export function Bookmarks(props: WidgetProps<BookmarksConfig>) {
                     )}
                   </chakra.li>
                 );
+              }
               default:
                 return node satisfies never;
             }

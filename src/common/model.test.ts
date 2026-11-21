@@ -71,7 +71,7 @@ const decodedWidget = (widget: unknown) =>
  */
 const old = { id: "w", subheading: "Links", collapsed: true };
 /** The same, as a widget's own config holds them now. */
-const moved = { heading: "Links", collapsed: true };
+const moved = { heading: "Links" };
 
 Deno.test("Layout leaves a widget's config to the widget", () => {
   const widget = { id: "w", is: "weather", config: { anything: [1, "two"] } };
@@ -82,7 +82,7 @@ Deno.test("Layout rejects a widget type ID that isn't a folder name", () => {
   assertEquals(Either.isLeft(decode(withWidget({ id: "w", is: "Bad Type", config: {} }))), true);
 });
 
-Deno.test("Layout moves a widget's old heading and collapse state into its config", () => {
+Deno.test("Layout moves a widget's old heading into its config, dropping its collapse state", () => {
   assertEquals(
     decodedWidget({ ...old, is: "bookmarks", config: { items: [] } }),
     Either.right({ id: "w", is: "bookmarks", config: { ...moved, items: [] } }),
@@ -93,7 +93,7 @@ Deno.test("Layout moves a widget's old heading and collapse state into its confi
     Either.right({
       id: "w",
       is: "bookmarks",
-      config: { heading: "Mine", collapsed: true, items: [] },
+      config: { heading: "Mine", items: [] },
     }),
   );
   // A config that isn't an object is left for the widget to reject.

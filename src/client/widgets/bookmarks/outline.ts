@@ -54,7 +54,8 @@ const parseLine = (raw: string): ParsedLine => {
 };
 
 /**
- * @param previous existing nodes, used to preserve folders' expanded state
+ * @param previous existing nodes: a folder keeps its id when a folder of the same label is still
+ *   there, so what's stored about it (whether it's open) still applies
  * @param makeId generates ids for the parsed nodes
  */
 export const parseOutline = (
@@ -62,9 +63,13 @@ export const parseOutline = (
   previous: ReadonlyArray<BookmarkNode>,
   makeId: () => string,
 ): ParsedOutline => {
-  const expanded = new Map(
-    previous.flatMap((n) => (n.is === "folder" ? [[n.label, n.expanded]] : [])),
-  );
+  // Folders sharing a label take over ids in order.
+  const folderIds = new Map<string, Array<string>>();
+  for (const node of previous) {
+    if (node.is === "folder") {
+      folderIds.set(node.label, [...(folderIds.get(node.label) ?? []), node.id]);
+    }
+  }
   const items: Array<BookmarkNode> = [];
   const lines = text.split("\n");
   for (const [index, raw] of lines.entries()) {
@@ -82,9 +87,8 @@ export const parseOutline = (
       }
       const folder: Folder = {
         is: "folder",
-        id: makeId(),
+        id: folderIds.get(line.label)?.shift() ?? makeId(),
         label: line.label,
-        expanded: expanded.get(line.label) ?? false,
         children: [],
       };
       items.push(folder);

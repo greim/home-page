@@ -1,4 +1,7 @@
-/** The bookmarks widget's config: links, and folders of links. */
+/**
+ * The bookmarks widget's config: links, and folders of links. What's open or closed isn't
+ * config: see open-state.ts.
+ */
 import { Schema } from "effect";
 
 export const Link = Schema.Struct({
@@ -14,7 +17,6 @@ export const Folder = Schema.Struct({
   is: Schema.Literal("folder"),
   id: Schema.String,
   label: Schema.String,
-  expanded: Schema.Boolean,
   children: Schema.Array(Link),
 });
 export type Folder = typeof Folder.Type;
@@ -25,22 +27,6 @@ export type BookmarkNode = typeof BookmarkNode.Type;
 export const BookmarksConfig = Schema.Struct({
   /** Shown above the links; clicking it opens or closes the widget. None when blank. */
   heading: Schema.optionalWith(Schema.String, { default: () => "" }),
-  /** Showing only the heading. */
-  collapsed: Schema.optionalWith(Schema.Boolean, { default: () => false }),
   items: Schema.Array(BookmarkNode),
 });
 export type BookmarksConfig = typeof BookmarksConfig.Type;
-
-/** Opens or closes the whole widget, leaving its heading. */
-export const toggleCollapsed = (config: BookmarksConfig): BookmarksConfig => ({
-  ...config,
-  collapsed: !config.collapsed,
-});
-
-/** Opens or closes one folder. */
-export const toggleFolder = (config: BookmarksConfig, folderId: string): BookmarksConfig => ({
-  ...config,
-  items: config.items.map((node) =>
-    node.is === "folder" && node.id === folderId ? { ...node, expanded: !node.expanded } : node
-  ),
-});
