@@ -2,6 +2,7 @@ import { assertEquals, assertStringIncludes } from "@std/assert";
 import { Effect, Stream } from "effect";
 import type { Answer, LoggedEvent, SendMessage } from "../common/assistant.ts";
 import type { Assistant, SendResult } from "./assistant.ts";
+import { CommitMessageIo } from "./commit-message.ts";
 import { AssistantService, handleAssistant } from "./assistant-routes.ts";
 import { type HttpRequest, type HttpResponse, IoError } from "./http.ts";
 import { type Runs, WidgetAgentRuns } from "./widget-agents.ts";
@@ -98,6 +99,10 @@ const handle = (req: HttpRequest, assistant: Assistant, runs: Array<string> = []
     handleAssistant(req, site).pipe(
       Effect.provideService(AssistantService, assistant),
       Effect.provideService(WidgetAgentRuns, fakeRuns(runs)),
+      Effect.provideService(
+        CommitMessageIo,
+        CommitMessageIo.of({ ask: () => Effect.die("unused") }),
+      ),
     ),
   );
 

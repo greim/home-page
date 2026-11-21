@@ -6,6 +6,8 @@
 import { Effect } from "effect";
 import { AssistantIo, makeAssistant } from "./assistant.ts";
 import { assistantIoLive } from "./assistant-live.ts";
+import { CommitMessageIo } from "./commit-message.ts";
+import { commitMessageIoLive } from "./commit-message-live.ts";
 import { AssistantService, handleAssistant } from "./assistant-routes.ts";
 import { config } from "./config.ts";
 import { type HttpRequest, type HttpResponse, IoError, ServerIo } from "./http.ts";
@@ -81,6 +83,8 @@ const widgetAgentRuns = await Effect.runPromise(
   ),
 );
 
+const commitMessages = commitMessageIoLive(`${config.dataDir}/commit-message-runs`);
+
 Deno.serve(
   {
     hostname: config.hostname,
@@ -97,6 +101,7 @@ Deno.serve(
       }).pipe(
         Effect.provideService(AssistantService, assistant),
         Effect.provideService(WidgetAgentRuns, widgetAgentRuns),
+        Effect.provideService(CommitMessageIo, commitMessages),
         Effect.map(toResponse),
       ),
     ),

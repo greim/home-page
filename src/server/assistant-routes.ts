@@ -18,13 +18,15 @@
  *   GET  /api/assistant/state                the log being kept, and its last event's number
  *   GET  /api/assistant/health               is the service up
  *
- *   /api/widget-apis/...                     the widget APIs it serves: agent-runs (see
- *                                            src/common/apis/agent-runs.ts)
+ *   /api/widget-apis/...                     the widget APIs it serves: agent-runs and
+ *                                            commit-message (see src/common/apis/)
  */
 import { Context, Effect, Either, Schema, Stream } from "effect";
 import { Answer, SendMessage, SetMode, SetModel } from "../common/assistant.ts";
 import type { Assistant } from "./assistant.ts";
 import { agentRunsServed } from "./agent-runs-api.ts";
+import { commitMessageServed } from "./commit-message-api.ts";
+import type { CommitMessageIo } from "./commit-message.ts";
 import { handleWidgetApis, isWidgetApiRequest } from "./widget-api-routes.ts";
 import type { WidgetAgentRuns } from "./widget-agents.ts";
 import {
@@ -67,9 +69,14 @@ const seqParam = (value: string | null): number | null => {
 
 const route = (
   request: HttpRequest,
-): Effect.Effect<HttpResponse, never, AssistantService | WidgetAgentRuns> =>
+): Effect.Effect<HttpResponse, never, AssistantService | WidgetAgentRuns | CommitMessageIo> =>
   Effect.gen(function* () {
-    if (isWidgetApiRequest(request)) return yield* handleWidgetApis(request, [agentRunsServed]);
+    if (isWidgetApiRequest(request)) {
+      return yield* handleWidgetApis<WidgetAgentRuns | CommitMessageIo>(request, [
+        agentRunsServed,
+        commitMessageServed,
+      ]);
+    }
     const assistant = yield* AssistantService;
     const path = request.url.pathname.startsWith(prefix)
       ? request.url.pathname.slice(prefix.length)
@@ -186,7 +193,7 @@ const corsHeaders = (origin: string): Record<string, string> => ({
 export const handleAssistant = (
   request: HttpRequest,
   site: AssistantSite,
-): Effect.Effect<HttpResponse, never, AssistantService | WidgetAgentRuns> => {
+): Effect.Effect<HttpResponse, never, AssistantService | WidgetAgentRuns | CommitMessageIo> => {
   if (!site.hosts.has(request.url.host)) {
     return Effect.succeed(text(421, "Misdirected request"));
   }

@@ -4,6 +4,7 @@
  */
 import type { AnyApi } from "../widget-apis.ts";
 import { agentRunsApi } from "./agent-runs.ts";
+import { commitMessageApi } from "./commit-message.ts";
 import { feedsApi } from "./feeds.ts";
 import { layoutApi } from "./layout.ts";
 import { layoutHistoryApi } from "./layout-history.ts";
