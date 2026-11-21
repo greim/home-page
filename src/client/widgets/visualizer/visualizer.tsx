@@ -171,7 +171,7 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
                   chartTyped();
                 }
               }}
-              placeholder={"Paste JSON, CSV, or a table from a page or spreadsheet, " +
+              placeholder={"Type or paste JSON, CSV, or a table from a page or spreadsheet, " +
                 "or a screenshot of one, or a description along with the data."}
               aria-label="Data to chart"
               readOnly={error !== null}
