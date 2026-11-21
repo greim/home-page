@@ -20,6 +20,8 @@ import type { FullScreenSize } from "../../common/widgets.ts";
 export type FullScreenView =
   | { readonly is: "assistant" }
   | { readonly is: "settings" }
+  /** The layout's past versions, to look through and restore. */
+  | { readonly is: "history" }
   | { readonly is: "column-editor"; readonly columnId: string; readonly widgetId: string | null }
   | { readonly is: "widget"; readonly widgetId: string }
   /** What a widget type sends to outside services, for the user to agree to (or not). */
@@ -40,6 +42,7 @@ export const viewKey = (view: FullScreenView): string => {
   switch (view.is) {
     case "assistant":
     case "settings":
+    case "history":
       return view.is;
     case "column-editor":
       return `column-editor:${view.columnId}`;
@@ -92,6 +95,7 @@ export const stillThere = (view: FullScreenView, layout: Layout): boolean => {
   switch (view.is) {
     case "assistant":
     case "settings":
+    case "history":
     case "permissions":
       return true;
     case "column-editor":

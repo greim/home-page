@@ -14,7 +14,7 @@ import { apiBase, makeApiClient } from "./widget-api-client.ts";
 import type { WidgetApis } from "./widget-kit/contract.ts";
 import { registeredTypes, useWidgetHost } from "./widget-host.tsx";
 
-const assistantPort = () =>
+export const assistantPort = () =>
   document.querySelector(`meta[name="${assistantPortMetaName}"]`)?.getAttribute("content") ?? "";
 
 /** The clients for `widget`'s APIs. */

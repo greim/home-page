@@ -1,5 +1,5 @@
 import { Button, type ButtonProps, Flex, Text, Theme } from "@chakra-ui/react";
-import { LuBotMessageSquare, LuSettings, LuSun, LuX } from "react-icons/lu";
+import { LuBotMessageSquare, LuHistory, LuSettings, LuSun, LuX } from "react-icons/lu";
 import { screenshotSkip } from "./screenshot.ts";
 import { smallCorners, surface } from "./surface.ts";
 
@@ -27,6 +27,8 @@ export function AdminBar(props: {
   onSettings: () => void;
   /** Opens the assistant's window (or brings it back, if it's open). */
   onAssistant: () => void;
+  /** Opens the layout's history. */
+  onHistory: () => void;
 }) {
   const { dayPreview } = props;
   return (
@@ -92,6 +94,14 @@ export function AdminBar(props: {
           onClick={props.onSettings}
         >
           <LuSettings />
+        </AdminBarButton>
+        <AdminBarButton
+          title="Layout history"
+          aria-label="Open the layout's history"
+          px="3"
+          onClick={props.onHistory}
+        >
+          <LuHistory />
         </AdminBarButton>
         <AdminBarButton
           title="Assistant"

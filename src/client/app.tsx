@@ -3,12 +3,15 @@ import { Effect, Either } from "effect";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyAction, type LayoutAction } from "../common/layout-ops.ts";
 import { defaultSchedule } from "../common/day-cycle.ts";
-import type { Layout } from "../common/model.ts";
+import { emptyLayout, type Layout } from "../common/model.ts";
 import { defaultFullScreenSize } from "../common/widgets.ts";
 import { AdminBar } from "./admin-bar.tsx";
 import { Http, loadLayout, saveLayout } from "./api.ts";
 import { adminModeKey, type Board, BoardContext } from "./board-context.ts";
 import { ColumnStrip } from "./column-strip.tsx";
+import { historyTitle, HistoryView } from "./history-view.tsx";
+import { PendingBanner } from "./pending-banner.tsx";
+import { usePendingLayout } from "./pending-layout-live.ts";
 import { HttpLive, run } from "./live.ts";
 import { useDayPhase } from "./use-day-phase.ts";
 import { dayPreviewAvailable, nextNightView, type NightView, showsNight } from "./night-mode.ts";
@@ -117,6 +120,11 @@ export function App() {
     [dispatch],
   );
 
+  const pendingLayout = usePendingLayout(
+    state.is === "ready" ? state.layout : emptyLayout,
+    onApplied,
+  );
+
   const schedule = state.is === "ready" ? state.layout.schedule : defaultSchedule;
   const phase = useDayPhase(schedule);
   // Previewing daytime at night, to see and edit column colors. It lasts only
@@ -173,6 +181,22 @@ export function App() {
           width: "36rem",
           fullHeight: true,
           content: <ConnectedAssistantPanel />,
+        };
+      case "history":
+        return {
+          title: historyTitle,
+          width: "56rem",
+          fullHeight: true,
+          content: (
+            <HistoryView
+              pending={pendingLayout.state}
+              onRestored={(restored) => {
+                onApplied(restored);
+                close();
+              }}
+              onClose={close}
+            />
+          ),
         };
       case "settings":
         return {
@@ -266,10 +290,18 @@ export function App() {
               }}
               onSettings={() => fullScreen.open({ is: "settings" })}
               onAssistant={() => fullScreen.open({ is: "assistant" })}
+              onHistory={() => fullScreen.open({ is: "history" })}
             />
           }
         />
         <FullScreenHost fullScreen={fullScreen} render={renderView} />
+        <PendingBanner
+          state={pendingLayout.state}
+          onAccept={pendingLayout.accept}
+          onDiscard={pendingLayout.discard}
+          onMessage={pendingLayout.setMessage}
+          onReview={() => fullScreen.open({ is: "history" })}
+        />
       </AssistantProvider>
       {saveError !== null && (
         <Box position="fixed" bottom="3" left="50%" transform="translateX(-50%)" zIndex="3">
