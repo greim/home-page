@@ -42,6 +42,16 @@ export const isCodeCopy = (nodes: ReadonlyArray<HtmlNode>): boolean => {
   return only.tag === "pre" || /(?:^|;)white-space:pre(?:-wrap)?(?:;|$)/.test(style);
 };
 
+/** Pasted JSON, pretty-printed; anything that doesn't parse is left as it was. */
+const textSource = (kind: Kind, text: string): Source => {
+  if (kind !== "json") return { kind, data: text };
+  try {
+    return { kind, data: JSON.stringify(JSON.parse(text), null, 2) };
+  } catch {
+    return { kind, data: text };
+  }
+};
+
 export const readPaste = (clip: Clip): PasteResult => {
   if (clip.html !== null && !(isCodeCopy(clip.html) && clip.text.trim() !== "")) {
     const html = sanitizeHtml(clip.html);
@@ -51,7 +61,7 @@ export const readPaste = (clip: Clip): PasteResult => {
     const kind = detect(clip.text);
     return kind === null
       ? { is: "ask", text: clip.text }
-      : { is: "ready", source: { kind, data: clip.text } };
+      : { is: "ready", source: textSource(kind, clip.text) };
   }
   return { is: "unsupported", types: clip.types.filter((t) => t !== "text/plain") };
 };
@@ -67,7 +77,5 @@ export const unsupportedMessage = (types: ReadonlyArray<string>): string =>
 export type Choice = Kind | "guess";
 
 /** The text as the kind chosen for it. */
-export const chosenSource = (text: string, choice: Choice): Source => ({
-  kind: choice === "guess" ? bestGuess(text) : choice,
-  data: text,
-});
+export const chosenSource = (text: string, choice: Choice): Source =>
+  textSource(choice === "guess" ? bestGuess(text) : choice, text);
