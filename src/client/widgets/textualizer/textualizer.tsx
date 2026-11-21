@@ -6,7 +6,7 @@
  */
 import { Box, chakra, HStack, Stack, Text } from "@chakra-ui/react";
 import { type ClipboardEvent, type ReactNode, useMemo } from "react";
-import { LuChevronDown, LuMaximize2 } from "react-icons/lu";
+import { LuChevronDown, LuLetterText, LuMaximize2 } from "react-icons/lu";
 import { codeTextShadow, hiddenScrollbar, widgetHeading } from "../../surface.ts";
 import { TextBox, textBoxStyle } from "../../widget-kit/text-box.tsx";
 import { TextBoxButton } from "../../widget-kit/text-box-button.tsx";
@@ -125,7 +125,12 @@ export function Textualizer({ config, widgetId, openFullScreen }: WidgetProps<Te
 
   return (
     <>
-      {heading !== "" && <chakra.h3 {...widgetHeading}>{heading}</chakra.h3>}
+      {heading !== "" && (
+        <chakra.h3 {...widgetHeading} display="flex" alignItems="center" gap="0.5rem">
+          <LuLetterText aria-hidden />
+          {heading}
+        </chakra.h3>
+      )}
       <Box position="relative">
         {box.is === "preview" ? <Preview source={box.source} /> : (
           // Only ever empty: it takes a paste, and nothing typed or dropped.

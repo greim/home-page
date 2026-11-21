@@ -7,7 +7,7 @@
 import { Box, Button, chakra, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
 import { Either } from "effect";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LuCheck, LuCopy, LuSend, LuSlidersHorizontal, LuX } from "react-icons/lu";
+import { LuCheck, LuCopy, LuMaximize2, LuSend, LuSettings, LuX } from "react-icons/lu";
 import { layoutApi } from "../../../common/apis/layout.ts";
 import type { Layout } from "../../../common/model.ts";
 import { widgetHeading } from "../../surface.ts";
@@ -44,7 +44,12 @@ export function PageConfigurator(
   };
   return (
     <>
-      {heading !== "" && <chakra.h3 {...widgetHeading}>{heading}</chakra.h3>}
+      {heading !== "" && (
+        <chakra.h3 {...widgetHeading} display="flex" alignItems="center" gap="0.5rem">
+          <LuSettings aria-hidden />
+          {heading}
+        </chakra.h3>
+      )}
       <TextBox
         fontFamily="body"
         mb="0.6rem"
@@ -60,9 +65,15 @@ export function PageConfigurator(
           }
         }}
       />
-      <TextBoxButton onClick={go}>
-        <LuSlidersHorizontal /> {text.trim() === "" ? "Open the configurator" : "Change the page"}
-      </TextBoxButton>
+      <HStack gap="0.5rem">
+        <TextBoxButton disabled={text === ""} onClick={() => setText("")}>Clear</TextBoxButton>
+        <TextBoxButton aria-label="Change the page" disabled={text.trim() === ""} onClick={go}>
+          <LuSend />
+        </TextBoxButton>
+        <TextBoxButton ms="auto" onClick={openFullScreen}>
+          <LuMaximize2 /> Full screen
+        </TextBoxButton>
+      </HStack>
     </>
   );
 }

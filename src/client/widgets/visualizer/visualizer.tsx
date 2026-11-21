@@ -5,7 +5,7 @@
  */
 import { Box, chakra, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { type ClipboardEvent, type ReactNode, useState } from "react";
-import { LuChartColumn, LuChevronDown, LuMaximize2, LuSquare } from "react-icons/lu";
+import { LuChartBarStacked, LuChevronDown, LuMaximize2, LuSend, LuSquare } from "react-icons/lu";
 import { codeTextShadow, widgetHeading } from "../../surface.ts";
 import { TextBox } from "../../widget-kit/text-box.tsx";
 import { TextBoxButton } from "../../widget-kit/text-box-button.tsx";
@@ -153,7 +153,12 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
 
   return (
     <>
-      {heading !== "" && <chakra.h3 {...widgetHeading}>{heading}</chakra.h3>}
+      {heading !== "" && (
+        <chakra.h3 {...widgetHeading} display="flex" alignItems="center" gap="0.5rem">
+          <LuChartBarStacked aria-hidden />
+          {heading}
+        </chakra.h3>
+      )}
       <Box position="relative">
         {chart === null
           ? (
@@ -232,8 +237,12 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
         </TextBoxButton>
         {chart === null
           ? (
-            <TextBoxButton disabled={draft.trim() === ""} onClick={chartTyped}>
-              <LuChartColumn /> Chart it
+            <TextBoxButton
+              aria-label="Chart it"
+              disabled={draft.trim() === ""}
+              onClick={chartTyped}
+            >
+              <LuSend />
             </TextBoxButton>
           )
           : (
