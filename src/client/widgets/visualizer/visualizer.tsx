@@ -171,9 +171,8 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
                   chartTyped();
                 }
               }}
-              placeholder={"Paste data to chart: JSON, CSV, a table from a page or spreadsheet, " +
-                "or a screenshot of one. Or type it, or describe it, with what you'd like " +
-                "(⌘/Ctrl+Enter to chart)."}
+              placeholder={"Paste JSON, CSV, or a table from a page or spreadsheet, " +
+                "or a screenshot of one, or a description along with the data."}
               aria-label="Data to chart"
               readOnly={error !== null}
               onPaste={paste}
