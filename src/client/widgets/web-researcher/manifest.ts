@@ -29,6 +29,8 @@ export const manifest = defineManifest({
       terms: "https://www.anthropic.com/legal/consumer-terms",
     }],
   },
+  // About 70% of a full-width view; the modal's own max-width keeps it inside small viewports.
+  fullScreen: { width: 80, height: "full" },
   agents: {
     research: {
       title: "Research a topic",

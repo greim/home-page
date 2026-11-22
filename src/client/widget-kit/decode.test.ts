@@ -31,20 +31,26 @@ Deno.test("decodeWidgetProps decodes the config, and encodes it again to save", 
   assertEquals(opened, 1);
 });
 
-Deno.test("decodeFullScreenProps decodes the same props, without a way to open itself", () => {
+Deno.test("decodeFullScreenProps decodes the same props, with a way to close, not open", () => {
   const saved: Array<unknown> = [];
+  let closed = 0;
   const props = decodeFullScreenProps(Config, {
     widgetId: "w",
     config: { count: "2" },
     saveConfig: (c: unknown) => saved.push(c),
     schedule: defaultSchedule,
+    closeFullScreen: () => closed++,
   });
   assertEquals(
     Either.map(props, (p) => [p.config, "openFullScreen" in p]),
     Either.right([{ count: 2 }, false]),
   );
-  Either.map(props, (p) => p.saveConfig({ count: 4 }));
+  Either.map(props, (p) => {
+    p.saveConfig({ count: 4 });
+    p.closeFullScreen();
+  });
   assertEquals(saved, [{ count: "4" }]);
+  assertEquals(closed, 1);
 });
 
 Deno.test("decodeWidgetProps says what's wrong with the config", () => {

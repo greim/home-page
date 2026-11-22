@@ -50,10 +50,12 @@ function WidgetBody(props: { columnId: string; widget: Widget }) {
 }
 
 /** The widget's full-screen view (rendered by its MFE bundle), for its modal or PiP window. */
-export function WidgetFullScreen(props: { columnId: string; widget: Widget }) {
+export function WidgetFullScreen(
+  props: { columnId: string; widget: Widget; onClose: () => void },
+) {
   const { dispatch, schedule } = useBoard();
   const { manager } = useWidgetHost();
-  const { columnId, widget } = props;
+  const { columnId, widget, onClose } = props;
   const apis = useWidgetApis(widget);
   const viewProps: FullScreenViewProps = useMemo(() => ({
     widgetId: widget.id,
@@ -62,7 +64,8 @@ export function WidgetFullScreen(props: { columnId: string; widget: Widget }) {
       dispatch({ is: "set-widget-config", columnId, widgetId: widget.id, config }),
     schedule,
     apis,
-  }), [columnId, widget.id, widget.config, dispatch, schedule, apis]);
+    closeFullScreen: onClose,
+  }), [columnId, widget.id, widget.config, dispatch, schedule, apis, onClose]);
   return (
     <MfeView
       manager={manager}

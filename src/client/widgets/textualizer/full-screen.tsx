@@ -21,7 +21,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LuArrowRight, LuCheck, LuChevronDown, LuSpellCheck, LuX } from "react-icons/lu";
 import { useWidgetAgent } from "../../widget-kit/agents.ts";
-import type { FullScreenProps } from "../../widget-kit/views.tsx";
+import { type FullScreenProps, useColumnsPerView } from "../../widget-kit/views.tsx";
 import { useBox } from "./box-live.ts";
 import type { TextualizerConfig } from "./config.ts";
 import { formattedTree, markdownOf } from "./convert.ts";
@@ -157,6 +157,8 @@ function IssueCard(props: {
 
 /** The checker's side panel: what it does, how it's going, and what it found. */
 function CheckPanel(props: {
+  /** The panel's width. */
+  width: string;
   check: Check;
   text: string;
   onLocate: (range: Range) => void;
@@ -165,11 +167,11 @@ function CheckPanel(props: {
 }) {
   const { check, text } = props;
   return (
-    <Stack w="26rem" flexShrink="0" borderLeftWidth="1px" p="5" gap="3" overflowY="auto">
+    <Stack w={props.width} flexShrink="0" borderLeftWidth="1px" p="5" gap="3" overflowY="auto">
       {check.is === "idle" && (
         <Text color="fg.muted" fontSize="sm">
-          Check grammar has Claude check the text for grammar, spelling, punctuation, wording,
-          clarity and readability, and suggest fixes. Checking HTML turns it into Markdown.
+          Grammar check results will appear here. Note: grammar check converts the source into
+          Markdown.
         </Text>
       )}
       {check.is === "checking" && (
@@ -208,6 +210,9 @@ function CheckPanel(props: {
 }
 
 export function TextualizerFullScreen({ widgetId }: FullScreenProps<TextualizerConfig>) {
+  // The layout regime: three or more columns have the grammar check beside the text (at
+  // its own width); two share the width 60/40; one has no grammar check.
+  const columns = useColumnsPerView();
   const [box, setBox] = useBox(widgetId);
   const source = box.is === "preview" ? box.source : null;
   const [tab, setTab] = useState<Tab>("formatted");
@@ -244,7 +249,7 @@ export function TextualizerFullScreen({ widgetId }: FullScreenProps<TextualizerC
     );
   }
 
-  const canCheck = checkable(source.kind);
+  const canCheck = columns >= 2 && checkable(source.kind);
   const text = canCheck ? markdownOf(source, parseHtml) : "";
   const tooLong = text.length > maxTextLength;
 
@@ -269,6 +274,12 @@ export function TextualizerFullScreen({ widgetId }: FullScreenProps<TextualizerC
   return (
     <Box display="flex" h="full" w="full" bg="bg" color="fg">
       <Stack flex="1" minW="0" p="5" gap="3">
+        {columns <= 1 && (
+          <Text fontSize="sm" color="fg.muted">
+            Not all features are available at this size. Expand your browser window to see more,
+            such as the grammar check.
+          </Text>
+        )}
         <Tabs.Root
           value={tab}
           onValueChange={(e) => setTab(e.value === "source" ? "source" : "formatted")}
@@ -301,8 +312,8 @@ export function TextualizerFullScreen({ widgetId }: FullScreenProps<TextualizerC
             )}
           <CopyFlash flash={flash} />
         </Box>
-        <HStack justify="space-between" gap="3">
-          <HStack gap="3">
+        <HStack justify="space-between" gap="3" wrap="wrap">
+          <HStack gap="3" wrap="wrap">
             <Badge variant="subtle">{kindLabels[source.kind]}</Badge>
             {canCheck && (
               <Text fontSize="sm" color={tooLong ? "fg.error" : "fg.muted"}>
@@ -310,7 +321,7 @@ export function TextualizerFullScreen({ widgetId }: FullScreenProps<TextualizerC
               </Text>
             )}
           </HStack>
-          <HStack gap="2">
+          <HStack gap="2" wrap="wrap">
             <CopyMenu
               portalled={false}
               onCopy={copy}
@@ -335,6 +346,7 @@ export function TextualizerFullScreen({ widgetId }: FullScreenProps<TextualizerC
       </Stack>
       {canCheck && (
         <CheckPanel
+          width={columns === 2 ? "40%" : "26rem"}
           check={check}
           text={source.data}
           onLocate={(range) => {

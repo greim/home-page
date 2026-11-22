@@ -7,17 +7,16 @@ const Callback = Schema.declare(
   { identifier: "Function" },
 );
 
-const RawFullScreenProps = Schema.Struct({
+const sharedFields = {
   widgetId: Schema.String,
   config: Schema.Unknown,
   saveConfig: Callback,
   schedule: Schedule,
-});
+};
 
-const RawWidgetProps = Schema.Struct({
-  ...RawFullScreenProps.fields,
-  openFullScreen: Callback,
-});
+const RawFullScreenProps = Schema.Struct({ ...sharedFields, closeFullScreen: Callback });
+
+const RawWidgetProps = Schema.Struct({ ...sharedFields, openFullScreen: Callback });
 
 const RawEditorProps = Schema.Struct({
   widgetId: Schema.String,
@@ -25,7 +24,7 @@ const RawEditorProps = Schema.Struct({
   reportDraft: Callback,
 });
 
-export type FullScreenProps<A> = {
+type SharedProps<A> = {
   readonly widgetId: string;
   readonly config: A;
   readonly saveConfig: (config: A) => void;
@@ -33,7 +32,12 @@ export type FullScreenProps<A> = {
   readonly schedule: Schedule;
 };
 
-export type WidgetProps<A> = FullScreenProps<A> & {
+export type FullScreenProps<A> = SharedProps<A> & {
+  /** Closes the full-screen view, e.g. once something has been chosen in it. */
+  readonly closeFullScreen: () => void;
+};
+
+export type WidgetProps<A> = SharedProps<A> & {
   /**
    * Opens the widget's full-screen view as a modal over the page. Call it only from a
    * user action (a click), and only if the widget provides one (`fullScreenView`).
@@ -62,6 +66,17 @@ const decodeConfig = <A, I>(schema: Schema.Schema<A, I>, config: unknown) =>
 /** Encodes a config for saving. A config the widget built itself always encodes. */
 const encoder = <A, I>(schema: Schema.Schema<A, I>) => Schema.encodeSync(schema);
 
+const decodeShared = <A, I>(
+  schema: Schema.Schema<A, I>,
+  raw: Schema.Schema.Type<typeof RawWidgetProps> | Schema.Schema.Type<typeof RawFullScreenProps>,
+): Either.Either<SharedProps<A>, string> =>
+  Either.map(decodeConfig(schema, raw.config), (config) => ({
+    widgetId: raw.widgetId,
+    config,
+    saveConfig: (next: A) => raw.saveConfig(encoder(schema)(next)),
+    schedule: raw.schedule,
+  }));
+
 export const decodeFullScreenProps = <A, I>(
   schema: Schema.Schema<A, I>,
   props: unknown,
@@ -69,11 +84,9 @@ export const decodeFullScreenProps = <A, I>(
   Either.flatMap(
     Either.mapLeft(Schema.decodeUnknownEither(RawFullScreenProps)(props), describe),
     (raw) =>
-      Either.map(decodeConfig(schema, raw.config), (config) => ({
-        widgetId: raw.widgetId,
-        config,
-        saveConfig: (next: A) => raw.saveConfig(encoder(schema)(next)),
-        schedule: raw.schedule,
+      Either.map(decodeShared(schema, raw), (shared) => ({
+        ...shared,
+        closeFullScreen: () => raw.closeFullScreen(undefined),
       })),
   );
 
@@ -84,8 +97,8 @@ export const decodeWidgetProps = <A, I>(
   Either.flatMap(
     Either.mapLeft(Schema.decodeUnknownEither(RawWidgetProps)(props), describe),
     (raw) =>
-      Either.map(decodeFullScreenProps(schema, raw), (decoded) => ({
-        ...decoded,
+      Either.map(decodeShared(schema, raw), (shared) => ({
+        ...shared,
         openFullScreen: () => raw.openFullScreen(undefined),
       })),
   );

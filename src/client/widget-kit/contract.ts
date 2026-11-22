@@ -30,8 +30,8 @@ export const fullScreenViewName = "full-screen";
  */
 export type WidgetApis = Readonly<Record<string, unknown>>;
 
-/** What a full-screen view is given: the widget view's props, less the way to open it. */
-export type FullScreenViewProps = {
+/** What a widget's views are given, whichever they are. */
+type SharedViewProps = {
   readonly widgetId: string;
   /** The widget's config as saved: JSON, for the widget to decode. */
   readonly config: unknown;
@@ -43,7 +43,13 @@ export type FullScreenViewProps = {
   readonly apis: WidgetApis;
 };
 
-export type WidgetViewProps = FullScreenViewProps & {
+/** What a full-screen view is given: also a way to close itself. */
+export type FullScreenViewProps = SharedViewProps & {
+  /** Closes the full-screen view. */
+  readonly closeFullScreen: () => void;
+};
+
+export type WidgetViewProps = SharedViewProps & {
   /**
    * Opens the widget's full-screen view as a modal over the page. Call it only from
    * a user action, and only if the widget provides a "full-screen" view.

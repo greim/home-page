@@ -20,6 +20,7 @@ import {
   type WidgetProps,
 } from "./decode.ts";
 
+export { useColumnsPerView } from "../use-columns-per-view.ts";
 export type { Draft, EditorProps, FullScreenProps, WidgetProps } from "./decode.ts";
 
 const Problem = (props: { message: string }) => (

@@ -17,7 +17,7 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { LuChevronDown, LuChevronLeft, LuChevronRight, LuSend, LuTrash2 } from "react-icons/lu";
-import type { FullScreenProps } from "../../widget-kit/views.tsx";
+import { type FullScreenProps, useColumnsPerView } from "../../widget-kit/views.tsx";
 import { ChartSvg } from "./chart-view.tsx";
 import { type Chart, describeData, type Entry, latest } from "./charts.ts";
 import type { VisualizerConfig } from "./config.ts";
@@ -137,7 +137,12 @@ function EntryView({ entry }: { entry: Entry }) {
   }
 }
 
-export function VisualizerFullScreen({ widgetId }: FullScreenProps<VisualizerConfig>) {
+export function VisualizerFullScreen(
+  { widgetId, closeFullScreen }: FullScreenProps<VisualizerConfig>,
+) {
+  // The layout regime: three or more columns show everything; two swap the list of charts
+  // for previous/next buttons; one shows only the list, picking a chart for the column.
+  const columns = useColumnsPerView();
   const charts = useCharts(widgetId);
   const inCard = useShownInCard(widgetId);
   const working = useWorking();
@@ -167,35 +172,77 @@ export function VisualizerFullScreen({ widgetId }: FullScreenProps<VisualizerCon
     setMessage("");
   };
 
+  const chartList = (
+    onSelect: (id: string) => void,
+    props: { w?: string; borderRightWidth?: string; flex?: string },
+  ) => (
+    <Stack as="nav" aria-label="Charts" p="3" gap="2" overflowY="auto" {...props}>
+      {charts.length === 0 && (
+        <Text fontSize="sm" color="fg.muted" p="2">
+          No charts yet. Paste data into the box in the column.
+        </Text>
+      )}
+      {charts.map((c) => (
+        <ChartListItem
+          key={c.id}
+          chart={c}
+          selected={c.id === chart?.id}
+          working={working.has(c.id)}
+          onSelect={() => onSelect(c.id)}
+        />
+      ))}
+    </Stack>
+  );
+
+  if (columns <= 1) {
+    return (
+      <Box display="flex" flexDirection="column" h="full" w="full" bg="bg" color="fg">
+        <Text fontSize="sm" color="fg.muted" px="4" pt="3">
+          Pick a chart to show it in the column. To see one larger, or to change it in a chat, widen
+          your browser window.
+        </Text>
+        {chartList((id) => {
+          select(id);
+          closeFullScreen();
+        }, { flex: "1" })}
+      </Box>
+    );
+  }
+
+  const index = charts.findIndex((c) => c.id === chart?.id);
+  const step = (by: number) => {
+    const next = charts.at(index + by);
+    if (next !== undefined) select(next.id);
+  };
+
   return (
     <Box display="flex" h="full" w="full" bg="bg" color="fg">
-      <Stack
-        as="nav"
-        aria-label="Charts"
-        w="15rem"
-        flexShrink="0"
-        p="3"
-        gap="2"
-        borderRightWidth="1px"
-        overflowY="auto"
-      >
-        {charts.length === 0 && (
-          <Text fontSize="sm" color="fg.muted" p="2">
-            No charts yet. Paste data into the box in the column.
-          </Text>
-        )}
-        {charts.map((c) => (
-          <ChartListItem
-            key={c.id}
-            chart={c}
-            selected={c.id === chart?.id}
-            working={working.has(c.id)}
-            onSelect={() => select(c.id)}
-          />
-        ))}
-      </Stack>
+      {columns >= 3 && chartList(select, { w: "15rem", borderRightWidth: "1px" })}
 
       <Stack flex="1" minW="0" p="5" gap="3">
+        {columns === 2 && charts.length > 1 && (
+          <HStack gap="1" justify="center">
+            <IconButton
+              size="xs"
+              variant="ghost"
+              aria-label="Previous chart"
+              disabled={index <= 0}
+              onClick={() => step(-1)}
+            >
+              <LuChevronLeft />
+            </IconButton>
+            <Text fontSize="sm" color="fg.muted">Chart {index + 1} of {charts.length}</Text>
+            <IconButton
+              size="xs"
+              variant="ghost"
+              aria-label="Next chart"
+              disabled={index < 0 || index >= charts.length - 1}
+              onClick={() => step(1)}
+            >
+              <LuChevronRight />
+            </IconButton>
+          </HStack>
+        )}
         {chart !== null && (
           <HStack gap="3">
             <Box flex="1" minW="0">
@@ -236,7 +283,7 @@ export function VisualizerFullScreen({ widgetId }: FullScreenProps<VisualizerCon
             )}
           </HStack>
         )}
-        <Box flex="1" minH="0" display="grid" placeItems="center" position="relative">
+        <Box flex="1" minH="0" display="grid" placeItems="start center" position="relative">
           <CopyFlash flash={flash} />
           {version !== null && (
             <ChartSvg

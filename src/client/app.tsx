@@ -241,7 +241,7 @@ export function App() {
               // The view's embedding elements fill the area, so the view can too (h="full").
               css={{ "& > div, & > div > div": { height: "100%" } }}
             >
-              <WidgetFullScreen columnId={column.id} widget={widget} />
+              <WidgetFullScreen columnId={column.id} widget={widget} onClose={close} />
             </Box>
           ),
         };
