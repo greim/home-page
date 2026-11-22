@@ -11,6 +11,7 @@ import { LuCheck, LuCopy, LuMaximize2, LuSend, LuSettings, LuX } from "react-ico
 import { layoutApi } from "../../../common/apis/layout.ts";
 import type { Layout } from "../../../common/model.ts";
 import { widgetHeading } from "../../surface.ts";
+import { useBoxHeight } from "../../widget-kit/box-height.ts";
 import { TextBox } from "../../widget-kit/text-box.tsx";
 import { TextBoxButton } from "../../widget-kit/text-box-button.tsx";
 import { useAgentRun } from "../../widget-kit/agent-run.ts";
@@ -36,6 +37,7 @@ export function PageConfigurator(
 ) {
   const heading = config.heading.trim();
   const [text, setText] = useState("");
+  const box = useBoxHeight(widgetId);
   const go = () => {
     const message = text.trim();
     if (message !== "") requestChange(widgetId, message);
@@ -54,6 +56,7 @@ export function PageConfigurator(
         fontFamily="body"
         mb="0.6rem"
         minH="5rem"
+        {...box}
         aria-label="What should change on the page"
         placeholder="What should change? Columns, widgets, bookmarks, colors"
         value={text}

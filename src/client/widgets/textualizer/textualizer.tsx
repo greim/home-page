@@ -8,6 +8,7 @@ import { Box, chakra, HStack, Stack, Text } from "@chakra-ui/react";
 import { type ClipboardEvent, type ReactNode, useMemo } from "react";
 import { LuChevronDown, LuLetterText, LuMaximize2 } from "react-icons/lu";
 import { codeTextShadow, hiddenScrollbar, widgetHeading } from "../../surface.ts";
+import { useBoxHeight } from "../../widget-kit/box-height.ts";
 import { TextBox, textBoxStyle } from "../../widget-kit/text-box.tsx";
 import { TextBoxButton } from "../../widget-kit/text-box-button.tsx";
 import type { WidgetProps } from "../../widget-kit/views.tsx";
@@ -20,9 +21,6 @@ import { type Choice, chosenSource, readPaste, unsupportedMessage } from "./past
 import { kindLabels, kinds, type Source } from "./source.ts";
 import { Formatted } from "./formatted.tsx";
 import { miniatureFont } from "./styles.ts";
-
-/** The box's one size: it never grows to fit what's in it, and can't be resized. */
-const boxHeight = "10rem";
 
 /** A tight shadow, so a dialog's text and buttons stand out from the box under them. */
 const dialogShadow = "0 0.05rem 0.15rem rgba(0, 0, 0, 0.8)";
@@ -77,15 +75,15 @@ function DialogButton(props: { onClick: () => void; children: ReactNode }) {
 }
 
 /** The source formatted, in miniature, in a box just like the text box, with a badge. */
-function Preview({ source }: { source: Source }) {
+function Preview({ source, box }: { source: Source; box: ReturnType<typeof useBoxHeight> }) {
   const tree = useMemo(() => formattedTree(source, parseHtml), [source]);
   return (
     <>
       <chakra.div
         {...textBoxStyle}
         css={{ ...textBoxStyle.css, ...hiddenScrollbar }}
-        resize="none"
-        h={boxHeight}
+        minH="5rem"
+        {...box}
         overflow="auto"
         textShadow={codeTextShadow}
         tabIndex={0}
@@ -117,6 +115,7 @@ function Preview({ source }: { source: Source }) {
 export function Textualizer({ config, widgetId, openFullScreen }: WidgetProps<TextualizerConfig>) {
   const heading = config.heading.trim();
   const [box, setBox] = useBox(widgetId);
+  const height = useBoxHeight(widgetId);
   const source = box.is === "preview" ? box.source : null;
   const { flash, copy } = useCopy(source, parseHtml);
   const clear = () => setBox({ is: "empty" });
@@ -132,11 +131,11 @@ export function Textualizer({ config, widgetId, openFullScreen }: WidgetProps<Te
         </chakra.h3>
       )}
       <Box position="relative">
-        {box.is === "preview" ? <Preview source={box.source} /> : (
+        {box.is === "preview" ? <Preview source={box.source} box={height} /> : (
           // Only ever empty: it takes a paste, and nothing typed or dropped.
           <TextBox
-            resize="none"
-            h={boxHeight}
+            minH="5rem"
+            {...height}
             textShadow={codeTextShadow}
             spellCheck={false}
             value=""

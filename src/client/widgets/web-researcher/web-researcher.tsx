@@ -18,6 +18,7 @@ import { LuGlobe, LuMaximize2, LuSearch, LuSend, LuTrash2 } from "react-icons/lu
 import { widgetHeading } from "../../surface.ts";
 import { useAgentRun } from "../../widget-kit/agent-run.ts";
 import { AgentRunPanel } from "../../widget-kit/agent-run-panel.tsx";
+import { useBoxHeight } from "../../widget-kit/box-height.ts";
 import { TextBox } from "../../widget-kit/text-box.tsx";
 import { TextBoxButton } from "../../widget-kit/text-box-button.tsx";
 import type { FullScreenProps, WidgetProps } from "../../widget-kit/views.tsx";
@@ -30,6 +31,7 @@ export function WebResearcher(
 ) {
   const heading = config.heading.trim();
   const [text, setText] = useState("");
+  const box = useBoxHeight(widgetId);
   const go = () => {
     const topic = text.trim();
     if (topic !== "") requestTopic(widgetId, topic);
@@ -48,6 +50,7 @@ export function WebResearcher(
         fontFamily="body"
         mb="0.6rem"
         minH="5rem"
+        {...box}
         aria-label="What to research on the web"
         placeholder="What do you want to learn about today?"
         value={text}

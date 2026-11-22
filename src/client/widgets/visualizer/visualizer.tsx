@@ -7,6 +7,7 @@ import { Box, chakra, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { type ClipboardEvent, type ReactNode, useState } from "react";
 import { LuChartBarStacked, LuChevronDown, LuMaximize2, LuSend, LuSquare } from "react-icons/lu";
 import { codeTextShadow, widgetHeading } from "../../surface.ts";
+import { useBoxHeight } from "../../widget-kit/box-height.ts";
 import { TextBox } from "../../widget-kit/text-box.tsx";
 import { TextBoxButton } from "../../widget-kit/text-box-button.tsx";
 import type { WidgetProps } from "../../widget-kit/views.tsx";
@@ -89,6 +90,7 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
   const agent = useVisualize();
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const box = useBoxHeight(widgetId);
   const chart = chosen === undefined
     ? charts.at(0) ?? null
     : charts.find((c) => c.id === chosen) ?? null;
@@ -163,9 +165,8 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
         {chart === null
           ? (
             <TextBox
-              resize="none"
-              minH="0"
-              aspectRatio={boxAspect}
+              minH="5rem"
+              {...box}
               textShadow={codeTextShadow}
               spellCheck={false}
               value={draft}
