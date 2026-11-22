@@ -2,6 +2,7 @@
  * The web researcher's views: a button in its column, and the full-screen view where
  * a topic is researched by its agent and the report shown.
  */
+import { MarkdownText } from "../../widget-kit/markdown-text.tsx";
 import {
   Box,
   Button,
@@ -84,9 +85,7 @@ function Report(props: { report: ResearchReport }) {
       {report.sections.map((section, i) => (
         <Box key={i}>
           <Heading size="sm" mb="2">{section.heading}</Heading>
-          {section.body.split(/\n\s*\n/).map((paragraph, j) => (
-            <Text key={j} mb="2" whiteSpace="pre-wrap">{paragraph}</Text>
-          ))}
+          <MarkdownText text={section.body} />
         </Box>
       ))}
       {report.sources.length > 0 && (

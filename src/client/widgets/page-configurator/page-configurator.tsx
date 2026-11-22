@@ -4,6 +4,7 @@
  * starting with what they typed in the column (request-live.ts). Each change is
  * listed for the user to apply (through the layout API) or discard.
  */
+import { MarkdownText } from "../../widget-kit/markdown-text.tsx";
 import { Box, Button, chakra, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
 import { Either } from "effect";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -136,13 +137,13 @@ function EntryView(props: { entry: Entry }) {
     case "user":
       return (
         <Box alignSelf="end" maxW="80%" bg="bg.emphasized" rounded="lg" px="3" py="2">
-          <Text whiteSpace="pre-wrap">{entry.text}</Text>
+          <MarkdownText text={entry.text} />
         </Box>
       );
     case "configurator":
       return (
         <Box maxW="90%">
-          <Text whiteSpace="pre-wrap">{entry.text}</Text>
+          <MarkdownText text={entry.text} />
           {entry.handOff !== null && <HandOff message={entry.handOff} />}
         </Box>
       );

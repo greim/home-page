@@ -3,6 +3,7 @@
  * the chosen chart large in the middle (with its earlier versions), and a chat on the
  * right to refine it with the agent.
  */
+import { MarkdownText } from "../../widget-kit/markdown-text.tsx";
 import {
   Box,
   Button,
@@ -124,11 +125,11 @@ function EntryView({ entry }: { entry: Entry }) {
     case "user":
       return (
         <Box alignSelf="end" maxW="85%" bg="bg.emphasized" rounded="lg" px="3" py="2">
-          <Text whiteSpace="pre-wrap">{entry.text}</Text>
+          <MarkdownText text={entry.text} />
         </Box>
       );
     case "visualizer":
-      return <Text whiteSpace="pre-wrap">{entry.text}</Text>;
+      return <MarkdownText text={entry.text} />;
     case "note":
       return <Text fontSize="sm" color="fg.muted" textAlign="center">{entry.text}</Text>;
     default:

@@ -211,9 +211,8 @@ function Entry(props: { entry: ChatEntry; assistant: Assistant }) {
           py="2"
           rounded="l3"
           fontSize="sm"
-          whiteSpace="pre-wrap"
         >
-          {entry.text}
+          <MarkdownText text={entry.text} />
         </Box>
       );
     case "attachments":
