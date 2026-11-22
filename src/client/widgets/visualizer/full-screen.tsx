@@ -198,8 +198,8 @@ export function VisualizerFullScreen(
     return (
       <Box display="flex" flexDirection="column" h="full" w="full" bg="bg" color="fg">
         <Text fontSize="sm" color="fg.muted" px="4" pt="3">
-          Pick a chart to show on the main page. To see more features, widen
-          your browser window or zoom out.
+          This view is limited at this size. For full functionality, widen your browser window or zoom out.
+          Click a chart below to show on the main page.
         </Text>
         {chartList((id) => {
           select(id);

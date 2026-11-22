@@ -276,7 +276,7 @@ export function TextualizerFullScreen({ widgetId }: FullScreenProps<TextualizerC
       <Stack flex="1" minW="0" p="5" gap="3">
         {columns <= 1 && (
           <Text fontSize="sm" color="fg.muted">
-            Not all features are available at this size. Expand your browser window or zoom out to see more.
+            This view is limited at this size. For full functionality, widen your browser window or zoom out.
           </Text>
         )}
         <Tabs.Root
