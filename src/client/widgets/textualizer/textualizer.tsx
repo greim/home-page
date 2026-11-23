@@ -1,6 +1,6 @@
 /**
  * The textualizer's card: a box to paste into, which shows what was pasted
- * formatted, in miniature, with buttons to clear it, copy it, and open it full
+ * formatted, in miniature, with buttons to clear it, export it, and open it full
  * screen. The box is empty (waiting for a paste), a dialog (an error, or a
  * question about what was pasted), or a preview.
  */
@@ -15,7 +15,7 @@ import type { WidgetProps } from "../../widget-kit/views.tsx";
 import { type Box as BoxState, useBox } from "./box-live.ts";
 import type { TextualizerConfig } from "./config.ts";
 import { formattedTree } from "./convert.ts";
-import { CopyFlash, CopyMenu, useCopy } from "./copy-menu.tsx";
+import { CopyFlash, ExportMenu, useExport } from "./export-menu.tsx";
 import { parseHtml } from "./dom.ts";
 import { type Choice, chosenSource, readPaste, unsupportedMessage } from "./paste.ts";
 import { kindLabels, kinds, type Source } from "./source.ts";
@@ -117,7 +117,7 @@ export function Textualizer({ config, widgetId, openFullScreen }: WidgetProps<Te
   const [box, setBox] = useBox(widgetId);
   const height = useBoxHeight(widgetId);
   const source = box.is === "preview" ? box.source : null;
-  const { flash, copy } = useCopy(source, parseHtml);
+  const { flash, exportAs } = useExport(source, parseHtml);
   const clear = () => setBox({ is: "empty" });
   const choose = (text: string, choice: Choice) =>
     setBox({ is: "preview", source: chosenSource(text, choice) });
@@ -174,12 +174,12 @@ export function Textualizer({ config, widgetId, openFullScreen }: WidgetProps<Te
       </Box>
       <HStack mt="0.6rem" gap="0.5rem">
         <TextBoxButton disabled={source === null} onClick={clear}>Clear</TextBoxButton>
-        <CopyMenu
+        <ExportMenu
           portalled
-          onCopy={copy}
+          onExport={exportAs}
           trigger={
             <TextBoxButton disabled={source === null}>
-              Copy as <LuChevronDown />
+              Export <LuChevronDown />
             </TextBoxButton>
           }
         />

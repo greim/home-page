@@ -1,6 +1,6 @@
 /**
  * What the textualizer holds: the text pasted in, and what kind of text it is. It's
- * the canonical copy; the preview and every "Copy as" are made from it.
+ * the canonical copy; the preview and every export is made from it.
  */
 
 /** The kinds of text the textualizer knows. "script" is TypeScript or JavaScript. */

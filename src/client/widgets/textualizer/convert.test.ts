@@ -4,6 +4,7 @@ import {
   clipboardData,
   codeTree,
   fenced,
+  fileData,
   formattedHtml,
   markdownOf,
   markdownToHtml,
@@ -94,4 +95,18 @@ Deno.test("clipboardData: each format", () => {
 Deno.test("clipboardData: formatted code falls back to the code itself", () => {
   const data = clipboardData("formatted", { kind: "json", data: "{}" }, parse);
   assertEquals(data.is === "rich" && data.text, "{}");
+});
+
+Deno.test("fileData: the extension fits the format and the source", () => {
+  const md = { kind: "markdown", data: "**b**" } as const;
+  assertEquals(fileData("source", md, parse), {
+    extension: "md",
+    mime: "text/markdown",
+    text: "**b**",
+  });
+  assertEquals(fileData("formatted", md, parse).extension, "html");
+  assertEquals(fileData("html", md, parse).text, "<p><strong>b</strong></p>");
+  assertEquals(fileData("markdown", { kind: "json", data: "{}" }, parse).extension, "md");
+  assertEquals(fileData("source", { kind: "json", data: "{}" }, parse).extension, "json");
+  assertEquals(fileData("source", { kind: "script", data: "f()" }, parse).extension, "ts");
 });

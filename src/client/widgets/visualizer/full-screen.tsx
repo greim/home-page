@@ -21,7 +21,7 @@ import { type FullScreenProps, useColumnsPerView } from "../../widget-kit/views.
 import { ChartSvg } from "./chart-view.tsx";
 import { type Chart, describeData, type Entry, latest } from "./charts.ts";
 import type { VisualizerConfig } from "./config.ts";
-import { CopyFlash, CopyMenu, useCopy } from "./copy-menu.tsx";
+import { CopyFlash, ExportMenu, useExport } from "./export-menu.tsx";
 import { palette } from "./palette.ts";
 import { chartAspect } from "./spec.ts";
 import { deleteChart, showInCard, useCharts, useShownInCard, useWorking } from "./store-live.ts";
@@ -163,7 +163,7 @@ export function VisualizerFullScreen(
 
   const progress = chart === null ? undefined : working.get(chart.id);
   const version = chart?.versions.at(versionIndex) ?? null;
-  const { flash, copy } = useCopy(chart, version);
+  const { flash, exportAs } = useExport(chart, version);
   const canSend = chart !== null && progress === undefined && message.trim() !== "";
 
   const send = () => {
@@ -198,8 +198,8 @@ export function VisualizerFullScreen(
     return (
       <Box display="flex" flexDirection="column" h="full" w="full" bg="bg" color="fg">
         <Text fontSize="sm" color="fg.muted" px="4" pt="3">
-          This view is limited at this size. For full functionality, widen your browser window or zoom out.
-          Click a chart below to show on the main page.
+          This view is limited at this size. For full functionality, widen your browser window or
+          zoom out. Click a chart below to show on the main page.
         </Text>
         {chartList((id) => {
           select(id);
@@ -249,12 +249,12 @@ export function VisualizerFullScreen(
               <Text fontSize="lg" fontWeight="medium" lineClamp={1}>{chart.title}</Text>
               <Text fontSize="sm" color="fg.muted">{describeData(chart.data)}</Text>
             </Box>
-            <CopyMenu
+            <ExportMenu
               portalled={false}
-              onCopy={copy}
+              onExport={exportAs}
               trigger={
                 <Button size="xs" variant="outline" disabled={version === null}>
-                  Copy as <LuChevronDown />
+                  Export <LuChevronDown />
                 </Button>
               }
             />

@@ -1,6 +1,6 @@
 /**
  * The textualizer's full-screen view: what was pasted, formatted or as editable
- * source, in tabs; "Copy as…"; and, for prose (Markdown and HTML), a grammar
+ * source, in tabs; "Export"; and, for prose (Markdown and HTML), a grammar
  * check by Claude (the manifest's "check" agent), whose fixes go into the source.
  * Checking HTML turns it into Markdown first, so fixes can be found and applied
  * as plain text.
@@ -25,7 +25,7 @@ import { type FullScreenProps, useColumnsPerView } from "../../widget-kit/views.
 import { useBox } from "./box-live.ts";
 import type { TextualizerConfig } from "./config.ts";
 import { formattedTree, markdownOf } from "./convert.ts";
-import { CopyFlash, CopyMenu, useCopy } from "./copy-menu.tsx";
+import { CopyFlash, ExportMenu, useExport } from "./export-menu.tsx";
 import { parseHtml } from "./dom.ts";
 import {
   applySuggestion,
@@ -220,7 +220,7 @@ export function TextualizerFullScreen({ widgetId }: FullScreenProps<TextualizerC
   // Text to select in the source once its tab is showing.
   const [selection, setSelection] = useState<Range | null>(null);
   const sourceBox = useRef<HTMLTextAreaElement>(null);
-  const { flash, copy } = useCopy(source, parseHtml);
+  const { flash, exportAs } = useExport(source, parseHtml);
   const checkGrammar = useWidgetAgent("check", GrammarReport);
   const tree = useMemo(() => source === null ? null : formattedTree(source, parseHtml), [source]);
 
@@ -276,7 +276,8 @@ export function TextualizerFullScreen({ widgetId }: FullScreenProps<TextualizerC
       <Stack flex="1" minW="0" p="5" gap="3">
         {columns <= 1 && (
           <Text fontSize="sm" color="fg.muted">
-            This view is limited at this size. For full functionality, widen your browser window or zoom out.
+            This view is limited at this size. For full functionality, widen your browser window or
+            zoom out.
           </Text>
         )}
         <Tabs.Root
@@ -321,12 +322,12 @@ export function TextualizerFullScreen({ widgetId }: FullScreenProps<TextualizerC
             )}
           </HStack>
           <HStack gap="2" wrap="wrap">
-            <CopyMenu
+            <ExportMenu
               portalled={false}
-              onCopy={copy}
+              onExport={exportAs}
               trigger={
                 <Button variant="outline">
-                  Copy as <LuChevronDown />
+                  Export <LuChevronDown />
                 </Button>
               }
             />

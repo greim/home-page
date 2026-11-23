@@ -14,7 +14,7 @@ import type { WidgetProps } from "../../widget-kit/views.tsx";
 import { ChartSvg } from "./chart-view.tsx";
 import { type Chart, latest, newChart, tooBig } from "./charts.ts";
 import type { VisualizerConfig } from "./config.ts";
-import { CopyFlash, CopyMenu, useCopy } from "./copy-menu.tsx";
+import { CopyFlash, ExportMenu, useExport } from "./export-menu.tsx";
 import { type Clip, type Dump, readDump, readTyped } from "./data.ts";
 import { palette } from "./palette.ts";
 import { chartAspect } from "./spec.ts";
@@ -96,7 +96,7 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
     : charts.find((c) => c.id === chosen) ?? null;
   const progress = chart === null ? undefined : working.get(chart.id);
   const version = chart === null ? null : latest(chart);
-  const { flash, copy } = useCopy(chart, version);
+  const { flash, exportAs } = useExport(chart, version);
 
   const start = (dump: Dump, original: string, request: string, image: Blob | null = null) => {
     const problem = tooBig(dump, original, image);
@@ -247,12 +247,12 @@ export function Visualizer({ config, widgetId, openFullScreen }: WidgetProps<Vis
             </TextBoxButton>
           )
           : (
-            <CopyMenu
+            <ExportMenu
               portalled
-              onCopy={copy}
+              onExport={exportAs}
               trigger={
                 <TextBoxButton disabled={version === null}>
-                  Copy as <LuChevronDown />
+                  Export <LuChevronDown />
                 </TextBoxButton>
               }
             />

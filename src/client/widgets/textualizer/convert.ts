@@ -146,3 +146,42 @@ export const clipboardData = (
       return format satisfies never;
   }
 };
+
+/** A file to save: its extension (no dot), its type, and its text. */
+export type FileData = { readonly extension: string; readonly mime: string; readonly text: string };
+
+/** The extension that suits the source as it is. */
+const sourceExtension = (source: Source): string => {
+  switch (source.kind) {
+    case "markdown":
+      return "md";
+    case "html":
+      return "html";
+    case "json":
+      return "json";
+    case "script":
+      return "ts";
+    default:
+      return source.kind satisfies never;
+  }
+};
+
+const mimes: Readonly<Record<string, string>> = {
+  md: "text/markdown",
+  html: "text/html",
+  json: "application/json",
+  ts: "text/typescript",
+};
+
+/** What saving in `format` writes: the same text a copy would, in the fitting file type. */
+export const fileData = (format: CopyFormat, source: Source, parse: HtmlParser): FileData => {
+  const data = clipboardData(format, source, parse);
+  const extension = format === "source"
+    ? sourceExtension(source)
+    : format === "markdown"
+    ? "md"
+    : "html";
+  // "Formatted" is saved as the HTML it copies.
+  const text = data.is === "rich" ? data.html : data.text;
+  return { extension, mime: mimes[extension] ?? "text/plain", text };
+};

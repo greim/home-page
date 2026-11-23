@@ -34,3 +34,16 @@ export const writeClipboard = (from: Element, data: ClipboardData): Promise<void
     }),
   ]);
 };
+
+/** Saves `text` as a file by clicking a link to it, in the document `from` is in. */
+export const downloadText = (from: Element, name: string, mime: string, text: string): void => {
+  const doc = from.ownerDocument;
+  const url = URL.createObjectURL(new Blob([text], { type: `${mime};charset=utf-8` }));
+  const link = doc.createElement("a");
+  link.href = url;
+  link.download = name;
+  doc.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};

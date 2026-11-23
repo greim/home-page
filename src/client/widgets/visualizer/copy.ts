@@ -1,5 +1,5 @@
 /**
- * What "Copy as" puts on the clipboard for a chart: a picture of it (PNG, made in the
+ * What "Export" copies or saves on the clipboard for a chart: a picture of it (PNG, made in the
  * page: see copy-live.ts), its SVG, its Vega-Lite spec whole (data, size and look
  * included, so it renders the same anywhere Vega-Lite does), or the data as pasted.
  */
@@ -61,5 +61,39 @@ export const originalData = (chart: Chart): string => {
       return "";
     default:
       return chart.data satisfies never;
+  }
+};
+
+/** The extension (no dot) and type of the file that saving `format` writes. */
+export const fileKind = (
+  format: CopyFormat,
+  chart: Chart,
+): { readonly extension: string; readonly mime: string } => {
+  switch (format) {
+    case "png":
+      return { extension: "png", mime: "image/png" };
+    case "svg":
+      return { extension: "svg", mime: "image/svg+xml" };
+    case "vega-lite":
+      return { extension: "vl.json", mime: "application/json" };
+    case "data": {
+      // A chart made from an image saves the image.
+      if (chart.image !== null) return { extension: "png", mime: "image/png" };
+      if (chart.data.is === "text") return { extension: "txt", mime: "text/plain" };
+      switch (chart.data.format) {
+        case "CSV":
+          return { extension: "csv", mime: "text/csv" };
+        case "TSV":
+          return { extension: "tsv", mime: "text/tab-separated-values" };
+        case "JSON":
+          return { extension: "json", mime: "application/json" };
+        case "an HTML table":
+          return { extension: "html", mime: "text/html" };
+        default:
+          return { extension: "txt", mime: "text/plain" };
+      }
+    }
+    default:
+      return format satisfies never;
   }
 };

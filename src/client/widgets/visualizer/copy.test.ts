@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
 import { newChart } from "./charts.ts";
-import { originalData, standaloneSpec, standaloneSvg } from "./copy.ts";
+import { fileKind, originalData, standaloneSpec, standaloneSvg } from "./copy.ts";
 import { palette } from "./palette.ts";
 
 const rows = [{ k: "a", v: 1 }];
@@ -51,4 +51,14 @@ Deno.test("the original data is what was pasted, or the rows for charts kept bef
   );
   const image = { is: "image", format: "a PNG image", type: "image/png" } as const;
   assertEquals(originalData({ ...chart, original: "", data: image }), "");
+});
+
+Deno.test("saving picks the fitting extension", () => {
+  assertEquals(fileKind("png", chart).extension, "png");
+  assertEquals(fileKind("svg", chart).extension, "svg");
+  assertEquals(fileKind("vega-lite", chart).extension, "vl.json");
+  assertEquals(fileKind("data", chart).extension, "csv");
+  const text = { ...chart, data: { is: "text", format: "text", text: "x" } } as const;
+  assertEquals(fileKind("data", text).extension, "txt");
+  assertEquals(fileKind("data", { ...text, image: new Blob([]) }).extension, "png");
 });
