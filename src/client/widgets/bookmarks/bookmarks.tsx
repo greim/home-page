@@ -1,4 +1,5 @@
 import { chakra, Link } from "@chakra-ui/react";
+import { LuChevronDown, LuChevronRight } from "react-icons/lu";
 import { widgetHeading } from "../../surface.ts";
 import type { WidgetProps } from "../../widget-kit/views.tsx";
 import type { BookmarksConfig, Link as LinkModel } from "./config.ts";
@@ -72,10 +73,13 @@ export function Bookmarks(props: WidgetProps<BookmarksConfig>) {
             color="inherit"
             cursor="pointer"
             textAlign="start"
-            _before={{ content: open ? `"⏷ "` : `"⏵ "`, whiteSpace: "pre", fontFamily: "mono" }}
+            display="inline-flex"
+            alignItems="center"
+            gap="0.25em"
             aria-expanded={open}
             onClick={() => changeOpenState(widgetId, toggleCollapsed)}
           >
+            {open ? <LuChevronDown aria-hidden /> : <LuChevronRight aria-hidden />}
             {heading}
           </chakra.button>
         </chakra.h3>
